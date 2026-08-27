@@ -1,0 +1,23 @@
+[project]
+name = "atlas-plugin-ingestion"
+description = "Atlas ingestion plugin: discovers catalog-info.yaml manifests and applies them through the core Entity Service"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "atlas_plugin_ingestion" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
+django = ">=6.1,<6.2"
+atlas-plugin-standard-catalog = { path = "../../standard-catalog/backend", develop = true }
+atlas-plugin-apis = { path = "../../apis/backend", develop = true }
+django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }
+django-apscheduler = "^0.7"
+requests = "^2.34"
+pyyaml = "^6.0"

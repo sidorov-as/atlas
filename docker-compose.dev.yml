@@ -1,0 +1,132 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas}
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [database]
+
+  migrate:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: development
+    env_file: ./core/backend/.env
+    environment: &development-environment
+      DJANGO_ENV: development
+      DJANGO_SETTINGS_MODULE: server.settings
+      DJANGO_DATABASE_HOST: postgres
+      DJANGO_DATABASE_PORT: "5432"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    volumes:
+      - ./core/backend:/code/core/backend
+      - ./composer:/code/composer
+      - ./plugin-api/python:/code/plugin-api/python
+      - ./plugins/auth-oidc/backend:/code/plugins/auth-oidc/backend
+      - ./plugins/standard-catalog/backend:/code/plugins/standard-catalog/backend
+      - ./plugins/apis/backend:/code/plugins/apis/backend
+      - ./plugins/c4/backend:/code/plugins/c4/backend
+      - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
+      - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
+      - ./plugins/flows/backend:/code/plugins/flows/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [database]
+
+  backend:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: development
+    env_file: ./core/backend/.env
+    environment: *development-environment
+    volumes:
+      - ./core/backend:/code/core/backend
+      - ./composer:/code/composer
+      - ./plugin-api/python:/code/plugin-api/python
+      - ./plugins/auth-oidc/backend:/code/plugins/auth-oidc/backend
+      - ./plugins/standard-catalog/backend:/code/plugins/standard-catalog/backend
+      - ./plugins/apis/backend:/code/plugins/apis/backend
+      - ./plugins/c4/backend:/code/plugins/c4/backend
+      - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
+      - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
+      - ./plugins/flows/backend:/code/plugins/flows/backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh /code/core/backend/docker/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [application, database]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: core/frontend/Dockerfile
+      target: development
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    volumes:
+      - ./core/frontend:/app/core/frontend
+      - ./plugin-api/typescript:/app/plugin-api/typescript
+      - ./plugins/standard-catalog/frontend:/app/plugins/standard-catalog/frontend
+      - ./plugins/apis/frontend:/app/plugins/apis/frontend
+      - ./plugins/c4/frontend:/app/plugins/c4/frontend
+      - ./plugins/database-schema/frontend:/app/plugins/database-schema/frontend
+      - ./plugins/flows/frontend:/app/plugins/flows/frontend
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [application]
+
+  ingestor:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: development
+    env_file: ./core/backend/.env
+    environment: *development-environment
+    command: ["python", "manage.py", "runapscheduler"]
+    volumes:
+      - ./core/backend:/code/core/backend
+      - ./composer:/code/composer
+      - ./plugin-api/python:/code/plugin-api/python
+      - ./plugins/auth-oidc/backend:/code/plugins/auth-oidc/backend
+      - ./plugins/standard-catalog/backend:/code/plugins/standard-catalog/backend
+      - ./plugins/apis/backend:/code/plugins/apis/backend
+      - ./plugins/c4/backend:/code/plugins/c4/backend
+      - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
+      - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
+      - ./plugins/flows/backend:/code/plugins/flows/backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [database]
+
+networks:
+  application:
+  database:
+
+volumes:
+  postgres-data-dev:
+  frontend-node-modules:

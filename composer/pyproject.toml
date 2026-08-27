@@ -1,0 +1,21 @@
+[project]
+name = "atlas-composer"
+description = "Atlas distribution composer: resolves a deployment manifest to a lock file and generates Core's INSTALLED_APPS and frontend plugin composition"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "atlas_composer" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+pydantic = "^2.13"
+pyyaml = "^6.0"
+atlas-plugin-api-python = { path = "../plugin-api/python", develop = true }
+
+[tool.poetry.scripts]
+atlas-compose = "atlas_composer.cli:main"

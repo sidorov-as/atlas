@@ -1,0 +1,9 @@
+id: first-plugin-backend
+pages:
+  - plugin-development/tutorial.md
+files:
+  - atlas_plugin_hello/plugin.py
+  - tests/test_plugin.py
+validation:
+  working-directory: core/backend
+  command: poetry run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests -q

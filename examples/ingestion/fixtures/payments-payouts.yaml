@@ -1,0 +1,109 @@
+apiVersion: atlas/v1alpha1
+kind: System
+metadata:
+  name: payments-payouts
+  title: Payments & Payouts
+  description: Charges guests and pays out hosts.
+spec:
+  owner: group:payments-team
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: payments-db
+  title: Payments DB
+  description: Stores payment attempts, authorization outcomes, and settlement state.
+spec:
+  type: database
+  owner: group:payments-team
+  system: system:payments-payouts
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: ledger-db
+  title: Ledger DB
+  description: Records immutable financial entries used to reconcile host payouts.
+spec:
+  type: database
+  owner: group:payments-team
+  system: system:payments-payouts
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: payout-events-queue
+  title: Payout Events Queue
+  description: Distributes payout status changes to finance and notification consumers.
+spec:
+  type: queue
+  owner: group:payments-team
+  system: system:payments-payouts
+---
+apiVersion: atlas/v1alpha1
+kind: API
+metadata:
+  name: payments-api
+  title: Payments API
+  description: Initiates and tracks guest payment collection.
+  tags: [Python, FastAPI, REST]
+spec:
+  type: openapi
+  owner: group:payments-team
+  system: system:payments-payouts
+---
+apiVersion: atlas/v1alpha1
+kind: API
+metadata:
+  name: payout-api
+  title: Payout API
+  description: Creates and tracks host payout instructions.
+  tags: [Python, FastAPI, REST]
+spec:
+  type: openapi
+  owner: group:payments-team
+  system: system:payments-payouts
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: payment-service
+  title: Payment Service
+  description: Collects guest payments and records their processing outcome.
+  tags: [Python, FastAPI, PostgreSQL, Stripe]
+spec:
+  type: service
+  lifecycle: production
+  owner: group:payments-team
+  system: system:payments-payouts
+  providesApis: [api:payments-api]
+  dependsOn: [resource:payments-db]
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: payout-service
+  title: Payout Service
+  description: Calculates host earnings, tax withholding, and payout instructions.
+  tags: [Python, FastAPI, PostgreSQL, Stripe]
+spec:
+  type: service
+  lifecycle: production
+  owner: group:payments-team
+  system: system:payments-payouts
+  providesApis: [api:payout-api]
+  dependsOn: [resource:ledger-db, resource:payout-events-queue]
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: ledger-worker
+  title: Ledger Worker
+  description: Posts reconciled financial events to the payout ledger.
+  tags: [Python, Celery, PostgreSQL]
+spec:
+  type: worker
+  lifecycle: production
+  owner: group:payments-team
+  system: system:payments-payouts
+  dependsOn: [resource:ledger-db]

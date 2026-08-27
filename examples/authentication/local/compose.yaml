@@ -1,0 +1,97 @@
+name: atlas-auth-local
+
+x-backend-environment: &backend-environment
+  DJANGO_ENV: development
+  DJANGO_SETTINGS_MODULE: server.settings
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?copy .env.example to .env}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
+  DJANGO_DATABASE_HOST: postgres
+  DJANGO_DATABASE_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-atlas_local_example}
+  POSTGRES_USER: ${POSTGRES_USER:-atlas_local_example}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+
+x-backend-build: &backend-build
+  context: ../../..
+  dockerfile: core/backend/Dockerfile
+  target: development
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_local_example}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas_local_example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    volumes:
+      - local-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [database]
+
+  initializer:
+    build: *backend-build
+    environment:
+      <<: *backend-environment
+      ATLAS_BOOTSTRAP_USERNAME: ${ATLAS_BOOTSTRAP_USERNAME:-local-admin}
+      ATLAS_BOOTSTRAP_EMAIL: ${ATLAS_BOOTSTRAP_EMAIL:-local-admin@example.test}
+      ATLAS_BOOTSTRAP_GROUP: ${ATLAS_BOOTSTRAP_GROUP:-local-platform}
+      ATLAS_BOOTSTRAP_PASSWORD: ${ATLAS_BOOTSTRAP_PASSWORD:?copy .env.example to .env}
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        python manage.py migrate --noinput &&
+        python manage.py seed_admin
+        --username "$$ATLAS_BOOTSTRAP_USERNAME"
+        --email "$$ATLAS_BOOTSTRAP_EMAIL"
+        --group "$$ATLAS_BOOTSTRAP_GROUP"
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [database]
+    restart: "no"
+
+  backend:
+    build: *backend-build
+    environment: *backend-environment
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh /code/core/backend/docker/healthcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [application, database]
+
+  frontend:
+    build:
+      context: ../../..
+      dockerfile: core/frontend/Dockerfile
+      target: development
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    ports:
+      - "${ATLAS_PORT:-18080}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [application]
+
+networks:
+  application:
+  database:
+    internal: true
+
+volumes:
+  local-postgres-data:

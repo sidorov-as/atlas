@@ -1,0 +1,13 @@
+{$DOMAIN_NAME:localhost} {
+    encode gzip
+    header -Server
+    handle /static/* {
+        root * /var/www/django/static
+        file_server
+    }
+    handle /media/* {
+        root * /var/www/django/media
+        file_server
+    }
+    reverse_proxy web:8000
+}

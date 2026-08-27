@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/dist
+npm-debug.log
+core/backend/.venv
+core/backend/uv.lock
+core/backend/__pycache__
+core/backend/**/__pycache__
+core/backend/**/*.pyc
+core/backend/.env
+core/backend/staticfiles
+core/backend/*.sqlite3

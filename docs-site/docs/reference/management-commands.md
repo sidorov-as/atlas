@@ -1,0 +1,48 @@
+---
+title: Management commands
+description: Supported Atlas management commands, their prerequisites, and their effects.
+audience: [operator, contributor]
+page-type: reference
+---
+
+# Management commands
+
+Run commands from `core/backend` through Poetry in an initialized backend
+environment.
+
+| Command | Purpose and prerequisite | Side effect |
+| --- | --- | --- |
+| `ATLAS_BOOTSTRAP_PASSWORD=... poetry run python manage.py seed_admin` | Idempotently create or update the first local administrator, linked Actor, and owner Group. Use the environment or `--password-stdin`; never pass the secret as an argument. | Validates and updates the exact bootstrap account and catalog linkage. |
+| `poetry run python manage.py seed_booking_demo` | Create the reproducible demo catalog. Add `--yes` only for an intentional non-interactive run. | **Destructive:** flushes the database before seeding. |
+| `poetry run python manage.py check_migration_boundaries` | Check selected plugin migration ownership. | Read-only; fails on a sibling-plugin dependency. |
+| `poetry run python manage.py purge_plugin <id>` | Preview model tables and row counts for a selected plugin. | Read-only dry run. |
+| `poetry run python manage.py purge_plugin <id> --confirm` | Delete the displayed scoped rows while the plugin remains selected. | **Irreversible:** transactional data deletion. |
+| `poetry run python manage.py clear_read_only <exact-username> --reason <reason>` | Preview infrastructure recovery for an account restriction. Requires an exact target and non-blank audit reason. | Read-only dry run. |
+| `poetry run python manage.py clear_read_only <exact-username> --reason <reason> --confirm` | Apply the reviewed recovery when no writable authorized administrator remains. | Transactionally changes `AccountAccess` and writes an infrastructure-recovery audit record. |
+| `poetry run python manage.py classify_membership_grant <grant-id> --as-manual --reason <reason>` | Preview acknowledgement of one reviewed legacy grant as intentionally retained manual access. | Read-only dry run. |
+| `poetry run python manage.py classify_membership_grant <grant-id> --as-manual --reason <reason> --apply` | Apply that acknowledgement before enabling exact synchronization. | Clears the legacy-unclassified marker and writes an immutable audit record. |
+| `poetry run python manage.py classify_membership_grant <grant-id> --identity-link-id <link-id> --external-key <key> --reason <reason> [--apply]` | Preview, or with `--apply` transfer, one reviewed legacy grant to an exact external identity link. | Apply removes the manual provenance in place (or deduplicates it), records provider provenance and freshness, and writes an immutable audit record. |
+| `poetry run python manage.py check_membership_grants` | List exact identifiers for legacy-unclassified grants before enabling exact synchronization. | Read-only; exits unsuccessfully until every legacy grant has been classified or explicitly retained. |
+| `poetry run python manage.py manage_auth_identity inspect --provider <id> --source <source> [--subject <subject>] [--principal-id <id>]` | Inspect links with exact provider/source filters. | Read-only. |
+| `poetry run python manage.py manage_auth_identity link --provider <id> --source <source> --subject <subject> --principal-id <id> --reason <reason> [--operator-id <id>] [--privileged-target] [--apply]` | Preview or create one exact preprovisioned link. Administrative targets require `--privileged-target`. | Dry run unless `--apply`; apply is audited. |
+| `poetry run python manage.py manage_auth_identity revoke|restore --provider <id> --source <source> --subject <subject> --reason <reason> [--operator-id <id>] [--apply]` | Preview or change one exact link. | Revoke invalidates link grants and sessions; restore does not resurrect grants. |
+| `poetry run python manage.py manage_auth_identity source-migrate --provider <id> --source <old> --to-source <new> --subject <subject> --reason <reason> [--operator-id <id>] [--apply]` | Preview or migrate verified links to a new immutable source after collision checks. | Apply revokes the old binding generation and records audited source changes. |
+
+The `seed_flow_layout_tests` command is a development fixture and is not an
+operator recovery procedure. For backup and restore, see [data
+safety](../operating-atlas/data-safety.md). For lifecycle procedures, see
+[plugin lifecycle](../operating-atlas/plugin-lifecycle.md). For command output,
+authorization, and verification, follow [Manage read-only
+accounts](../operating-atlas/read-only-accounts.md#recover-when-every-writable-operator-is-locked-out).
+
+Legacy membership classification never infers ownership from group names or
+claims. Review exact grant and identity-link identifiers first. Before enabling
+exact synchronization, classify every legacy-unclassified grant or explicitly
+retain it with `--as-manual`; otherwise diagnostics must be treated as a failed
+activation check. Reversing the membership migration preserves one currently
+effective Actor/Group pair but loses source provenance, confirmation time, and
+expiry metadata.
+
+Identity mutations require `--subject` and a non-empty reason. Run the default
+dry run first, record the exact identifiers and counts, and add `--apply` only
+after review. See the [migration and revocation runbook](../operating-atlas/authentication-migration.md).

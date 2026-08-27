@@ -1,0 +1,28 @@
+/* Near-viewport full-screen sizing for CompactDependencyGraph's Dialog
+   Dialog's built-in `maxWidth` tops out at 'l' with
+   no fullscreen tier, so size is set explicitly via these CSS custom
+   properties instead. */
+.compact-dependency-graph-modal {
+  --g-modal-width: 92vw;
+  --g-modal-height: 92vh;
+  --g-modal-max-width: 92vw;
+  --g-modal-max-height: 92vh;
+}
+
+.compact-dependency-graph-dialog {
+  --g-dialog-width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.compact-dependency-graph-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.compact-dependency-graph-dialog-body > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}

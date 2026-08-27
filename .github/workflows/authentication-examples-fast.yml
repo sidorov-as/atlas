@@ -1,0 +1,80 @@
+name: Authentication examples fast validation
+
+on:
+  pull_request:
+    paths:
+      - "examples/authentication/**"
+      - "composer/atlas_composer/**"
+      - "plugin-api/python/**"
+      - "plugins/auth-*/**"
+      - "core/backend/server/apps/plugins/tests/test_import_boundaries.py"
+      - "docs-site/docs/**"
+      - "docs-site/scripts/**"
+      - ".github/actions/setup-python-env/action.yml"
+      - ".github/workflows/authentication-examples-fast.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "examples/authentication/**"
+      - "composer/atlas_composer/**"
+      - "plugin-api/python/**"
+      - "plugins/auth-*/**"
+      - "docs-site/docs/**"
+      - "docs-site/scripts/**"
+      - ".github/workflows/authentication-examples-fast.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authentication-examples-fast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up composer validation environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13.13"
+          working-directory: composer
+
+      - name: Parse YAML, JSON, environment, script, and provider fixtures
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py syntax
+
+      - name: Validate manifest and lock schemas
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py schemas
+
+      - name: Validate documented example commands
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py docs
+
+      - name: Enforce custom provider import boundaries
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py imports
+
+      - name: Scan examples for non-fixture secrets
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py secrets
+
+      - name: Render every Compose project
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py compose
+
+      - name: Set up documentation validation environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          working-directory: docs-site
+
+      - name: Validate documentation source contracts and links
+        working-directory: docs-site
+        run: |
+          uv run python -m unittest scripts/test_validate_docs.py
+          uv run python scripts/validate_docs.py

@@ -1,0 +1,32 @@
+[project]
+name = "atlas-plugin-auth-gitea"
+description = "First-party Atlas Gitea OAuth2 authentication provider"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project.entry-points."atlas.plugins"]
+"atlas.auth.gitea" = "atlas_plugin_auth_gitea.plugin:PLUGIN"
+
+[tool.poetry]
+packages = [{ include = "atlas_plugin_auth_gitea" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
+django = ">=6.1,<6.2"
+django-allauth = { version = "==65.19.1", extras = ["socialaccount"] }
+requests = "^2.34"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.1"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]

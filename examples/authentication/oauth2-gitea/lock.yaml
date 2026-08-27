@@ -1,0 +1,114 @@
+distribution: atlas.example.auth.oauth2-gitea@2026.09
+core: 0.1.0
+plugins:
+  atlas.auth.gitea@0.1.0:
+    backend:
+      package: atlas-plugin-auth-gitea
+      version: 0.1.0
+      hash: sha256:0be6499196c9bc103e302c38b239419eb12b395a8aaf0571ab2e147ff0a9b6cd
+    config:
+      instanceOrigin: http://gitea.localhost:18082
+      clientId: generated-by-runtime-bootstrap
+      clientSecret:
+        fromEnv: GITEA_CLIENT_SECRET
+      scopes:
+      - read:user
+      oauthPkceEnabled: true
+      allowedDestinations:
+      - http://gitea.localhost:18082
+      allowDevelopmentHttp: true
+  atlas.standard-catalog@0.1.0:
+    backend:
+      package: atlas-plugin-standard-catalog
+      version: 0.1.0
+      hash: sha256:7e0228444548b62a3bdaf07d91225e0b0ee9dbb7f030ed81066d904f4eb7c8df
+    frontend:
+      package: '@atlas/plugin-standard-catalog'
+      version: 0.1.0
+      integrity: sha512-Qo/Vj1eG+LNS9dAYjAduJ77VSUdWubAAX9ljZzcagdHt/N8dnP8RxMbOZm9MPM/VAXobXXvus/Cmwg0JXstbmg==
+  atlas.apis@0.1.0:
+    backend:
+      package: atlas-plugin-apis
+      version: 0.1.0
+      hash: sha256:955d5bb5127084accf73e7eae5d1f33c2d622d077445b0f8f80c7c12fe705067
+    frontend:
+      package: '@atlas/plugin-apis'
+      version: 0.1.0
+      integrity: sha512-tB22/Gp8R9sFJ0nFfAxceFp5Osj/BpT1gAsYM3CgeMI5oxBBiOnZYT4pzPFK512l971RSoi49txySt4paII87A==
+  atlas.c4@0.1.0:
+    backend:
+      package: atlas-plugin-c4
+      version: 0.1.0
+      hash: sha256:a9c30bf93d0884bbdbb5e7be419d17212690e5b6b8b6d18b22a67bdf01712887
+    frontend:
+      package: '@atlas/plugin-c4'
+      version: 0.1.0
+      integrity: sha512-aF48ZCZAO2Lq/SyHo70ddy4Zkoe2JUtvkddDqK4djUnRNor/z0RgJAykpoCD4cwjSb68I9wNZyP7DLnndZ9MVw==
+  atlas.database-schema@0.1.0:
+    backend:
+      package: atlas-plugin-database-schema
+      version: 0.1.0
+      hash: sha256:3a94efd0e716aa007d63edf29914db11199cc7e83e8cb45a76de56cda79a52a5
+    frontend:
+      package: '@atlas/plugin-database-schema'
+      version: 0.1.0
+      integrity: sha512-OyFMOvdI+iNI7J+am/k2KMpLxw1DvHkpxVuWwpepowRKbMW1Pj6iLD9v06XHBzsKWAvUU27JRgXCS4FY28aqHw==
+  atlas.ingestion@0.1.0:
+    backend:
+      package: atlas-plugin-ingestion
+      version: 0.1.0
+      hash: sha256:dd2f579c789a88c33bc3bac7389ae0d749355d5dcfa0e6a68eba6d9d2fe4aab3
+  atlas.flows@0.1.0:
+    backend:
+      package: atlas-plugin-flows
+      version: 0.1.0
+      hash: sha256:57c0ce58bdadb14e63f6cd916d28ab42f3f654ef327e5d2eeb6ef3b7eab3e1d4
+    frontend:
+      package: '@atlas/plugin-flows'
+      version: 0.1.0
+      integrity: sha512-+AlL3mTlCzYNw5X2Facj3YnjtWmWHY06blvk9F7ysGkwpQD4GZbHhbeaQNOc+uq7h4uJV+i6hzx2NZNZ7Rb6uA==
+auth:
+  providers:
+  - id: atlas.auth.gitea
+    owner: atlas.auth.gitea
+    contractVersion: atlas.auth.providers.v1
+    flowKind: redirect
+    remoteLogout: unsupported
+    presentation:
+      displayName: Gitea
+      credentialFields: []
+    signup: disabled
+    principalProvisioning: automatic
+    actorProvisioning: automatic
+    profileFields:
+    - username
+    - displayName
+    groupSync:
+      mode: none
+      snapshotRequirement: unsupported
+      maxAgeSeconds: 28800
+      mappings: {}
+    restrictedAttributes: []
+    sourceBinding:
+      sourceId: http://gitea.localhost:18082
+      configurationFingerprint: atlas-example-gitea-1.27.3-v1
+  default: atlas.auth.gitea
+  sessionMaxAgeSeconds: 28800
+  publicOrigin: http://localhost:18080
+  trustedProxyAddresses: []
+  adminPassword:
+    mode: disabled
+    principalIds: []
+  outboundTrust:
+    allowedDestinations:
+    - http://gitea.localhost:18082
+    allowDevelopmentHttp: true
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+    verifiedAddressesRequired: true
+    tokenMaxAgeSeconds: 3600

@@ -1,0 +1,164 @@
+[project]
+site_name = "Atlas"
+site_url = "https://sidorov-as.github.io/atlas/"
+site_description = "An extensible software catalog: deployment, configuration, and plugin development guide"
+repo_url = "https://github.com/sidorov-as/atlas"
+repo_name = "sidorov-as/atlas"
+edit_uri = "edit/main/docs-site/docs/"
+
+nav = [
+  { "Overview" = "overview/index.md" },
+  { "Getting Started" = [
+      { "Overview" = "getting-started/index.md" },
+      { "Run Atlas locally" = "getting-started/development.md" },
+      { "Tour the demo catalog" = "getting-started/catalog-tour.md" },
+  ] },
+  { "Using Atlas" = [
+      { "Overview" = "using-atlas/index.md" },
+      { "Browse the catalog" = "using-atlas/browse-catalog.md" },
+      { "Inspect entity details" = "using-atlas/inspect-entity-details.md" },
+      { "Create or edit entities" = "using-atlas/create-edit-entities.md" },
+      { "Choose the correct workflow" = "using-atlas/choose-entity-workflow.md" },
+      { "Register and ingest a repository" = "using-atlas/ingest-repository.md" },
+      { "Troubleshoot repository ingestion" = "using-atlas/troubleshoot-ingestion.md" },
+      { "Manage an entity lifecycle" = "using-atlas/manage-entity-lifecycle.md" },
+      { "Use feature-specific views" = "using-atlas/use-feature-views.md" },
+  ] },
+  { "Operating Atlas" = [
+      { "Overview" = "operating-atlas/index.md" },
+      { "Supported topologies" = "deployment/index.md" },
+      { "Development topology" = "deployment/development.md" },
+      { "Production-like topology" = "deployment/production.md" },
+      { "Choose authentication" = "operating-atlas/authentication.md" },
+      { "Local authentication" = "operating-atlas/local-authentication.md" },
+      { "OIDC authentication" = "operating-atlas/oidc-authentication.md" },
+      { "Gitea OAuth2 authentication" = "operating-atlas/gitea-authentication.md" },
+      { "Principal and Actor provisioning" = "operating-atlas/identity-provisioning.md" },
+      { "Group reconciliation" = "operating-atlas/group-reconciliation.md" },
+      { "Authentication security" = "operating-atlas/authentication-security.md" },
+      { "Authentication migration" = "operating-atlas/authentication-migration.md" },
+      { "Read-only accounts" = "operating-atlas/read-only-accounts.md" },
+      { "Assembling a distribution" = "configuration/distributions.md" },
+      { "Fix composition errors" = "operating-atlas/composition-errors.md" },
+      { "Change plugin lifecycle" = "operating-atlas/plugin-lifecycle.md" },
+      { "Database changes and data safety" = "operating-atlas/data-safety.md" },
+      { "Upgrade" = "operating-atlas/upgrade.md" },
+      { "Operations" = "deployment/operations.md" },
+      { "Troubleshooting" = "deployment/troubleshooting.md" },
+  ] },
+  { "Features & Integrations" = [
+      { "Overview" = "features/index.md" },
+      { "Standard Catalog" = "features/standard-catalog.md" },
+      { "APIs" = "features/apis.md" },
+      { "C4" = "features/c4.md" },
+      { "Database Schema" = "features/database-schema.md" },
+      { "Ingestion" = "features/ingestion.md" },
+      { "Flows" = "features/flows.md" },
+      { "Git connector" = "features/git-connector.md" },
+  ] },
+  { "Concepts & Architecture" = [
+      { "Overview" = "concepts/index.md" },
+      { "Domain glossary" = "concepts/glossary.md" },
+      { "Entity model" = "concepts/entity-model.md" },
+      { "Entity references" = "concepts/entity-references.md" },
+      { "Life of an entity" = "concepts/life-of-an-entity.md" },
+      { "Auth and identity" = "concepts/auth-and-identity.md" },
+      { "Permissions" = "concepts/permissions.md" },
+      { "System shape" = "concepts/system-shape.md" },
+      { "Architectural principles" = "concepts/principles.md" },
+  ] },
+  { "Plugin Development" = [
+      { "Overview" = "plugin-development/index.md" },
+      { "Choose an extension mechanism" = "plugin-development/choose-an-extension.md" },
+      { "Choose a plugin layout" = "plugin-development/plugin-layouts.md" },
+      { "Build your first plugin" = "plugin-development/tutorial.md" },
+      { "Frontend contributions" = "plugin-development/extension-points.md" },
+      { "Entity kinds & facets" = "plugin-development/entity-kinds-and-facets.md" },
+      { "Backend collaboration" = "plugin-development/backend-collaboration.md" },
+      { "Plugin configuration" = "plugin-development/plugin-configuration.md" },
+      { "Authentication provider SDK" = "plugin-development/authentication-provider-sdk.md" },
+      { "Plugin permissions" = "plugin-development/permissions.md" },
+      { "Models, migrations, and jobs" = "plugin-development/models-migrations-and-jobs.md" },
+      { "Test a plugin" = "plugin-development/testing.md" },
+      { "Debug a plugin" = "plugin-development/debugging.md" },
+      { "Compatibility and lifecycle" = "plugin-development/compatibility-and-lifecycle.md" },
+      { "Plugin API reference" = "plugin-development/reference.md" },
+  ] },
+  { "Reference" = [
+      { "Overview" = "reference/index.md" },
+      { "catalog-info.yaml" = "concepts/catalog-info-yaml.md" },
+      { "Distribution manifest and lock" = "reference/distribution-manifest.md" },
+      { "Built-in registries" = "reference/registries.md" },
+      { "Management commands" = "reference/management-commands.md" },
+      { "Authentication routes" = "reference/authentication.md" },
+      { "Environment variables" = "configuration/environment-variables.md" },
+      { "Catalog branding" = "configuration/catalog-branding.md" },
+      { "Plugin API contract" = "plugin-development/reference.md" },
+      { "HTTP API" = "api-reference/index.md" },
+  ] },
+  { "Project" = [
+      { "Overview" = "project/index.md" },
+      { "Contributing" = "contributing/index.md" },
+      { "Changelog, versioning, and support" = "project/changelog.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.annotate",
+  "content.code.copy",
+  "content.tabs.link",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+logo = "assets/atlas-logo.svg"
+favicon = "assets/favicon.ico"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+toc.permalink = true
+pymdownx.betterem = {}
+pymdownx.details = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.magiclink = {}
+pymdownx.smartsymbols = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tasklist.custom_checkbox = true

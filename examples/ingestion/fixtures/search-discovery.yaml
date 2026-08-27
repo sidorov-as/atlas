@@ -1,0 +1,71 @@
+apiVersion: atlas/v1alpha1
+kind: System
+metadata:
+  name: search-discovery
+  title: Search & Discovery
+  description: Query, rank, and serve available listings to guests.
+spec:
+  owner: group:search-team
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: search-index
+  title: Search Index
+  description: Indexes listing attributes and availability signals for low-latency search.
+spec:
+  type: cluster
+  owner: group:search-team
+  system: system:search-discovery
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: availability-cache
+  title: Availability Cache
+  description: Caches short-lived availability responses to keep guest searches responsive.
+spec:
+  type: cache
+  owner: group:search-team
+  system: system:search-discovery
+---
+apiVersion: atlas/v1alpha1
+kind: API
+metadata:
+  name: search-api
+  title: Search API
+  description: Serves listing search and discovery results to guest-facing clients.
+  tags: [Python, Django, REST]
+spec:
+  type: openapi
+  owner: group:search-team
+  system: system:search-discovery
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: search-service
+  title: Search Service
+  description: Executes guest listing queries against the search index and availability cache.
+  tags: [Python, Django, Elasticsearch, Redis]
+spec:
+  type: service
+  lifecycle: production
+  owner: group:search-team
+  system: system:search-discovery
+  providesApis: [api:search-api]
+  dependsOn: [resource:search-index, resource:availability-cache]
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: ranking-worker
+  title: Ranking Worker
+  description: Computes ranking signals used to order search results.
+  tags: [Python, Celery, Machine Learning]
+spec:
+  type: worker
+  lifecycle: experimental
+  owner: group:search-team
+  system: system:search-discovery
+  dependsOn: [resource:search-index]

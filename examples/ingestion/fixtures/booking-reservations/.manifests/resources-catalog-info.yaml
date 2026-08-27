@@ -1,0 +1,24 @@
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: booking-db
+  title: Booking DB
+  description: Stores reservation state, guest and host commitments, and booking audit history.
+spec:
+  type: database
+  owner: group:booking-team
+  system: system:booking-reservations
+  databaseSchema:
+    dialect: postgresql
+    sourceSqlPath: db/schema.sql
+---
+apiVersion: atlas/v1alpha1
+kind: Resource
+metadata:
+  name: booking-events-queue
+  title: Booking Events Queue
+  description: Carries booking lifecycle events to asynchronous consumers.
+spec:
+  type: queue
+  owner: group:booking-team
+  system: system:booking-reservations

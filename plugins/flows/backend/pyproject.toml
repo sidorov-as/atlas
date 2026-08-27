@@ -1,0 +1,18 @@
+[project]
+name = "atlas-plugin-flows"
+description = "Atlas Flows plugin: hand-authored cross-system process documentation and its CRUD API"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "atlas_plugin_flows" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
+django = ">=6.1,<6.2"
+django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }

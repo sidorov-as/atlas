@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before running the production stack}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [database]
+
+  initializer:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: production
+      args:
+        DJANGO_ENV: production
+    env_file: ./core/backend/.env
+    environment: &production-environment
+      DJANGO_ENV: production
+      DJANGO_SETTINGS_MODULE: server.settings
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8080}
+      DJANGO_DATABASE_HOST: postgres
+      DJANGO_DATABASE_PORT: "5432"
+      DJANGO_STATIC_ROOT: /var/www/django/static
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
+    command: ["/bin/sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    volumes:
+      - django-static:/var/www/django/static
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [database]
+
+  backend:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: production
+      args:
+        DJANGO_ENV: production
+    env_file: ./core/backend/.env
+    environment: *production-environment
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh /code/core/backend/docker/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [application, database]
+
+  ingestor:
+    build:
+      context: .
+      dockerfile: core/backend/Dockerfile
+      target: production
+      args:
+        DJANGO_ENV: production
+    env_file: ./core/backend/.env
+    environment: *production-environment
+    command: ["python", "manage.py", "runapscheduler"]
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    networks: [database]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: core/frontend/Dockerfile
+      target: production
+    volumes:
+      - django-static:/var/www/django/static:ro
+    ports:
+      - "${ATLAS_PORT:-8080}:80"
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+    networks: [application]
+
+networks:
+  application:
+  database:
+    internal: true
+
+volumes:
+  postgres-data:
+  django-static:

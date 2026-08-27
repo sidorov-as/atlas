@@ -1,0 +1,96 @@
+# Atlas's own official default distribution: one particular manifest, selecting every first-party plugin from this
+# program, built through the same composer an external operator would use — no longer a
+# special hard-coded build.
+#
+# `source: workspace` for every artifact: this manifest builds against the monorepo's own
+# packages (via `core/backend/poetry.lock` and the root `package-lock.json`), not a
+# published registry — the only source `resolver.py` currently resolves.
+#
+# Plugin order matches the pre-composer `SELECTED_PLUGINS`/`installedFrontendPlugins`
+# ordering it replaces (`server/settings/selected_plugins.py`,
+# `core/frontend/src/plugins/composition.ts`), so composer-generated output is a like-for-
+# like replacement, not a behavior change.
+
+distribution:
+  id: atlas.default
+  version: "2026.09"
+
+core:
+  version: 0.1.0
+
+auth:
+  publicOrigin: http://localhost:8000
+  trustedProxyAddresses: []
+  sessionMaxAgeSeconds: 28800
+  adminPassword:
+    mode: disabled
+  outboundTrust:
+    allowedDestinations: []
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+  providers:
+    - id: atlas.auth.local
+      signup: disabled
+      principalProvisioning: preprovisioned
+      actorProvisioning: manual
+      profileFields: []
+      groupSync:
+        mode: none
+  default: atlas.auth.local
+
+plugins:
+  - id: atlas.standard-catalog
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-standard-catalog
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-standard-catalog"
+      source: workspace
+
+  - id: atlas.apis
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-apis
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-apis"
+      source: workspace
+
+  - id: atlas.c4
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-c4
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-c4"
+      source: workspace
+
+  - id: atlas.database-schema
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-database-schema
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-database-schema"
+      source: workspace
+
+  - id: atlas.ingestion
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-ingestion
+      source: workspace
+
+  - id: atlas.flows
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-flows
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-flows"
+      source: workspace

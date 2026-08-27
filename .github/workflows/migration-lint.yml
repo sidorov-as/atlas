@@ -1,0 +1,55 @@
+name: Migration lint
+
+# A destructive migration
+# (dropped column/table, non-nullable-without-default addition) must be
+# blocked by CI unless explicitly marked maintenance-mode, and a plugin's
+# migrations may declare `dependencies` only on Core and its own history.
+# Both checks only need Django's app registry and each migration's source
+# file — no database connection is required to run them.
+
+on:
+  pull_request:
+    paths:
+      - "core/backend/**/migrations/**"
+      - "plugins/*/backend/**/migrations/**"
+      - "**/plugin.py"
+      - ".github/workflows/migration-lint.yml"
+  workflow_dispatch: {}
+
+jobs:
+  lint-migrations:
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: server.settings
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin "${{ github.base_ref }}"
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13.13"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        working-directory: core/backend
+        run: poetry install
+
+      - name: Block destructive migrations outside maintenance mode
+        working-directory: core/backend
+        # `check-migrations` (the console script) doesn't add the cwd to
+        # sys.path, so `server.settings` can't be imported from it; `-m`
+        # does (matching how `manage.py`/pytest-django resolve it too).
+        run: >
+          poetry run python -m django_safe_migrations.cli
+          --diff "origin/${{ github.base_ref }}"
+          --format=github
+
+      - name: Check cross-plugin migration dependencies
+        working-directory: core/backend
+        run: poetry run python manage.py check_migration_boundaries

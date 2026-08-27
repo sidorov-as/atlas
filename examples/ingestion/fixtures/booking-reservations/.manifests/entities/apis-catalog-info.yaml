@@ -1,0 +1,23 @@
+apiVersion: atlas/v1alpha1
+kind: API
+metadata:
+  name: booking-api
+  title: Booking API
+  description: Creates, confirms, and cancels guest reservations.
+  tags: [Python, Django, REST]
+spec:
+  type: openapi
+  owner: group:booking-team
+  system: system:booking-reservations
+---
+apiVersion: atlas/v1alpha1
+kind: API
+metadata:
+  name: booking-events-api
+  title: Booking Events API
+  description: Publishes booking lifecycle events for downstream consumers.
+  tags: [Python, Kafka, AsyncAPI]
+spec:
+  type: asyncapi
+  owner: group:booking-team
+  system: system:booking-reservations

@@ -1,0 +1,170 @@
+name: atlas-auth-oauth2-gitea
+
+x-backend-environment: &backend-environment
+  DJANGO_ENV: development
+  DJANGO_SETTINGS_MODULE: server.settings
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?copy .env.example to .env}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
+  DJANGO_DATABASE_HOST: postgres
+  DJANGO_DATABASE_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-atlas_gitea_example}
+  POSTGRES_USER: ${POSTGRES_USER:-atlas_gitea_example}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+  GITEA_INSTANCE_ORIGIN: http://gitea.localhost:18082
+  GITEA_ALLOWED_DESTINATIONS: http://gitea.localhost:18082
+  GITEA_ALLOW_DEVELOPMENT_HTTP: "true"
+
+x-backend-build: &backend-build
+  context: ../../..
+  dockerfile: core/backend/Dockerfile
+  target: development
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_gitea_example}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas_gitea_example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    volumes:
+      - gitea-example-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [database]
+
+  gitea:
+    image: gitea/gitea:1.27.3
+    entrypoint: ["/bin/sh", "/bootstrap/start.sh"]
+    ports:
+      - "${GITEA_PORT:-18082}:18082"
+    volumes:
+      - ./gitea/app.ini:/bootstrap/app.ini:ro
+      - ./gitea/start.sh:/bootstrap/start.sh:ro
+      - gitea-example-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:18082/api/healthz | grep -q pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      identity:
+        aliases: [gitea.localhost]
+
+  gitea-users:
+    image: gitea/gitea:1.27.3
+    user: "1000:1000"
+    entrypoint: ["/bin/sh", "/bootstrap/bootstrap-users.sh"]
+    environment:
+      GITEA_ADMIN_USERNAME: ${GITEA_ADMIN_USERNAME:-gitea-example-admin}
+      GITEA_ADMIN_PASSWORD: ${GITEA_ADMIN_PASSWORD:?copy .env.example to .env}
+      GITEA_ADMIN_EMAIL: ${GITEA_ADMIN_EMAIL:-gitea-admin@example.invalid}
+      ATLAS_GITEA_TEST_USERNAME: ${ATLAS_GITEA_TEST_USERNAME:-gitea-alice}
+      ATLAS_GITEA_TEST_PASSWORD: ${ATLAS_GITEA_TEST_PASSWORD:?copy .env.example to .env}
+      ATLAS_GITEA_TEST_EMAIL: ${ATLAS_GITEA_TEST_EMAIL:-gitea-alice@example.invalid}
+    volumes:
+      - ./gitea/bootstrap-users.sh:/bootstrap/bootstrap-users.sh:ro
+      - gitea-example-data:/data
+    depends_on:
+      gitea:
+        condition: service_healthy
+    networks: [identity]
+    restart: "no"
+
+  oauth-bootstrap:
+    build: *backend-build
+    # `backend`/`initializer` run as non-root `appuser` (fix-ingestion-path-
+    # traversal), but this one-shot bootstrap needs root to create a file in
+    # `gitea-runtime-secrets` — a fresh named volume Docker mounts root-owned
+    # (see bootstrap_oauth.py, which chowns the file to `appuser` once it's
+    # written so the non-root readers below can still open it).
+    user: root
+    environment:
+      GITEA_INTERNAL_ORIGIN: http://gitea.localhost:18082
+      GITEA_ADMIN_USERNAME: ${GITEA_ADMIN_USERNAME:-gitea-example-admin}
+      GITEA_ADMIN_PASSWORD: ${GITEA_ADMIN_PASSWORD:?copy .env.example to .env}
+    command: ["python", "/bootstrap/bootstrap_oauth.py"]
+    volumes:
+      - ./gitea/bootstrap_oauth.py:/bootstrap/bootstrap_oauth.py:ro
+      - gitea-runtime-secrets:/run/atlas-auth
+    depends_on:
+      gitea-users:
+        condition: service_completed_successfully
+    networks: [identity]
+    restart: "no"
+
+  initializer:
+    build: *backend-build
+    environment: *backend-environment
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        . /run/atlas-auth/gitea.env;
+        export GITEA_CLIENT_ID GITEA_CLIENT_SECRET;
+        python manage.py migrate --noinput;
+        python manage.py shell < /example/bootstrap.py
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+      - ./bootstrap.py:/example/bootstrap.py:ro
+      - gitea-runtime-secrets:/run/atlas-auth:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oauth-bootstrap:
+        condition: service_completed_successfully
+    networks: [database, identity]
+    restart: "no"
+
+  backend:
+    build: *backend-build
+    environment: *backend-environment
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        . /run/atlas-auth/gitea.env;
+        export GITEA_CLIENT_ID GITEA_CLIENT_SECRET;
+        exec python -We -bb manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+      - gitea-runtime-secrets:/run/atlas-auth:ro
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh /code/core/backend/docker/healthcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [application, database, identity]
+
+  frontend:
+    build:
+      context: ../../..
+      dockerfile: core/frontend/Dockerfile
+      target: development
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    ports:
+      - "${ATLAS_PORT:-18080}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [application]
+
+networks:
+  application:
+  database:
+    internal: true
+  identity:
+
+volumes:
+  gitea-example-postgres-data:
+  gitea-example-data:
+  gitea-runtime-secrets:

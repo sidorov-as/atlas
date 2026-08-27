@@ -1,0 +1,19 @@
+[project]
+name = "atlas-plugin-api-python"
+description = "Atlas Plugin API (Python): the internal 0.x contract package for backend plugins — definitions, protocols, and value types only, no core implementation"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "atlas_plugin_api" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+pydantic = "^2.13"
+django = ">=6.1,<6.2"
+django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }
+requests = "^2.34"

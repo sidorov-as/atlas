@@ -1,0 +1,34 @@
+[project]
+name = "atlas-example-auth-fixture"
+description = "Development-only fixture credential provider for the Atlas authentication example"
+version = "0.1.0"
+requires-python = "==3.13.13"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project.entry-points."atlas.plugins"]
+"example.auth.fixture" = "atlas_example_auth_fixture.plugin:PLUGIN"
+
+[tool.poetry]
+packages = [{ include = "atlas_example_auth_fixture" }]
+
+[tool.poetry.dependencies]
+python = "==3.13.13"
+atlas-plugin-api-python = { path = "../../../../plugin-api/python", develop = true }
+pydantic = "^2.13"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.1"
+pytest-django = "^4.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]

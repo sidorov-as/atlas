@@ -1,0 +1,30 @@
+:80 {
+    encode zstd gzip
+    header -Server
+
+    handle /static/* {
+        root * /var/www/django/static
+        file_server
+    }
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    handle /_allauth/* {
+        reverse_proxy backend:8000
+    }
+    handle /admin/* {
+        reverse_proxy backend:8000
+    }
+    # `/healthz/plugins/`
+    # — first frontend-origin read of this ops health-check route; the
+    # Docker healthcheck curls the backend container directly and never
+    # needed this proxied.
+    handle /healthz/* {
+        reverse_proxy backend:8000
+    }
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
+}

@@ -1,0 +1,68 @@
+name: Frontend checks
+
+# No path filters, deliberately: this is meant to become a required status
+# check, and a required check that's skipped by
+# a path filter blocks merges on PRs that never trigger it. It runs on every
+# pull request and every push to main instead.
+
+on:
+  pull_request: {}
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Frontend test, build, and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        # npm workspaces: installs core/frontend, plugin-api/typescript, and
+        # every plugins/*/frontend package (none of which have their own
+        # scripts — they're exercised through core/frontend below).
+        run: npm ci
+
+      - name: Test
+        working-directory: core/frontend
+        # vite.config.ts's `test.include` already pulls in plugin-api/typescript's
+        # and every plugins/*/frontend's own tests alongside core/frontend's.
+        run: npm test -- --run
+
+      - name: Build
+        working-directory: core/frontend
+        # tsc -b and vite build both follow core/frontend's imports of the
+        # plugin frontend workspace packages transitively, so this
+        # type-checks and bundles them too.
+        run: npm run build
+
+      - name: Lint
+        working-directory: core/frontend
+        # Unlike vitest and the build, oxlint's default scope is only its own
+        # cwd — it doesn't follow imports or workspace config. Pass every
+        # sibling package's src/ explicitly (absolute paths: oxlint rejects
+        # ".."-relative ones) so this picks up what `npm run lint` alone
+        # would miss.
+        run: >-
+          npm run lint --
+          src
+          "${{ github.workspace }}/plugin-api/typescript/src"
+          "${{ github.workspace }}/plugins/standard-catalog/frontend/src"
+          "${{ github.workspace }}/plugins/apis/frontend/src"
+          "${{ github.workspace }}/plugins/c4/frontend/src"
+          "${{ github.workspace }}/plugins/database-schema/frontend/src"
+          "${{ github.workspace }}/plugins/flows/frontend/src"

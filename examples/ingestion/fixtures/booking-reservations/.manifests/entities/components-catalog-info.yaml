@@ -1,0 +1,49 @@
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: booking-service
+  title: Booking Service
+  description: Coordinates reservation state from availability checks through confirmation.
+  tags: [Python, Django, PostgreSQL, Kafka]
+spec:
+  type: service
+  lifecycle: production
+  owner: group:booking-team
+  system: system:booking-reservations
+  providesApis: [api:booking-api, api:booking-events-api]
+  consumesApis: [api:search-api, api:payments-api]
+  dependsOn: [resource:booking-db, resource:booking-events-queue]
+  relationships:
+    - target: component:payment-service
+      label: Calls for payment authorization
+      technology: REST/HTTPS
+      interactionKind: synchronous
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: booking-web
+  title: Booking Web
+  description: Presents the guest search, checkout, and reservation-management experience.
+  tags: [React, TypeScript, Vite]
+spec:
+  type: website
+  lifecycle: production
+  owner: group:booking-team
+  system: system:booking-reservations
+  consumesApis: [api:booking-api, api:search-api]
+---
+apiVersion: atlas/v1alpha1
+kind: Component
+metadata:
+  name: cancellation-worker
+  title: Cancellation Worker
+  description: Processes cancellation requests and coordinates applicable refunds.
+  tags: [Python, Celery, Kafka]
+spec:
+  type: worker
+  lifecycle: production
+  owner: group:booking-team
+  system: system:booking-reservations
+  consumesApis: [api:booking-api, api:payments-api]
+  dependsOn: [resource:booking-events-queue]

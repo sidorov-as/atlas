@@ -1,0 +1,207 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.entity-table-frame {
+  display: block;
+  width: 100%;
+  max-width: min(1440px, 100%);
+}
+
+/* Applies a tag's preset palette colors (set via a `.tag-preset-*` class from
+   tag-palette.css) as the Label's background and text, overriding the
+   `theme="clear"` default. */
+.tag-label.g-label {
+  background-color: var(--tag-bg);
+  color: var(--tag-fg);
+  box-shadow: none;
+}
+
+/* Typography for MarkdownDescription's react-markdown output, matching the
+   plain-text `<Text color="secondary">` look it replaced. */
+.markdown-description {
+  color: var(--g-color-text-secondary);
+  line-height: 1.5;
+}
+.markdown-description > :first-child {
+  margin-top: 0;
+}
+.markdown-description > :last-child {
+  margin-bottom: 0;
+}
+.markdown-description p,
+.markdown-description ul,
+.markdown-description ol,
+.markdown-description blockquote,
+.markdown-description pre {
+  margin: 0 0 8px;
+}
+.markdown-description ul,
+.markdown-description ol {
+  padding-left: 20px;
+}
+.markdown-description h1,
+.markdown-description h2,
+.markdown-description h3,
+.markdown-description h4 {
+  color: var(--g-color-text-primary);
+  margin: 16px 0 8px;
+}
+.markdown-description a {
+  color: var(--g-color-text-link);
+}
+.markdown-description code {
+  font-family: var(--g-font-family-monospace);
+  background: var(--g-color-base-misc-light);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.markdown-description pre {
+  background: var(--g-color-base-misc-light);
+  padding: 8px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+.markdown-description pre code {
+  background: none;
+  padding: 0;
+}
+.markdown-description blockquote {
+  margin-left: 0;
+  padding-left: 12px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-left: 2px solid var(--g-color-line-generic);
+  background: var(--g-color-base-misc-light);
+}
+.markdown-note {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--g-color-line-info);
+  border-left: 4px solid var(--g-color-line-info);
+  border-radius: var(--g-border-radius-m, 6px);
+  background: var(--g-color-base-info-light);
+  color: var(--g-color-text-primary);
+}
+.markdown-note__title {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--g-color-text-info-heavy);
+}
+.markdown-note > :last-child {
+  margin-bottom: 0;
+}
+
+/* AsideHeader's `logo` prop exposes no button-alignment prop, so center the
+   inner clickable row (its only child) through the documented `className`.
+   Tag qualifier bumps specificity above the library's same-specificity class,
+   since its stylesheet is injected after ours. */
+.app-shell-logo > a,
+.app-shell-logo > span {
+  justify-content: center;
+}
+
+/* The Logo's icon <img> is left at its default `display: inline`, wrapped in
+   a plain (non-flex) <span> — that leaves a baseline/descender gap below the
+   image, so the flex `align-items: center` on the icon-place row centers the
+   *span* while the visible image sits a few px too high inside it. `block`
+   removes the gap so the image's own box is what gets centered. */
+.app-shell-logo img {
+  display: block;
+}
+
+/* The library hardcodes the logo row at height:40px, which fit a single
+   text line but clips a two-line title+subtitle. Let it size to content —
+   the icon (iconSize) or the text block, whichever is taller. */
+.app-shell-logo {
+  height: auto;
+  min-height: 40px;
+}
+
+/* AsideHeader's Logo only supports a single-line `text`, so the subtitle
+   below "Atlas" is rendered via `text: () => ...` (Logo.js accepts a
+   function) instead of a plain string — see AppShell.tsx. */
+.app-shell-logo-subtitle {
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--g-color-text-secondary);
+}
+
+/* AsideHeader's internal `.gn-aside-header__header` wrapper hardcodes
+   padding-top:8px / padding-bottom:22px with no prop or token to reach it.
+   Anchor on our own `.app-shell-logo` (its only direct child) instead of the
+   library's hashed class, and keep the total padding (30px) unchanged so the
+   header height doesn't shift — just split evenly to center the logo. */
+div:has(> .app-shell-logo) {
+  padding-top: 10px;
+  padding-bottom: 25px;
+}
+
+/* FlowGraph's `@xyflow/react` canvas — the library
+   fills its parent, so this needs an explicit box. Node styling itself lives
+   in `FlowNodes.tsx`'s component-scoped styles. */
+.flow-graph {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-l, 8px);
+  overflow: hidden;
+}
+.flow-graph__zoom {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  z-index: 10;
+  transform: translate(0, -50%);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--g-border-radius-m, 6px);
+  overflow: hidden;
+  box-shadow: var(--g-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+.flow-graph__zoom .g-button {
+  border-radius: 0;
+}
+.flow-graph__zoom .g-button:not(:last-child) {
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+/* Editable-canvas node card header controls (`FlowNodes.tsx`'s `NodeDeleteButton`/add control) — always visible, not only on hover. */
+.flow-graph__node-delete,
+.flow-graph__node-add-next {
+  opacity: 1;
+}
+
+/* Read-only detail-page canvas (`FlowGraph.tsx`) and its SVG/PNG export
+   (`handleExport`, same DOM): every node card renders a target/source
+   `Handle` (`FlowNodes.tsx`'s `FlowNodeHandles`) so the editable canvas
+   (`FlowCanvasEditor.tsx`, which shares the `.flow-graph` class but never
+   gets this modifier) can start/end a connection drag from it. That
+   affordance has no purpose once dragging is disabled — viewing or exporting
+   a Flow diagram should show only the cards and their transition edges.
+   `visibility: hidden`, not `display: none` — React Flow measures each
+   Handle's own DOM position to anchor its edges (`FlowNodeHandles`'s
+   comment/`AddPlaceholderNodeComponent`'s hidden target Handle rely on the
+   same distinction); `display: none` removes it from layout entirely, so
+   edges lost their anchor and disappeared along with the dots. */
+.flow-graph--readonly .react-flow__handle {
+  visibility: hidden;
+}
+
+/* FlowStepModal's shared entity/query/event lookup `Select`s (`LookupOptionRow.tsx`'s
+   `lookupSelectLoadingProps`). Gravity UI's `Select` popup has
+   no built-in cap on its height relative to available viewport space — it sizes itself to
+   the full option list. The two-line `LookupOptionRow` rows (56px, vs. the ~28px single-line
+   rows this replaced for the entity_ref field) roughly double that height, which was
+   pushing the popup past the room below the field often enough that `flip` repositioned it
+   above the field instead — and, still uncapped, it then rendered tall enough to cover the
+   whole dialog. Capping the option list's own height keeps the popup scrollable-but-bounded
+   regardless of how many rows match; paired with `popupPlacement` (kept below the field, no
+   flip) this keeps the popup from ever visually overlapping the rest of the dialog. */
+.flow-lookup-popup .g-select-list {
+  max-height: 40vh;
+  overflow-y: auto;
+}

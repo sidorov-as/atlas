@@ -1,0 +1,40 @@
+/* Layout intentionally duplicated, not shared, with OperationOverviewTab.css.
+   Mirror layout-only
+   changes made to that file here (and vice versa). */
+
+/* Two-column top section: summary content 3/5, dependency graph 2/5 — widened from the
+   original 2:1 split so the consumers graph has more room to breathe next to
+   the comparatively sparse Documentation/Details content. Collapses to a
+   single column under ~1200px viewport width. Both tracks use minmax(0, Nfr)
+   (no fixed px floor) so the ratio holds exactly instead of being skewed by a
+   floor clamping the graph track wider at narrower two-column widths. */
+.endpoint-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 32px;
+}
+
+@media (max-width: 1200px) {
+  .endpoint-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Details card: two label/value columns keep the card's height in check next
+   to the fixed-height consumers graph, instead of a single long stack. The
+   card itself stretches (flex: 1 in EndpointOverviewTab.tsx) to match the
+   grid row's height — align-content spreads the row gaps to fill that height
+   evenly instead of leaving one dead gap at the card's bottom. */
+.endpoint-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 16px;
+  align-content: space-between;
+}
+
+@media (max-width: 560px) {
+  .endpoint-details-grid {
+    grid-template-columns: 1fr;
+  }
+}

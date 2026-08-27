@@ -1,0 +1,8 @@
+.venv
+uv.lock
+__pycache__
+*.pyc
+.env
+staticfiles
+*.sqlite3
+.git

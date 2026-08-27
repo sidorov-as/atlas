@@ -1,0 +1,18 @@
+apiVersion: atlas/v1alpha1
+kind: System
+metadata:
+  name: booking-reservations
+  title: Booking & Reservations
+  description: "Owns the booking lifecycle: checkout, confirmation, cancellation."
+spec:
+  owner: group:booking-team
+---
+kind: Include
+spec:
+  paths:
+    # Resolved and ingested in list order, so booking-db/booking-events-queue
+    # exist before entities/*.yaml's Components declare dependsOn against
+    # them (an explicit path is listed before the glob for exactly this
+    # reason; a glob's own matches are ingested in sorted-path order).
+    - .manifests/resources-catalog-info.yaml
+    - .manifests/entities/*.yaml

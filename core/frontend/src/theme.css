@@ -1,0 +1,21 @@
+/**
+ * Atlas brand palette, layered on top of Gravity UI's default theme tokens.
+ * Overrides must target the same theme classes Gravity applies to <body>
+ * (`.g-root_theme_*`), not just `:root`, since a `:root`-only override loses
+ * the cascade to Gravity's own class-scoped declarations on `<body>`.
+ */
+.g-root_theme_light,
+.g-root_theme_dark {
+  --g-color-base-brand: #1c73e3;
+  --g-color-base-brand-hover: #185fbd;
+  --g-color-base-selection: #edf4fb;
+  --g-color-base-selection-hover: #dbe9f7;
+
+  --g-color-line-brand: #1c73e3;
+  --g-color-text-brand: #1c73e3;
+  --g-color-text-brand-heavy: #1c73e3;
+  --g-color-text-brand-contrast: var(--g-color-text-light-primary);
+
+  --g-color-text-link: #1c73e3;
+  --g-color-text-link-hover: #185fbd;
+}

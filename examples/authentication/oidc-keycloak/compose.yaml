@@ -1,0 +1,135 @@
+name: atlas-auth-oidc-keycloak
+
+x-backend-environment: &backend-environment
+  DJANGO_ENV: development
+  DJANGO_SETTINGS_MODULE: server.settings
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?copy .env.example to .env}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
+  DJANGO_DATABASE_HOST: postgres
+  DJANGO_DATABASE_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-atlas_oidc_example}
+  POSTGRES_USER: ${POSTGRES_USER:-atlas_oidc_example}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+  OIDC_DISCOVERY_URL: http://keycloak.localhost:18081/realms/atlas-example/.well-known/openid-configuration
+  OIDC_EXPECTED_ISSUER: http://localhost:18081/realms/atlas-example
+  OIDC_CLIENT_ID: atlas-example
+  OIDC_CLIENT_SECRET: ${ATLAS_OIDC_CLIENT_SECRET:?copy .env.example to .env}
+  OIDC_SCOPES: openid profile email groups
+  OIDC_GROUPS_CLAIM: groups
+  OIDC_ALLOWED_DESTINATIONS: http://keycloak.localhost:18081
+  OIDC_ALLOW_DEVELOPMENT_HTTP: "true"
+
+x-backend-build: &backend-build
+  context: ../../..
+  dockerfile: core/backend/Dockerfile
+  target: development
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_oidc_example}
+      POSTGRES_USER: ${POSTGRES_USER:-atlas_oidc_example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    volumes:
+      - oidc-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [database]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.5
+    command:
+      - start-dev
+      - --import-realm
+      - --http-port=18081
+      - --hostname=http://localhost:18081
+      - --hostname-backchannel-dynamic=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-oidc-example-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?copy .env.example to .env}
+      KC_HEALTH_ENABLED: "true"
+      ATLAS_OIDC_CLIENT_SECRET: ${ATLAS_OIDC_CLIENT_SECRET:?copy .env.example to .env}
+    ports:
+      - "${KEYCLOAK_PORT:-18081}:18081"
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/atlas-example-realm.json:ro
+      - oidc-keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000;
+          printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      identity:
+        aliases: [keycloak.localhost]
+
+  initializer:
+    build: *backend-build
+    environment: *backend-environment
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        python manage.py migrate --noinput &&
+        python manage.py shell < /example/bootstrap.py
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+      - ./bootstrap.py:/example/bootstrap.py:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks: [database, identity]
+    restart: "no"
+
+  backend:
+    build: *backend-build
+    environment: *backend-environment
+    volumes:
+      - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh /code/core/backend/docker/healthcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [application, database, identity]
+
+  frontend:
+    build:
+      context: ../../..
+      dockerfile: core/frontend/Dockerfile
+      target: development
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    ports:
+      - "${ATLAS_PORT:-18080}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [application]
+
+networks:
+  application:
+  database:
+    internal: true
+  identity:
+
+volumes:
+  oidc-postgres-data:
+  oidc-keycloak-data:

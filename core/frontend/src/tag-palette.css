@@ -1,0 +1,73 @@
+/**
+ * Fixed tag color palette. Each preset is a paired
+ * --tag-bg/--tag-fg, verified to meet WCAG AA contrast (>=4.5:1) against
+ * the app's actual light/dark page background, so readability holds by
+ * construction rather than depending on whatever background an admin
+ * picked. Keep in sync with `TAG_PALETTE` in
+ * `lib/types.ts` and `TAG_PALETTE` in `backend/apps/catalog/models/tag.py`.
+ */
+.tag-preset-gray {
+  --tag-bg: #e9edf0;
+  --tag-fg: #55697a;
+}
+.tag-preset-red {
+  --tag-bg: #ffd9e2;
+  --tag-fg: #c4002f;
+}
+.tag-preset-orange {
+  --tag-bg: #ffebd9;
+  --tag-fg: #a84e00;
+}
+.tag-preset-yellow {
+  --tag-bg: #fff5e7;
+  --tag-fg: #8a6732;
+}
+.tag-preset-green {
+  --tag-bg: #e0f5ea;
+  --tag-fg: #20784c;
+}
+.tag-preset-blue {
+  --tag-bg: #e1effd;
+  --tag-fg: #266baa;
+}
+.tag-preset-purple {
+  --tag-bg: #eee5f7;
+  --tag-fg: #814ab7;
+}
+.tag-preset-pink {
+  --tag-bg: #fbe2ef;
+  --tag-fg: #b23174;
+}
+
+.g-root_theme_dark .tag-preset-gray {
+  --tag-bg: #31323a;
+  --tag-fg: #8ea1b1;
+}
+.g-root_theme_dark .tag-preset-red {
+  --tag-bg: #4e1727;
+  --tag-fg: #ff5c83;
+}
+.g-root_theme_dark .tag-preset-orange {
+  --tag-bg: #4e2f1b;
+  --tag-fg: #ff8112;
+}
+.g-root_theme_dark .tag-preset-yellow {
+  --tag-bg: #4e3d2e;
+  --tag-fg: #ffbe5c;
+}
+.g-root_theme_dark .tag-preset-green {
+  --tag-bg: #253c33;
+  --tag-fg: #36bb78;
+}
+.g-root_theme_dark .tag-preset-blue {
+  --tag-bg: #26354b;
+  --tag-fg: #54a7f3;
+}
+.g-root_theme_dark .tag-preset-purple {
+  --tag-bg: #382844;
+  --tag-fg: #b288dc;
+}
+.g-root_theme_dark .tag-preset-pink {
+  --tag-bg: #492439;
+  --tag-fg: #ed72b2;
+}

@@ -1,0 +1,37 @@
+/* Layout intentionally duplicated, not shared, with EndpointOverviewTab.css.
+   Mirror layout-only
+   changes made to that file here (and vice versa). */
+
+/* Two-column top section (ratio matches
+   .endpoint-overview-grid): summary content 3/5, dependency graph 2/5.
+   Collapses to a single column under ~1200px viewport width. Both tracks use
+   minmax(0, Nfr) (no fixed px floor) so the ratio holds exactly instead of
+   being skewed by a floor clamping the graph track wider at narrower
+   two-column widths. */
+.operation-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 32px;
+}
+
+@media (max-width: 1200px) {
+  .operation-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Channel/Details row: each card keeps its own single-column label/value stack
+   internally, side by side rather than merged into one list or stacked into
+   one card's internal 2-column grid (contrast .endpoint-details-grid, which
+   holds only one card). */
+.operation-channel-details-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 560px) {
+  .operation-channel-details-row {
+    grid-template-columns: 1fr;
+  }
+}

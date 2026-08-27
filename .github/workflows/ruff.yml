@@ -1,0 +1,52 @@
+name: Ruff
+
+# No path filters, deliberately: this is meant to become a required status
+# check, and a required check that's skipped by
+# a path filter blocks merges on PRs that never trigger it. It runs on every
+# pull request and every push to main instead.
+#
+# Meant to become a required status check (branch protection) once every
+# package below is actually clean.
+
+on:
+  pull_request: {}
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ruff-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff check / ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - core/backend
+          - plugin-api/python
+          - plugins/apis/backend
+          - plugins/auth-gitea/backend
+          - plugins/auth-oidc/backend
+          - plugins/c4/backend
+          - plugins/database-schema/backend
+          - plugins/flows/backend
+          - plugins/ingestion/backend
+          - plugins/standard-catalog/backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Run ruff check
+        # Each package's own pyproject.toml supplies its own [tool.ruff]
+        # config (or ruff's built-in defaults, for the packages that don't
+        # customize it) — ruff-action searches upward from `src` for it.
+        uses: astral-sh/ruff-action@4919ec5cf1f49eff0871dbcea0da843445b837e6 # v3.6.1
+        with:
+          src: ${{ matrix.package }}

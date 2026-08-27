@@ -1,0 +1,108 @@
+distribution:
+  id: atlas.example.auth.custom-credentials
+  version: "2026.09"
+
+core:
+  version: 0.1.0
+
+auth:
+  publicOrigin: http://localhost:18080
+  trustedProxyAddresses: []
+  sessionMaxAgeSeconds: 28800
+  adminPassword:
+    mode: disabled
+  outboundTrust:
+    allowedDestinations: []
+    allowDevelopmentHttp: true
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+  providers:
+    - id: example.auth.fixture
+      signup: disabled
+      principalProvisioning: automatic
+      actorProvisioning: automatic
+      profileFields: [username, displayName, email]
+      sourceBinding:
+        sourceId: urn:atlas:directory:fixture-custom-credentials-example
+        configurationFingerprint: atlas-example-fixture-v1
+      groupSync:
+        mode: exact
+        maxAgeSeconds: 28800
+        mappings:
+          fixture-platform: custom-platform
+    - id: atlas.auth.local
+      signup: disabled
+      principalProvisioning: preprovisioned
+      actorProvisioning: manual
+      profileFields: []
+      groupSync:
+        mode: none
+  default: example.auth.fixture
+
+plugins:
+  - id: example.auth.fixture
+    version: 0.1.0
+    backend:
+      package: atlas-example-auth-fixture
+      source: workspace
+    config:
+      developmentEnabled: true
+      sourceId: urn:atlas:directory:fixture-custom-credentials-example
+      fixturePassword:
+        fromEnv: ATLAS_FIXTURE_PASSWORD
+
+  - id: atlas.standard-catalog
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-standard-catalog
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-standard-catalog"
+      source: workspace
+
+  - id: atlas.apis
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-apis
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-apis"
+      source: workspace
+
+  - id: atlas.c4
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-c4
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-c4"
+      source: workspace
+
+  - id: atlas.database-schema
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-database-schema
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-database-schema"
+      source: workspace
+
+  - id: atlas.ingestion
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-ingestion
+      source: workspace
+
+  - id: atlas.flows
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-flows
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-flows"
+      source: workspace

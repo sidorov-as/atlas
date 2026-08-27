@@ -1,0 +1,17 @@
+[project]
+name = "atlas-auth-contract-fixture"
+version = "0.0.0"
+description = "Out-of-tree-style proof for the Atlas authentication provider contract kit"
+requires-python = "==3.13.13"
+dependencies = ["atlas-plugin-api-python"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atlas_auth_contract_fixture"]
+

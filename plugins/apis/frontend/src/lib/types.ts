@@ -1,0 +1,217 @@
+// Endpoint read shapes — mirrors `atlas_plugin_apis/api/schemas.py`'s
+// Endpoint/ServiceEndpointUsage models. `Endpoint` is plugin-owned child data, not a
+// `CatalogEntity`, so it doesn't extend `frontend/lib/types`' entity union.
+
+export type EndpointMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+export type EndpointStatus = 'active' | 'removed'
+export type EndpointParameterLocation = 'path' | 'query' | 'header'
+
+/** Mirrors `EndpointSchemaOut` — a provisional JSON-Schema-like descriptor, not a JSON Schema implementation. */
+export interface EndpointSchema {
+  type: 'object' | 'array' | 'string' | 'integer' | 'number' | 'boolean' | null
+  /** `EndpointSchemaOut.ref` is aliased to `$ref` on the wire. */
+  '$ref': string | null
+  format: string
+  enum: (string | number | boolean)[] | null
+  nullable: boolean
+  description: string
+  properties: Record<string, EndpointSchema>
+  required: string[]
+  items: EndpointSchema | null
+}
+
+export interface EndpointParameter {
+  name: string
+  location: EndpointParameterLocation
+  required: boolean
+  description: string
+  schema: EndpointSchema | null
+}
+
+export interface EndpointBody {
+  contentType: string
+  schema: EndpointSchema | null
+  example: unknown
+}
+
+export interface EndpointRequest {
+  parameters: EndpointParameter[]
+  body: EndpointBody | null
+}
+
+export interface EndpointResponseHeader {
+  description: string
+  schema: EndpointSchema | null
+}
+
+export interface EndpointResponse {
+  statusCode: string
+  description: string
+  contentType: string
+  schema: EndpointSchema | null
+  example: unknown
+  headers: Record<string, EndpointResponseHeader>
+}
+
+export interface EndpointSecurity {
+  type: string
+  scheme: string | null
+}
+
+export interface Endpoint {
+  id: string
+  apiId: string
+  method: EndpointMethod
+  path: string
+  operationId: string
+  summary: string
+  description: string
+  deprecated: boolean
+  tags: string[]
+  request: EndpointRequest
+  responses: EndpointResponse[]
+  externalDocs: ExternalDocs | null
+  security: EndpointSecurity[]
+  status: EndpointStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EndpointListFilters {
+  method?: EndpointMethod
+  tag?: string
+  search?: string
+  deprecated?: boolean
+  status?: EndpointStatus
+}
+
+// --- Service <-> Endpoint dependency --------------
+// Types for the Linked Services tab.
+
+export interface ServiceSummary {
+  id: string
+  ref: string
+  name: string
+  title: string
+  team: string
+  teamId: string
+  teamName: string
+}
+
+export interface EndpointService {
+  id: string
+  service: ServiceSummary
+  linkedAt: string
+}
+
+// --- Link/unlink and the compact consumers graph ----
+
+export interface EndpointServiceLink {
+  id: string
+  service: ServiceSummary
+  linkedAt: string
+  apiRelationCreated: boolean
+}
+
+export interface EndpointConsumerSummary {
+  id: string
+  method: EndpointMethod
+  path: string
+  status: EndpointStatus
+}
+
+/** `GET /api/endpoints/{endpointId}/consumers` — the compact graph-data contract: every linked Service, unpaginated. The consumers graph, the Overview preview list, and the removed-endpoint banner's count all read from this one fetch. */
+export interface EndpointConsumers {
+  endpoint: EndpointConsumerSummary
+  services: ServiceSummary[]
+}
+
+// --- Operation -
+// `Operation` read shapes — mirrors `atlas_plugin_apis/api/schemas.py`'s
+// Operation/ServiceOperationUsage models. Like `Endpoint`, `Operation` is
+// plugin-owned child data, not a `CatalogEntity`.
+
+export type OperationDirection = 'send' | 'receive'
+export type OperationStatus = 'active' | 'removed'
+export type OperationRole = 'publisher' | 'subscriber'
+
+/** `{description?, url}` — mirrors `ExternalDocsOut`. */
+export interface ExternalDocs {
+  description: string
+  url: string
+}
+
+/** One message shape carried by an Operation's channel — reuses `EndpointSchema` for its payload schema. */
+export interface OperationMessage {
+  name: string
+  title: string
+  summary: string
+  contentType: string
+  schema: EndpointSchema | null
+  example: unknown
+  headers: EndpointSchema | null
+}
+
+/** The Operation's API document-owner Service, with its role implied purely from `direction` — never a stored `ServiceOperationUsage` row. `null` when the API has no `apiProvidedBy` relation. */
+export interface OperationProvider {
+  service: ServiceSummary
+  role: OperationRole
+}
+
+export interface Operation {
+  id: string
+  apiId: string
+  channelAddress: string
+  channelProtocol: string
+  direction: OperationDirection
+  operationKey: string
+  operationId: string
+  summary: string
+  description: string
+  tags: string[]
+  messages: OperationMessage[]
+  externalDocs: ExternalDocs | null
+  status: OperationStatus
+  deprecated: boolean
+  provider: OperationProvider | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OperationListFilters {
+  direction?: OperationDirection
+  tag?: string
+  search?: string
+  status?: OperationStatus
+}
+
+// --- Service <-> Operation dependency -------------
+
+export interface OperationService {
+  id: string
+  service: ServiceSummary
+  role: OperationRole
+  linkedAt: string
+}
+
+export type OperationServiceLink = OperationService
+
+export interface OperationConsumerSummary {
+  id: string
+  channelAddress: string
+  channelProtocol: string
+  direction: OperationDirection
+  status: OperationStatus
+}
+
+/** One publisher/subscriber node in the channel-scoped compact graph — either a document-owner's implied role or an explicit `ServiceOperationUsage` link. */
+export interface OperationConsumerParticipant {
+  service: ServiceSummary
+  role: OperationRole
+}
+
+/** `GET /api/operations/{operationId}/consumers` — aggregated by `channel_address`, not scoped to the single Operation row. */
+export interface OperationConsumers {
+  operation: OperationConsumerSummary
+  participants: OperationConsumerParticipant[]
+}

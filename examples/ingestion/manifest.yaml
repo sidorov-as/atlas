@@ -1,0 +1,113 @@
+distribution:
+  id: atlas.example.ingestion.gitea-primary
+  version: "2026.09"
+
+core:
+  version: 0.1.0
+
+auth:
+  publicOrigin: http://localhost:18090
+  trustedProxyAddresses: []
+  sessionMaxAgeSeconds: 28800
+  adminPassword:
+    mode: break-glass
+    principalIds: [1]
+  outboundTrust:
+    allowedDestinations:
+      - http://gitea.localhost:18092
+    allowDevelopmentHttp: true
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+  providers:
+    - id: atlas.auth.gitea
+      signup: disabled
+      principalProvisioning: automatic
+      actorProvisioning: automatic
+      profileFields: [username, displayName]
+      sourceBinding:
+        sourceId: http://gitea.localhost:18092
+        configurationFingerprint: atlas-example-gitea-1.27.3-v1
+      groupSync:
+        mode: none
+  default: atlas.auth.gitea
+
+plugins:
+  - id: atlas.auth.gitea
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-auth-gitea
+      source: workspace
+    config:
+      instanceOrigin: http://gitea.localhost:18092
+      clientId: generated-by-runtime-bootstrap
+      clientSecret:
+        fromEnv: GITEA_CLIENT_SECRET
+      scopes: [read:user]
+      oauthPkceEnabled: true
+      allowedDestinations:
+        - http://gitea.localhost:18092
+      allowDevelopmentHttp: true
+
+  - id: atlas.standard-catalog
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-standard-catalog
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-standard-catalog"
+      source: workspace
+
+  - id: atlas.apis
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-apis
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-apis"
+      source: workspace
+
+  - id: atlas.c4
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-c4
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-c4"
+      source: workspace
+
+  - id: atlas.database-schema
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-database-schema
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-database-schema"
+      source: workspace
+
+  - id: atlas.ingestion
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-ingestion
+      source: workspace
+    config:
+      sources:
+        - id: gitea-primary
+          baseUrl: http://gitea.localhost:18092
+          authKind: bearer
+          credential:
+            fromEnv: GITEA_INGESTION_TOKEN
+          allowDevelopmentHttp: true
+
+  - id: atlas.flows
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-flows
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-flows"
+      source: workspace
