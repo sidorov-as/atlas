@@ -1,0 +1,63 @@
+## Context
+
+Today, `atlas_plugin_database_schema` parses `source_sql` with a hand-rolled regex/tokenizer (`parser.py`) explicitly bounded to PostgreSQL `CREATE TABLE` statements, and renders `parsed_schema` as a static flex-wrap card layout (`ErDiagramView.tsx`) with FKs shown as text, no edges, no zoom, no export. `DatabaseSchema.dialect` exists as a model field but has exactly one choice and no UI. The plugin's own code comments describe both as intentionally provisional ("no external contract promised... free to reshape until a second consumer... exists"; "not a graph-layout engine... the plugin's own call"). Elsewhere in the catalog, the C4 plugin's diagram viewer (`plugins/c4/frontend/src/components/DiagramTab.tsx`) sets a UX bar — zoom in/out, fit-to-viewport, SVG/PNG download — that this feature doesn't meet. This design replaces the parser and the view while leaving the Facet/API contract (`entity-facets` spec, `schema.host.v1` capability gating) untouched.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Parse PostgreSQL, MySQL, and MS SQL DDL via sqlglot into a tbls-compatible `parsed_schema` shape.
+- Let a user pick the dialect on the Schema tab, alongside `source_sql`.
+- Render `parsed_schema` as a read-only, pannable/zoomable/fit-able React Flow graph with real relation edges and drag-to-reposition.
+- Match the C4 diagram viewer's button chrome (icons, placement, style) for zoom in/out/fit-to-viewport.
+- Support SVG and PNG export of the rendered diagram.
+- Make a parse failure visibly obvious in the ER Diagram tab itself, not only on the Schema tab.
+- Make the dialect→parser mapping a registry, not branching logic, so a future dialect is additive.
+
+**Non-Goals:**
+- Any diagram editing (adding/removing tables, drawing new relations, editing column metadata from the viewer).
+- DSN-based live database introspection (separate future work, out of scope here).
+- Rendering indexes, constraints, or enums in the graph (captured and stored in `parsed_schema`, not drawn yet).
+- Naming-convention-based ("virtual") relation inference for schemas without real foreign keys.
+- Dialects beyond PostgreSQL/MySQL/MS SQL in this change (the registry must make adding one, e.g. Oracle, cheap later — it is not being done now).
+- A server-rendered "true vector" SVG export pipeline (see Open Questions).
+
+## Decisions
+
+**sqlglot over ANTLR grammars-v4 or sqlfluff, for parsing.** Verified directly: sqlglot parses tricky Postgres DDL (custom enum types, `GENERATED ALWAYS AS IDENTITY`/`STORED`, partial indexes, `ALTER TABLE ADD CONSTRAINT ... FOREIGN KEY`) into an already-typed, cross-dialect-normalized AST (`ColumnDef`, `PrimaryKeyColumnConstraint`, `ForeignKey`, `DataType(ENUM)` with enum values as a literal list) with zero parse failures on that input. ANTLR's own `grammars-v4/sql/postgresql` grammar documents itself as derived from a bison grammar via a transform script, with known ambiguities and lexer warnings — and even a clean ANTLR grammar only yields a raw parse tree, requiring a hand-written listener per construct per dialect to reach the same structured output sqlglot already gives for free. sqlfluff parses the same input without errors too, but it's a linting CST (concrete syntax tree preserving whitespace/comments for style-checking), not a semantic model — column type/constraint extraction there means re-parsing raw segment strings. Keeping the existing regex parser and extending it to three dialects was also considered and rejected: it triples a bespoke, already self-documented-as-bounded tokenizer instead of adopting a maintained one.
+
+**`parsed_schema` targets the tbls-*json* shape, not the tbls-*Go-struct* shape.** tbls' internal `Table`/`Column` structs carry runtime-computed fields (`PK`/`FK` booleans mirrored from relations, `Occurrences`/`Percents` usage statistics, `ParentRelations`/`ChildRelations` back-links, `Viewpoints`, `Functions`, `Triggers`) that only make sense for a tool connected to a live, already-queried database. A static DDL parser has no business fabricating those. The shape adopted is the documented JSON-input subset: `tables[].{name, type, columns[], indexes[], constraints[]}`, top-level `relations[]` (`table`, `columns`, `parent_table`, `parent_columns`, `cardinality`), and `enums[]`. Indexes and constraints are populated even though the viewer doesn't render them yet, since `parser.py`'s docstring explicitly deferred locking the shape until "a second consumer" existed — this change is that consumer, so the shape should be set once, not twice.
+
+**Dialect selection lives on the Schema tab, not the Resource create/edit form.** Investigated whether a plugin can contribute a field into another plugin's entity form: it cannot today. `ResourceFormPage.tsx` builds its `specFields` as a hardcoded `ReactNode` passed to `EntityFormShell.tsx`, and the frontend contribution model (`plugin-api/typescript/src/types.ts`) only defines four contribution kinds (route, nav item, entity-detail-tab, home widget) — no form-field contribution exists, and adding one is disproportionate new architecture for this change. Independent of the extension-point gap, dialect is only meaningful alongside `source_sql`, and the two are already saved together through one facet endpoint (`DatabaseSchemaIn`/`Patch` both carry `dialect` and `source_sql`); splitting them across two different forms/owners would separate two facts that describe a single edit.
+
+**Dialect→sqlglot mapping is a registry, not branches.** `{"postgresql": "postgres", "mysql": "mysql", "mssql": "tsql"}` feeds one parser function; adding a dialect later (sqlglot already ships `oracle`) is a `DIALECT_CHOICES` entry, a migration, and a registry entry — not a parser code change.
+
+**Viewer is React Flow, not the C4 plugin's `DiagramViewer`.** The C4 viewer's pan/zoom/fit is hand-rolled CSS-transform logic over a single `<img>`, because PlantUML renders a flat image server-side — there is no live DOM to drag. That approach cannot support draggable table nodes, which this change explicitly wants (ChartDB-style). "Match the C4 viewer visually" is scoped to chrome parity only: the same icon set (`MagnifierPlus`/`MagnifierMinus`/`SquareDashed`), the same top-right `Tooltip` + `Button view="raised"` cluster, the same SVG/PNG download button treatment — reimplemented against React Flow's own `useReactFlow().zoomIn/zoomOut/fitView`, not against CSS transforms. Read-only is enforced via `nodesConnectable={false}` and no add/remove-node UI, while `nodesDraggable` stays on for repositioning. Autolayout (elkjs or dagre — see Open Questions) runs only on an explicit button press, preserving any manual dragging in between. `onlyRenderVisibleElements` is available on `<ReactFlow>` for large schemas but carries its own overhead, so it should be conditional on table count rather than always on.
+
+**Export is client-side rasterization, not a new backend render endpoint.** `html-to-image` (or equivalent) run in the browser is simpler and keeps everything in one rendering path, at the cost of producing `<foreignObject>`-wrapped-HTML "SVG" rather than genuinely vector art — a real limitation for anyone re-editing the export in a vector tool. A backend Graphviz-based renderer (mirroring the C4 plugin's server-render-and-download pattern) would fix that, but is a second rendering pipeline to build and keep visually consistent with the interactive canvas. Deferred as an explicit open question rather than folded into this change's scope.
+
+**Parse-failure banner reuses the existing `Alert` pattern.** `ErDiagramTab.tsx` already renders `<Alert theme="danger">` for the load-failure case; the parse-failure case (currently a plain `<Text color="secondary">`) gets the same treatment instead of a new component.
+
+## Risks / Trade-offs
+
+- [Risk] sqlglot is still a parser, not a live database engine — dialect-specific extensions, unrecognized custom types, or exotic `pg_dump` output can still fail to parse. → [Mitigation] This is the same failure mode the plugin already models as first-class: save the SQL, set `parse_status=failed`, show a visible failure indicator. No new behavior is needed, only a more visible surface for it (see banner decision above).
+- [Risk] Client-exported "SVG" is not true vector art (`<foreignObject>`-wrapped HTML) and may not round-trip through Illustrator/Inkscape or a wiki's SVG embed. → [Mitigation] Scope the export as "a downloadable snapshot of what's on screen," and revisit a server-rendered path only if that stronger guarantee is actually requested (Open Questions).
+- [Risk] Existing facets (all `postgresql`, old `parsed_schema` shape) don't get retroactively reparsed — `parsed_schema` is write-time-computed, never read-time. A resource with a schema attached before this change ships will have old-shape JSON until someone re-saves it. → [Mitigation] See Migration Plan; the new viewer must not assume every stored row is already in the new shape.
+- [Risk] Three new frontend dependencies (React Flow, an autolayout library, an export/rasterization library) land in a plugin that currently has none beyond the shared UI kit. → [Mitigation] Confined to `plugins/database-schema/frontend/`, an optional plugin — distributions omitting `atlas.database-schema` (already a supported configuration) carry none of this weight.
+
+## Migration Plan
+
+- Add `mysql` and `mssql` to `DatabaseSchema.DIALECT_CHOICES` via an additive, non-breaking Django migration. Default stays `postgresql`.
+- No bulk backfill: `parsed_schema` is only computed in `_apply_source`, on save. Existing rows keep their pre-change shape until their next edit through the Schema tab.
+- The new ER Diagram view must treat an old-shape `parsed_schema` (missing top-level `relations`, missing `tables[].type`) as not-yet-upgraded rather than crash on it — exact detection/fallback behavior is an open question below.
+- Rollback: reverting the frontend view and backend parser independently is safe in either order, since the Facet's REST contract (`DatabaseSchemaIn/Out/Patch`) doesn't change shape — only the internal content of `parsed_schema` does.
+
+## Open Questions
+
+- Is client-side raster/`foreignObject` export acceptable as a first version, or should a server-rendered true-vector-SVG export (mirroring the C4 plugin's render endpoint) be scoped as explicit, separate follow-up work?
+- Should `indexes`/`constraints` actually be populated in `parsed_schema` now (stored but unrendered, as proposed above), or left out entirely until the viewer is ready to draw them, to avoid modeling fields nothing yet reads?
+
+## Resolved Questions
+
+**elkjs, for autolayout (resolved during implementation, task 4.1).** `elkjs` is already a direct dependency of `core/frontend` (`frontend/src/lib/flowLayout.ts`, for the Flow diagram editor's tree layout via `@gravity-ui/graph`'s `useElk`), so it's a proven, actively-maintained choice already exercised elsewhere in this codebase, rather than a net-new library. `dagre` (the classic `dagrejs/dagre`) is unmaintained upstream; the only `dagre`-family package already present transitively (`dagre-d3-es`, via `mermaid`) is a rendering library, not a layout-only one, and pulling it in directly would still mean adopting an unmaintained algorithm core. elkjs's layered algorithm also handles the dense FK-edge case (a table referencing many others) better than dagre's, which matters more for ER diagrams than for the Flow editor's mostly-tree-shaped graphs. Used directly against React Flow nodes/edges (via `elkjs/lib/elk.bundled.js`, the same import path `flowLayout.ts` already uses) rather than through `@gravity-ui/graph`, since design.md's viewer decision already settled on React Flow.
+
+**Old-shape `parsed_schema` detection: a lightweight shape check with a re-save prompt, not an adapter (resolved during implementation, task 4.10).** The Migration Plan already rules out backfill — an old-shape row only exists until its next Schema-tab save, which recomputes `parsed_schema` in the new shape unconditionally (`_apply_source` always calls the current `parse_schema`). A shape-translating adapter would therefore only ever run against data that self-heals on the next save, for a feature (rendering a graph from a hand-rolled-regex-era shape that never had `relations[]`, `indexes[]`, or `constraints[]`) with no real target to adapt *to*. Detection is a single check — `Array.isArray(schema.relations)` — since that key never existed in the old shape and always exists (possibly empty) in the new one. On a miss, the ER Diagram tab shows the same kind of prompt-to-resave message already used for the "no facet yet" state, telling the user to open the Schema tab and save again.
