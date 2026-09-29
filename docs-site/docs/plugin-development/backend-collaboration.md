@@ -52,12 +52,12 @@ it contributes no kinds, permissions, or extension implementations.
 from atlas_plugin_api import PluginDescriptor, register_purge_scanner
 
 PLUGIN = PluginDescriptor(
-    id='atlas.inventory',
-    version='0.1.0',
-    compatibility={'atlasCore': '>=0.1 <1'},
-    django_apps=('atlas_plugin_inventory',),
-    entry_point='atlas_plugin_inventory.plugin:PLUGIN',
-    requires_plugins={'atlas.standard-catalog': '>=0.1 <1'},
+    id="atlas.inventory",
+    version="0.1.0",
+    compatibility={"atlasCore": ">=0.1 <1"},
+    django_apps=("atlas_plugin_inventory",),
+    entry_point="atlas_plugin_inventory.plugin:PLUGIN",
+    requires_plugins={"atlas.standard-catalog": ">=0.1 <1"},
 )
 
 
@@ -84,14 +84,14 @@ three cases explicitly:
 ```python
 from atlas_plugin_api import Error, Ok, Unavailable, resolve_capability
 
-result = resolve_capability(entity.kind, 'architecture.subject.v1')
+result = resolve_capability(entity.kind, "architecture.subject.v1")
 match result:
     case Ok(True):
         render_diagram(entity)
     case Ok(False) | Unavailable():
         return  # This entity cannot participate, or its provider is inactive.
     case Error(reason):
-        logger.warning('Capability lookup failed: %s', reason)
+        logger.warning("Capability lookup failed: %s", reason)
 ```
 
 `Unavailable` is not permission denial and not a signal to reach into the

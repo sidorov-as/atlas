@@ -119,7 +119,9 @@ def _relationship_target_validator(value: str) -> str:
 # UX-driven content limits.
 _TITLE_MAX_LENGTH = 255  # matches CatalogEntity.title's DB CharField(max_length=255)
 _DESCRIPTION_MAX_LENGTH = 4096
-_DOCUMENTATION_MAX_LENGTH = 1024 * 1024  # 1 MiB; documentation is Markdown and may be long
+_DOCUMENTATION_MAX_LENGTH = (
+    1024 * 1024
+)  # 1 MiB; documentation is Markdown and may be long
 _LABELS_MAX_ITEMS = 100
 _TAGS_MAX_ITEMS = 100
 _LINKS_MAX_ITEMS = 50
@@ -168,7 +170,9 @@ class MetadataPatch(CamelModel):
     name: str | None = None
     title: str | None = Field(default=None, max_length=_TITLE_MAX_LENGTH)
     description: str | None = Field(default=None, max_length=_DESCRIPTION_MAX_LENGTH)
-    documentation: str | None = Field(default=None, max_length=_DOCUMENTATION_MAX_LENGTH)
+    documentation: str | None = Field(
+        default=None, max_length=_DOCUMENTATION_MAX_LENGTH
+    )
     labels: dict[str, str] | None = Field(default=None, max_length=_LABELS_MAX_ITEMS)
     tags: list[str] | None = Field(default=None, max_length=_TAGS_MAX_ITEMS)
     links: list[LinkSchema] | None = Field(default=None, max_length=_LINKS_MAX_ITEMS)

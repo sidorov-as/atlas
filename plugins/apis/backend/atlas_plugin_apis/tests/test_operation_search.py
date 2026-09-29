@@ -1,5 +1,4 @@
-"""Tests for the cross-API Operation search endpoint.
-"""
+"""Tests for the cross-API Operation search endpoint."""
 
 import pytest
 from server.apps.catalog.tests.factories import create_api, create_system

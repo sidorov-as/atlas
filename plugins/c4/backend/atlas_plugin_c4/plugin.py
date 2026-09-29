@@ -19,6 +19,8 @@ treats every `requires_plugins` entry as mandatory).
 
 from atlas_plugin_api import PluginDescriptor
 
+from .config import C4PluginConfig
+
 PLUGIN = PluginDescriptor(
     id="atlas.c4",
     version="0.1.0",
@@ -26,6 +28,7 @@ PLUGIN = PluginDescriptor(
     django_apps=("atlas_plugin_c4",),
     entry_point="atlas_plugin_c4.plugin:PLUGIN",
     requires_plugins={"atlas.standard-catalog": ">=0.1 <1"},
+    config_schema=C4PluginConfig,
 )
 
 DIAGRAM_READ_PERMISSION = "atlas.c4.diagram.read"

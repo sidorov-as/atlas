@@ -443,7 +443,9 @@ def _include_fragment(
         failed_paths.add(resolved_path)
         return []
 
-    fragment_entries = _parse(repo, resolved_path, content, failed_paths, resolved_limits)
+    fragment_entries = _parse(
+        repo, resolved_path, content, failed_paths, resolved_limits
+    )
     return _expand_includes(
         connector,
         repo,

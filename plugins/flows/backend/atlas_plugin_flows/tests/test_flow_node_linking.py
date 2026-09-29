@@ -1,5 +1,4 @@
-"""Tests for `flow_ref`/`link_url` step validation and live status.
-"""
+"""Tests for `flow_ref`/`link_url` step validation and live status."""
 
 import pytest
 

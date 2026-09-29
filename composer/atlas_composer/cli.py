@@ -26,86 +26,96 @@ from .resolver import resolve_manifest
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog='atlas-compose')
-    subparsers = parser.add_subparsers(dest='command', required=True)
+    parser = argparse.ArgumentParser(prog="atlas-compose")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
     resolve_parser = subparsers.add_parser(
-        'resolve', help='Resolve a deployment manifest to a lock file.',
+        "resolve",
+        help="Resolve a deployment manifest to a lock file.",
     )
-    resolve_parser.add_argument('manifest', type=Path)
-    resolve_parser.add_argument('-o', '--output', type=Path, required=True)
+    resolve_parser.add_argument("manifest", type=Path)
+    resolve_parser.add_argument("-o", "--output", type=Path, required=True)
     resolve_parser.add_argument(
-        '--repo-root', type=Path, default=Path.cwd(),
-        help='Monorepo root containing core/backend/poetry.lock and '
-             'package-lock.json.',
+        "--repo-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Monorepo root containing core/backend/poetry.lock and package-lock.json.",
     )
 
     validate_parser = subparsers.add_parser(
-        'validate',
-        help='Run static composition validation for a manifest + lock.',
+        "validate",
+        help="Run static composition validation for a manifest + lock.",
     )
-    validate_parser.add_argument('manifest', type=Path)
-    validate_parser.add_argument('lock', type=Path)
+    validate_parser.add_argument("manifest", type=Path)
+    validate_parser.add_argument("lock", type=Path)
 
     diff_parser = subparsers.add_parser(
-        'diff', help='Show authentication differences between manifest and lock.',
+        "diff",
+        help="Show authentication differences between manifest and lock.",
     )
-    diff_parser.add_argument('manifest', type=Path)
-    diff_parser.add_argument('lock', type=Path)
+    diff_parser.add_argument("manifest", type=Path)
+    diff_parser.add_argument("lock", type=Path)
 
     generate_parser = subparsers.add_parser(
-        'generate',
-        help='Generate the backend/frontend composition modules a lock '
-             'implies.',
+        "generate",
+        help="Generate the backend/frontend composition modules a lock implies.",
     )
     generate_subparsers = generate_parser.add_subparsers(
-        dest='target', required=True,
+        dest="target",
+        required=True,
     )
     generate_backend_parser = generate_subparsers.add_parser(
-        'backend', help='Generate the SELECTED_PLUGINS module.',
+        "backend",
+        help="Generate the SELECTED_PLUGINS module.",
     )
-    generate_backend_parser.add_argument('lock', type=Path)
+    generate_backend_parser.add_argument("lock", type=Path)
     generate_backend_parser.add_argument(
-        '-o', '--output', type=Path, required=True,
+        "-o",
+        "--output",
+        type=Path,
+        required=True,
     )
     generate_frontend_parser = generate_subparsers.add_parser(
-        'frontend',
-        help='Generate the installedFrontendPlugins composition module.',
+        "frontend",
+        help="Generate the installedFrontendPlugins composition module.",
     )
-    generate_frontend_parser.add_argument('lock', type=Path)
+    generate_frontend_parser.add_argument("lock", type=Path)
     generate_frontend_parser.add_argument(
-        '-o', '--output', type=Path, required=True,
+        "-o",
+        "--output",
+        type=Path,
+        required=True,
     )
 
     args = parser.parse_args(argv)
 
-    if args.command == 'resolve':
+    if args.command == "resolve":
         manifest = load_manifest(args.manifest)
         lock = resolve_manifest(manifest, repo_root=args.repo_root)
         dump_lock(lock, args.output)
-    elif args.command == 'validate':
+    elif args.command == "validate":
         manifest = load_manifest(args.manifest)
         lock = load_lock(args.lock)
         descriptors = load_backend_descriptors(lock)
         validate_composition(manifest, lock, descriptors)
         distribution = manifest.distribution
-        print(f'{distribution.id}@{distribution.version} composition is valid')
-    elif args.command == 'diff':
+        print(f"{distribution.id}@{distribution.version} composition is valid")
+    elif args.command == "diff":
         manifest = load_manifest(args.manifest)
         lock = load_lock(args.lock)
         differences = authentication_configuration_diff(manifest, lock)
         if differences:
             for difference in differences:
-                print(f'- {difference}')
+                print(f"- {difference}")
         else:
-            print('Authentication selection matches the lock')
-    elif args.command == 'generate':
+            print("Authentication selection matches the lock")
+    elif args.command == "generate":
         lock = load_lock(args.lock)
-        if args.target == 'backend':
+        if args.target == "backend":
             dump_selected_plugins_module(lock, args.output)
         else:
             dump_composition_module(lock, args.output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -69,17 +69,16 @@ from atlas_plugin_api import (
 )
 
 PROVIDER = AuthenticationProviderDescriptor(
-    id='example.auth.directory',
+    id="example.auth.directory",
     flow_kind=AuthenticationFlowKind.REDIRECT,
-    presentation=AuthenticationProviderPresentation(display_name='Directory SSO'),
+    presentation=AuthenticationProviderPresentation(display_name="Directory SSO"),
 )
 
 PLUGIN = PluginDescriptor(
     # ordinary descriptor fields omitted
-    authentication_providers=(
-        AuthenticationProviderContribution(descriptor=PROVIDER),
-    ),
+    authentication_providers=(AuthenticationProviderContribution(descriptor=PROVIDER),),
 )
+
 
 def register_runtime() -> None:
     register_authentication_provider(DirectoryProvider(), owner=PLUGIN.id)
@@ -124,6 +123,7 @@ class EntityKindHandler(Protocol):
     def serialize_details(self, entity: CatalogEntity) -> BaseModel: ...
     def validate_delete(self, entity: CatalogEntity) -> None: ...
 
+
 def register_kind(handler: EntityKindHandler, *, owner: str | None = None) -> None: ...
 ```
 
@@ -147,8 +147,12 @@ a successful call that happens to return something falsy.
 ```python
 def register_permission(permission_id: str, *, owner: str | None = None) -> None: ...
 
+
 class PolicyEvaluator(Protocol):
-    def check(self, principal: Any, permission: str, resource: CatalogEntity | None) -> bool: ...
+    def check(
+        self, principal: Any, permission: str, resource: CatalogEntity | None
+    ) -> bool: ...
+
 
 def get_policy_evaluator() -> PolicyEvaluator: ...
 ```
@@ -163,6 +167,7 @@ backend resource boundary; see [Plugin permissions](permissions.md).
 ```python
 class SecretRef(BaseModel):
     from_env: str  # manifest's {fromEnv: VAR}
+
 
 class PluginConfigSchema(BaseModel):
     PUBLIC_FIELDS: ClassVar[frozenset[str]] = frozenset()

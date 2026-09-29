@@ -10,3 +10,6 @@ core/backend/**/*.pyc
 core/backend/.env
 core/backend/staticfiles
 core/backend/*.sqlite3
+**/__pycache__
+**/*.pyc
+**/.mypy_cache

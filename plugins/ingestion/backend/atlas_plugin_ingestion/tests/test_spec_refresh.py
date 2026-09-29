@@ -21,7 +21,9 @@ SPEC_FETCH_PATCH_TARGET = "atlas_plugin_apis.spec_fetch.safe_request"
 STALE_CONTENT = "openapi: 3.0.0  # last-good"
 
 
-def _fake_success(text: str, *, url: str = "https://example.com/spec.yaml") -> SafeHttpResponse:
+def _fake_success(
+    text: str, *, url: str = "https://example.com/spec.yaml"
+) -> SafeHttpResponse:
     return SafeHttpResponse(
         status_code=200,
         headers={},

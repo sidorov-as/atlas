@@ -184,9 +184,7 @@ def test_metadata_rejects_too_many_tags(model_cls):
 @pytest.mark.parametrize("model_cls", [MetadataIn, MetadataPatch])
 def test_metadata_rejects_too_many_links(model_cls):
     kwargs = {"name": "checkout"} if model_cls is MetadataIn else {}
-    links = [
-        {"url": "https://example.test"} for _ in range(_LINKS_MAX_ITEMS + 1)
-    ]
+    links = [{"url": "https://example.test"} for _ in range(_LINKS_MAX_ITEMS + 1)]
     with pytest.raises(ValidationError):
         model_cls(links=links, **kwargs)
 

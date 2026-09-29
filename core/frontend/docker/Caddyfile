@@ -9,6 +9,14 @@
     handle /api/* {
         reverse_proxy backend:8000
     }
+    # SPA login/session endpoints (`/auth/browser/v1/...`).
+    handle /auth/* {
+        reverse_proxy backend:8000
+    }
+    # allauth's provider redirect/callback routes (OIDC, Gitea OAuth2).
+    handle /accounts/* {
+        reverse_proxy backend:8000
+    }
     handle /_allauth/* {
         reverse_proxy backend:8000
     }

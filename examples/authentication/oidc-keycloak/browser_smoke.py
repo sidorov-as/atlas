@@ -25,9 +25,7 @@ class LoginFormParser(HTMLParser):
         super().__init__()
         self.action: str | None = None
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
         if tag == "form" and values.get("id") == "kc-form-login":
             self.action = html.unescape(values.get("action") or "")
@@ -79,9 +77,7 @@ class Browser:
         if authenticated_write:
             headers["Origin"] = self.base_url
             headers["X-CSRFToken"] = self.csrf()
-        request = urllib.request.Request(
-            url, data=body, headers=headers, method=method
-        )
+        request = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
             response = self.opener.open(request)
         except urllib.error.HTTPError as error:
@@ -96,9 +92,7 @@ class Browser:
         return payload
 
     def login(self, username: str, password: str) -> None:
-        config = json.loads(
-            self.request(f"{self.base_url}/auth/browser/v1/config")
-        )
+        config = json.loads(self.request(f"{self.base_url}/auth/browser/v1/config"))
         providers = config["providers"]
         assert [provider["id"] for provider in providers] == [PROVIDER_ID]
         assert all(provider["flowKind"] != "credentials" for provider in providers)
@@ -137,9 +131,7 @@ class Browser:
             # an interactive browser receives the SPA document instead.
             expected=(200, 404),
         )
-        session = json.loads(
-            self.request(f"{self.base_url}/auth/browser/v1/session")
-        )
+        session = json.loads(self.request(f"{self.base_url}/auth/browser/v1/session"))
         assert session["meta"]["is_authenticated"] is True
         assert session["data"]["user"]["username"] == username
 
@@ -202,10 +194,7 @@ def set_group(
     group_id: str,
     present: bool,
 ) -> None:
-    url = (
-        f"{keycloak_url}/admin/realms/atlas-example/users/{user_id}/groups/"
-        f"{group_id}"
-    )
+    url = f"{keycloak_url}/admin/realms/atlas-example/users/{user_id}/groups/{group_id}"
     request = urllib.request.Request(
         url,
         headers={"Authorization": f"Bearer {token}"},
@@ -321,9 +310,7 @@ def main() -> None:
             authenticated_write=True,
             expected=204,
         )
-        session = json.loads(
-            second.request(f"{atlas_url}/auth/browser/v1/session")
-        )
+        session = json.loads(second.request(f"{atlas_url}/auth/browser/v1/session"))
         assert session["meta"]["is_authenticated"] is False
     finally:
         set_group(

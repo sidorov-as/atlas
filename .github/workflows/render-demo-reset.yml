@@ -1,0 +1,33 @@
+name: Reset Render demo
+
+# Restarting the Render demo service discards its ephemeral filesystem, so
+# the container comes back with the pristine demo catalog baked into the
+# image (see deploy/render/ and render.yaml).
+#
+# Required configuration (Settings → Secrets and variables → Actions):
+#   secret   RENDER_API_KEY           Render account API key
+#   variable RENDER_DEMO_SERVICE_ID   the service id, e.g. srv-xxxxxxxx
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # 00:00 UTC = 03:00 Moscow
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  restart:
+    if: github.repository == 'sidorov-as/atlas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restart the demo service
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ vars.RENDER_DEMO_SERVICE_ID }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${RENDER_API_KEY}" \
+            --header "Accept: application/json" \
+            "https://api.render.com/v1/services/${SERVICE_ID}/restart"

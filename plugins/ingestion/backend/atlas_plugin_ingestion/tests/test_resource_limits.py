@@ -163,9 +163,8 @@ def test_include_depth_limit_is_rejected_without_a_cycle(repo, group, monkeypatc
 
     top = b"kind: Include\nspec:\n  paths: [.manifests/a.yaml]\n"
     a = b"kind: Include\nspec:\n  paths: [b.yaml]\n"
-    b = (
-        b"kind: Include\nspec:\n  paths: [c.yaml]\n---\n"
-        + _system_manifest("depth-two-fragment")
+    b = b"kind: Include\nspec:\n  paths: [c.yaml]\n---\n" + _system_manifest(
+        "depth-two-fragment"
     )
     c = _system_manifest("depth-three-fragment-never-ingested")
     connector = _FakeConnector(
