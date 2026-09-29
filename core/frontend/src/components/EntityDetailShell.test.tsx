@@ -249,4 +249,28 @@ describe('EntityDetailShell', () => {
     renderShell(makeSystem({ status: 'removed' }), [], { onRemove: async () => {}, onRevive: async () => {}, onPurge: async () => {} })
     expect(screen.queryByRole('button', { name: 'Purge' })).toBeNull()
   })
+  it('hides Edit and Remove when the server says the user may not edit the entity', () => {
+    renderShell(
+      makeSystem({ status: 'active', permissions: { canEdit: false, canPurge: false } }),
+      [],
+      { onRemove: async () => {}, onRevive: async () => {}, onPurge: async () => {} },
+    )
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull()
+  })
+
+  it('hides Revive and Purge for a removed entity the user may neither edit nor purge', () => {
+    renderShell(
+      makeSystem({ status: 'removed', permissions: { canEdit: false, canPurge: false } }),
+      [],
+      { onRemove: async () => {}, onRevive: async () => {}, onPurge: async () => {} },
+    )
+    expect(screen.queryByRole('button', { name: 'Revive' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Purge' })).toBeNull()
+  })
+
+  it('shows Edit when the server grants edit permission', () => {
+    renderShell(makeSystem({ permissions: { canEdit: true, canPurge: false } }), [], {})
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDefined()
+  })
 })

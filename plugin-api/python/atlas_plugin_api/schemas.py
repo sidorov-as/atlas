@@ -191,6 +191,16 @@ class MetadataOut(CamelModel):
     links: list[LinkSchema]
 
 
+class EntityPermissionsOut(CamelModel):
+    """What the *requesting* principal may do with one entity. A presentation
+    signal so the UI can hide actions that would answer 403; the
+    authorization service, not this field, stays the actual write boundary.
+    """
+
+    can_edit: bool
+    can_purge: bool
+
+
 class HistoryRecordOut(CamelModel):
     """One `EntityAuditRecord`, as shown on the entity detail page's History
     section (Remove/Revive/Purge are audited and visible on a History tab)."""

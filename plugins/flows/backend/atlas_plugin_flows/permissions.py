@@ -18,8 +18,12 @@ FLOW_EDIT_PERMISSION = "atlas.flows.flow.edit"
 FLOW_READ_PERMISSION = "atlas.flows.flow.read"
 
 
+def can_edit_flow(user: AbstractBaseUser, system: CatalogEntity) -> bool:
+    return bool(get_policy_evaluator().check(user, FLOW_EDIT_PERMISSION, system))
+
+
 def check_flow_write_permission(user: AbstractBaseUser, system: CatalogEntity) -> None:
-    if not get_policy_evaluator().check(user, FLOW_EDIT_PERMISSION, system):
+    if not can_edit_flow(user, system):
         raise APIError(
             format_error(
                 "You are not a member of the owner Group", error_type=ErrorType.security

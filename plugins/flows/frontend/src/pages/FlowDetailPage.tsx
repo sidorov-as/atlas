@@ -83,7 +83,7 @@ export function FlowDetailPage() {
           </div>
         }
         right={
-          isReadOnly ? null : (
+          isReadOnly || flow.permissions?.canEdit === false ? null : (
             <div style={{ display: 'flex', gap: 8 }}>
               <Button
                 view="outlined"

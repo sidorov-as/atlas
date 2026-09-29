@@ -36,3 +36,9 @@ services:
         value: admin
       - key: ATLAS_DEMO_ADMIN_PASSWORD
         sync: false
+      # Public guest account: no admin rights, owns only the "guest-team"
+      # Group. Credentials are published in the README.
+      - key: ATLAS_DEMO_GUEST_USERNAME
+        value: guest
+      - key: ATLAS_DEMO_GUEST_PASSWORD
+        value: atlas-demo-guest-password

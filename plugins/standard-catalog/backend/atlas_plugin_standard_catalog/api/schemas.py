@@ -16,6 +16,7 @@ from uuid import UUID
 from atlas_plugin_api import (
     ArchitectureRelationshipDeclarationIn,
     CamelModel,
+    EntityPermissionsOut,
     MetadataIn,
     MetadataOut,
     MetadataPatch,
@@ -71,6 +72,7 @@ class SystemOut(CamelModel):
     blocked_by: str | None = None
     blocked_by_reason: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    permissions: EntityPermissionsOut | None = None
 
 
 class SystemDocumentLinksQuery(BaseModel):
@@ -163,6 +165,7 @@ class ComponentOut(CamelModel):
     blocked_by: str | None = None
     blocked_by_reason: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    permissions: EntityPermissionsOut | None = None
 
 
 # --- Resource ---------------------------------------------------------------
@@ -222,6 +225,7 @@ class ResourceOut(CamelModel):
     blocked_by: str | None = None
     blocked_by_reason: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    permissions: EntityPermissionsOut | None = None
 
 
 # --- Group / Actor (admin-managed; Actor also ingestible) -----------------

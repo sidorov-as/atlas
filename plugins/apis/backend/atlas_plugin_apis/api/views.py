@@ -10,6 +10,7 @@ guard, not persistence.
 """
 
 from http import HTTPStatus
+from typing import Any
 
 from atlas_plugin_api import (
     API_VERSION,
@@ -31,6 +32,7 @@ from atlas_plugin_api import (
     blocked_by_reason,
     delete_blocked,
     entity_capabilities,
+    entity_permissions,
     entity_relations,
     filter_by_field,
     filter_by_owner,
@@ -122,7 +124,7 @@ from .schemas import (
 )
 
 
-def _api_out(instance: CatalogEntity) -> ApiOut:
+def _api_out(instance: CatalogEntity, user: Any = None) -> ApiOut:
     details = instance.api_details
     return ApiOut(
         id=instance.id,
@@ -151,6 +153,7 @@ def _api_out(instance: CatalogEntity) -> ApiOut:
         blocked_by=blocked_by(instance),
         blocked_by_reason=blocked_by_reason(instance),
         capabilities=entity_capabilities(instance),
+        permissions=entity_permissions(instance, user) if user else None,
     )
 
 
@@ -216,14 +219,14 @@ class ApiListController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _api_out(entity)
+        return _api_out(entity, self.request.user)
 
 
 class ApiDetailController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(self, parsed_path: Path[EntityPath]) -> ApiOut:
-        return _api_out(_get_api(parsed_path.id))
+        return _api_out(_get_api(parsed_path.id), self.request.user)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -239,7 +242,7 @@ class ApiDetailController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _api_out(entity)
+        return _api_out(entity, self.request.user)
 
     # No `delete`: retired in favor of Remove -> Purge as the sole destructive path (D14).
 
@@ -265,7 +268,7 @@ class ApiAdoptController(AtlasController):
     def post(self, parsed_path: Path[EntityPath], parsed_body: Body[AdoptIn]) -> ApiOut:
         instance = _get_api(parsed_path.id)
         adopt(instance, self.request, parsed_body)
-        return _api_out(instance)
+        return _api_out(instance, self.request.user)
 
 
 class ApiRemoveController(AtlasController):
@@ -275,7 +278,7 @@ class ApiRemoveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ApiOut:
         _get_api(parsed_path.id)
         entity = remove_entity(parsed_path.id, self.request.user)
-        return _api_out(entity)
+        return _api_out(entity, self.request.user)
 
 
 class ApiReviveController(AtlasController):
@@ -285,7 +288,7 @@ class ApiReviveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ApiOut:
         _get_api(parsed_path.id)
         entity = revive_entity(parsed_path.id, self.request.user)
-        return _api_out(entity)
+        return _api_out(entity, self.request.user)
 
 
 class ApiPurgeController(AtlasController):

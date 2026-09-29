@@ -42,7 +42,7 @@ function mockSession(isReadOnly: boolean) {
   })
 }
 
-function renderFlowDetailPage(initialEntry = '/flows/1') {
+function renderFlowDetailPage(initialEntry = '/flows/1', permissions?: { canEdit: boolean }) {
   vi.mocked(flowsApi.get).mockResolvedValue({
     id: 1,
     system: 'system:payments',
@@ -50,6 +50,7 @@ function renderFlowDetailPage(initialEntry = '/flows/1') {
     description: 'Short summary',
     documentation: '## Operational notes\n\nWatch the queue.',
     steps: [{ id: 'start', title: 'Start' }],
+    ...(permissions ? { permissions } : {}),
   })
   return render(
     <ThemeProvider theme="light">
@@ -121,5 +122,20 @@ describe('FlowDetailPage', () => {
     await waitFor(() => expect(screen.getByText(/Operational notes/)).toBeDefined())
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
+  it('hides Edit and Delete when the server says the user may not edit the flow', async () => {
+    renderFlowDetailPage('/flows/1', { canEdit: false })
+
+    await waitFor(() => expect(screen.getByText(/Operational notes/)).toBeDefined())
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
+  it('shows Edit and Delete when the server grants edit permission', async () => {
+    renderFlowDetailPage('/flows/1', { canEdit: true })
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit' })).toBeDefined())
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDefined()
   })
 })

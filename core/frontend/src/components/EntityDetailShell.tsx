@@ -136,13 +136,18 @@ export function EntityDetailShell({
   // narrows `CatalogEntityUnion` to the four kinds that do, mirroring `isSystem`/`isComponent`-
   // style guards elsewhere rather than widening `GroupEntity` with a field it'll never use.
   const status = entity && 'status' in entity ? entity.status : null
-  const canEdit = isManual && !isReadOnly
-  const canRemove = isManual && Boolean(onRemove) && status === 'active' && !isReadOnly
-  const canRevive = isManual && Boolean(onRevive) && status === 'removed' && !isReadOnly
+  // Server-computed per-user permissions; an entity without them (older payloads, kinds that
+  // don't report them yet) falls back to showing the action and letting the backend answer 403.
+  const permissions = entity && 'permissions' in entity ? entity.permissions : null
+  const mayEdit = permissions?.canEdit ?? true
+  const mayPurge = permissions?.canPurge ?? true
+  const canEdit = isManual && !isReadOnly && mayEdit
+  const canRemove = isManual && Boolean(onRemove) && status === 'active' && !isReadOnly && mayEdit
+  const canRevive = isManual && Boolean(onRevive) && status === 'removed' && !isReadOnly && mayEdit
   // Purge is shown whenever the entity is `removed`, independent of `isManual` — a Purge Grant
   // authorizes Purge on a YAML-managed entity despite the manual-write block (D9), so gating
   // visibility on `isManual` would hide it from exactly the grant holders it exists for.
-  const canPurge = !unavailable && Boolean(onPurge) && status === 'removed' && !isReadOnly
+  const canPurge = !unavailable && Boolean(onPurge) && status === 'removed' && !isReadOnly && mayPurge
 
   async function handleRemove() {
     if (!onRemove) return

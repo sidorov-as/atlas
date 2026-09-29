@@ -21,6 +21,7 @@ __all__ = [
     "FlowOut",
     "FlowPatch",
     "FlowPath",
+    "FlowPermissionsOut",
 ]
 
 
@@ -79,6 +80,14 @@ class FlowPatch(CamelModel):
         return value if value is None else _validate_flow_steps(value)
 
 
+class FlowPermissionsOut(CamelModel):
+    """What the requesting user may do with one Flow. Edit and delete share a
+    single permission (`atlas.flows.flow.edit`, checked against the Flow's
+    system). A UI hint only; the write endpoints re-check."""
+
+    can_edit: bool
+
+
 class FlowOut(CamelModel):
     id: int
     system: str
@@ -98,6 +107,7 @@ class FlowOut(CamelModel):
     # installed (query_ref/event_ref only), or the referenced entity no
     # longer resolves at all (e.g. purged).
     ref_status: dict[str, dict] = Field(default_factory=dict)
+    permissions: FlowPermissionsOut | None = None
 
 
 class FlowListFilters(BaseModel):

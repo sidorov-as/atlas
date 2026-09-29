@@ -20,6 +20,12 @@ if [ -n "${ATLAS_DEMO_ADMIN_PASSWORD:-}" ]; then
     --password-env ATLAS_DEMO_ADMIN_PASSWORD
 fi
 
+if [ -n "${ATLAS_DEMO_GUEST_PASSWORD:-}" ]; then
+  python manage.py seed_guest \
+    --username "${ATLAS_DEMO_GUEST_USERNAME:-guest}" \
+    --password-env ATLAS_DEMO_GUEST_PASSWORD
+fi
+
 gunicorn server.wsgi:application \
   --bind 127.0.0.1:8000 \
   --worker-class gthread \

@@ -155,3 +155,19 @@ def test_any_authenticated_user_can_read_flow_regardless_of_ownership(
     flow = Flow.objects.get(name="readable-flow")
     detail_response = non_member_client.get(f"/api/flows/{flow.id}/")
     assert detail_response.status_code == 200
+
+
+def test_detail_reports_edit_permission_to_a_member(owner_client, system):
+    flow = Flow.objects.create(system=system, name="perm-flow", steps=[])
+
+    body = owner_client.get(f"/api/flows/{flow.id}/").json()
+
+    assert body["permissions"] == {"canEdit": True}
+
+
+def test_detail_reports_no_edit_permission_to_a_non_member(non_member_client, system):
+    flow = Flow.objects.create(system=system, name="perm-flow", steps=[])
+
+    body = non_member_client.get(f"/api/flows/{flow.id}/").json()
+
+    assert body["permissions"] == {"canEdit": False}
