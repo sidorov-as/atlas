@@ -14,7 +14,10 @@ services:
     region: frankfurt
     dockerfilePath: ./deploy/render/Dockerfile
     dockerContext: .
-    healthCheckPath: /healthz/
+    # /healthz/ runs Cache/Database/DNS/Mail checks and returned 500 on Render;
+    # plugin health is enough for liveness. Inspect the failing check with
+    # /healthz/?format=json once the service is up.
+    healthCheckPath: /healthz/plugins/
     envVars:
       - key: DJANGO_ENV
         value: production
