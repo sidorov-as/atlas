@@ -1,14 +1,24 @@
 import pytest
-from atlas_plugin_c4 import c4
-from atlas_plugin_c4.config import C4PluginConfig
-from c4.renderers.plantuml import LocalPlantUMLBackend, RemotePlantUMLBackend
+from c4.renderers.plantuml import RemotePlantUMLBackend
 from pydantic import ValidationError
 
+from atlas_plugin_c4 import c4
+from atlas_plugin_c4.config import C4PluginConfig
 
-def test_defaults_to_local_renderer():
+
+def test_defaults_to_local_renderer(monkeypatch):
+    # The real backend refuses to construct without a PlantUML executable,
+    # which CI does not install; only the selection and arguments matter here.
+    created = []
+    monkeypatch.setattr(
+        c4, "LocalPlantUMLBackend", lambda **kwargs: created.append(kwargs)
+    )
     config = C4PluginConfig()
     assert config.renderer == "local"
-    assert isinstance(c4._plantuml_backend(config), LocalPlantUMLBackend)
+    c4._plantuml_backend(config)
+    assert created == [
+        {"timeout_seconds": 30.0, "plantuml_args": ["-DRELATIVE_INCLUDE=."]}
+    ]
 
 
 def test_remote_renderer_uses_configured_server():
