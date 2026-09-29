@@ -12,6 +12,7 @@ on:
       - "docs-site/scripts/**"
       - ".github/actions/setup-python-env/action.yml"
       - ".github/workflows/authentication-examples-fast.yml"
+      - ".github/workflows/authentication-examples-integration.yml"
   push:
     branches: ["main"]
     paths:
@@ -22,6 +23,7 @@ on:
       - "docs-site/docs/**"
       - "docs-site/scripts/**"
       - ".github/workflows/authentication-examples-fast.yml"
+      - ".github/workflows/authentication-examples-integration.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -67,6 +69,18 @@ jobs:
       - name: Render every Compose project
         working-directory: composer
         run: uv run python ../examples/authentication/validate.py compose
+
+      - name: Validate example manifest/lock/compose/journey content
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py content
+
+      - name: Validate integration workflow shape and CI diagnostics redaction
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py workflows
+
+      - name: Validate fixture documentation accuracy
+        working-directory: composer
+        run: uv run python ../examples/authentication/validate.py docs-accuracy
 
       - name: Set up documentation validation environment
         uses: ./.github/actions/setup-python-env

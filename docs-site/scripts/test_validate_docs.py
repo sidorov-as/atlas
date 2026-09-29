@@ -15,7 +15,6 @@ class SourceContractTests(unittest.TestCase):
                 "atlas.auth.local",
                 "atlas.auth.oidc",
                 "atlas.auth.gitea",
-                "example.auth.fixture",
             },
         )
         self.assertIn(

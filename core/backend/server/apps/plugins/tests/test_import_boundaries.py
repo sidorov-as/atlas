@@ -182,21 +182,6 @@ def _plugin_package_dirs() -> list[tuple[str, str, Path]]:
     return found
 
 
-def _example_authentication_package_dirs() -> list[tuple[str, str, Path]]:
-    plugin_root = (
-        REPO_ROOT
-        / "examples"
-        / "authentication"
-        / "custom-credentials"
-        / "plugin"
-    )
-    return [
-        ("example.auth.fixture", candidate.name, candidate)
-        for candidate in sorted(plugin_root.glob("atlas_*"))
-        if candidate.is_dir()
-    ]
-
-
 def _imported_modules(source_file: Path) -> list[str]:
     """Every dotted module path a file imports, from both `import x.y` and
     `from x.y import z` statements.
@@ -339,40 +324,6 @@ def test_authentication_plugins_use_only_the_published_provider_boundary(
         f"{package_name} authentication provider bypasses "
         f"`atlas.auth.providers.v1`; use the published `atlas_plugin_api` "
         f"contracts instead: " + "; ".join(offenders)
-    )
-
-
-@pytest.mark.parametrize(
-    ("plugin_id", "package_name", "package_dir"),
-    _example_authentication_package_dirs(),
-    ids=lambda value: value if isinstance(value, str) else None,
-)
-def test_example_authentication_plugins_use_only_public_sdk_imports(
-    plugin_id,
-    package_name,
-    package_dir,
-):
-    _ = plugin_id
-    allowed_top_level = {
-        "__future__",
-        "atlas_plugin_api",
-        package_name,
-        "dataclasses",
-        "hmac",
-        "typing",
-        "pydantic",
-    }
-    offenders = []
-    for source_file in package_dir.rglob("*.py"):
-        for module in _imported_modules(source_file):
-            if module.split(".", 1)[0] not in allowed_top_level:
-                offenders.append(
-                    f"{source_file.relative_to(REPO_ROOT)}: {module!r}"
-                )
-
-    assert offenders == [], (
-        f"{package_name} imports outside its package, Python stdlib, "
-        f"Pydantic, and the public `atlas_plugin_api`: " + "; ".join(offenders)
     )
 
 

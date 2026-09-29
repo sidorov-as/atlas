@@ -66,7 +66,6 @@ COPY composer /code/composer
 COPY plugin-api/python /code/plugin-api/python
 COPY plugins/auth-oidc/backend /code/plugins/auth-oidc/backend
 COPY plugins/auth-gitea/backend /code/plugins/auth-gitea/backend
-COPY examples/authentication/custom-credentials/plugin /code/examples/authentication/custom-credentials/plugin
 COPY plugins/standard-catalog/backend /code/plugins/standard-catalog/backend
 COPY plugins/apis/backend /code/plugins/apis/backend
 COPY plugins/c4/backend /code/plugins/c4/backend
