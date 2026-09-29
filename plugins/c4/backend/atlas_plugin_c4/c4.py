@@ -5,9 +5,13 @@ payloads.  ``c4-diagrams`` validates those payloads before rendering, keeping
 PlantUML-specific syntax and aliases out of controllers and catalog models.
 """
 
+import logging
 from collections.abc import Iterable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Literal
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from uuid import UUID
 
 from atlas_plugin_api import (
@@ -29,7 +33,7 @@ from c4.converters.exceptions import (
     DiagramJSONSchemaValidationError,
 )
 from c4.converters.json.converter import diagram_from_dict
-from c4.exceptions import PlantUMLError
+from c4.exceptions import PlantUMLError, PlantUMLRemoteRenderingError
 from c4.renderers.plantuml import (
     LocalPlantUMLBackend,
     PlantUMLRenderer,
@@ -39,6 +43,8 @@ from c4.renderers.plantuml.backends import DiagramFormat
 from django.db.models import Q
 
 from .config import C4PluginConfig
+
+logger = logging.getLogger(__name__)
 
 ImageFormat = Literal["svg", "png"]
 DiagramLayout = Literal[
@@ -900,6 +906,43 @@ def _merge_edges(
     return [merged[key] for key in sorted(merged)]
 
 
+class _IdentifiedRemotePlantUMLBackend(RemotePlantUMLBackend):
+    """`RemotePlantUMLBackend` that sends a descriptive `User-Agent`.
+
+    The library calls `urllib` with its default `Python-urllib/3.x` agent,
+    which the public PlantUML server (behind Cloudflare) rejects with
+    `403 error code: 1010`, so every remote render would fail. Mirrors
+    `RemotePlantUMLBackend.to_bytes` apart from the header.
+    """
+
+    USER_AGENT = "atlas-c4-renderer/0.1 (+https://github.com/sidorov-as/atlas)"
+
+    def to_bytes(self, diagram: str, *, format: DiagramFormat) -> bytes:
+        self._ensure_format_supported(format)
+        encoded = self._encode_text_diagram(diagram).decode("utf-8")
+        request = Request(
+            f"{self._server_url}/{format}/{encoded}",
+            headers={"User-Agent": self.USER_AGENT},
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=self._timeout_seconds) as resp:
+                return resp.read()  # type: ignore[no-any-return]
+        except HTTPError as exc:
+            body = b""
+            with suppress(Exception):
+                body = exc.read() or b""
+            preview = body[:200].decode("utf-8", errors="replace")
+            raise PlantUMLRemoteRenderingError(
+                f"PlantUML server render failed: HTTP {exc.code} {exc.reason}. "
+                f"Body: {preview!r}"
+            ) from exc
+        except URLError as exc:
+            raise PlantUMLRemoteRenderingError(
+                f"PlantUML server render failed: {exc.reason!r}"
+            ) from exc
+
+
 def _plantuml_config() -> C4PluginConfig:
     """The resolved ``atlas.c4`` config, or the local-renderer defaults when
     the deployment declares none."""
@@ -911,7 +954,7 @@ def _plantuml_config() -> C4PluginConfig:
 
 def _plantuml_backend(config: C4PluginConfig):
     if config.renderer == "remote":
-        return RemotePlantUMLBackend(
+        return _IdentifiedRemotePlantUMLBackend(
             server_url=config.server_url,
             timeout_seconds=config.timeout_seconds,
         )
@@ -933,4 +976,7 @@ def render(payload: Mapping[str, Any], *, format: ImageFormat = "svg") -> bytes:
         PlantUMLError,
         OSError,
     ) as exc:
+        # The API deliberately answers with a generic message; keep the cause
+        # in the server log so a misconfigured renderer is diagnosable.
+        logger.warning("Diagram rendering failed: %s: %s", type(exc).__name__, exc)
         raise DiagramRenderError("Unable to render diagram") from exc

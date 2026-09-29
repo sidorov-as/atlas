@@ -48,3 +48,34 @@ def test_remote_renderer_without_url_uses_library_default():
 def test_invalid_config_is_rejected(raw):
     with pytest.raises(ValidationError):
         C4PluginConfig.model_validate(raw)
+
+
+def test_remote_backend_sends_a_descriptive_user_agent(monkeypatch):
+    # The public PlantUML server rejects urllib's default agent with a 403.
+    seen = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b"<svg/>"
+
+    def fake_urlopen(request, timeout):
+        seen["headers"] = dict(request.header_items())
+        seen["url"] = request.full_url
+        return Response()
+
+    monkeypatch.setattr(c4, "urlopen", fake_urlopen)
+    backend = c4._plantuml_backend(
+        C4PluginConfig.model_validate(
+            {"renderer": "remote", "serverUrl": "https://plantuml.example.com"}
+        )
+    )
+
+    assert backend.to_bytes("@startuml\n@enduml", format="svg") == b"<svg/>"
+    assert seen["headers"]["User-agent"].startswith("atlas-c4-renderer/")
+    assert seen["url"].startswith("https://plantuml.example.com/svg/")
