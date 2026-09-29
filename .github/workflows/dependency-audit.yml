@@ -61,3 +61,11 @@ jobs:
         uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266 # v1.1.0
         with:
           virtual-environment: core/backend/.venv
+          # CVE-2026-49265: oauthlib PKCE `code_challenge_method_plain` uses a
+          # non-constant-time comparison (timing side channel). Fixed in
+          # oauthlib 4.0.0, but django-allauth[socialaccount] (our only
+          # consumer of oauthlib, via auth-oidc/auth-gitea) pins
+          # `oauthlib (>=3.3.0,<4)` as of the latest release (65.19.5), so we
+          # can't take the fix yet. Re-check when django-allauth relaxes that
+          # constraint and drop this line.
+          ignore-vulns: CVE-2026-49265
