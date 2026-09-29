@@ -1,5 +1,6 @@
 """Application-specific health-check configuration."""
 
+import logging
 from dataclasses import asdict
 from urllib.parse import urljoin
 from uuid import uuid4
@@ -13,15 +14,41 @@ from health_check.views import HealthCheckView
 from server.apps.catalog.auth_policy import authentication_policy
 from server.apps.plugins.health import plugin_health
 
+logger = logging.getLogger(__name__)
+
+_EXCLUDED_CHECKS = frozenset(
+    {"health_check.checks.Storage", "health_check.checks.DNS"}
+)
+
 
 class AtlasHealthCheckView(HealthCheckView):
-    """Run the standard checks except filesystem storage."""
+    """Run the standard checks except filesystem storage and DNS.
+
+    The DNS check resolves the container's own hostname, which platforms such
+    as Render do not publish, so it fails on a perfectly healthy service.
+
+    A failing check makes the endpoint answer 500 without saying which one,
+    and platform probes never ask for `?format=json`, so name each failure in
+    the application log.
+    """
 
     checks = tuple(
         check
         for check in HealthCheckView.checks
-        if check != "health_check.checks.Storage"
+        if check not in _EXCLUDED_CHECKS
     )
+
+    async def get(self, request, *args, **kwargs):
+        response = await super().get(request, *args, **kwargs)
+        for result in self.results:
+            if result.error:
+                logger.error(
+                    "Health check failed: %s: %s (%.3fs)",
+                    result.check,
+                    result.error,
+                    result.time_taken,
+                )
+        return response
 
 
 class PluginHealthView(View):

@@ -14,10 +14,7 @@ services:
     region: frankfurt
     dockerfilePath: ./deploy/render/Dockerfile
     dockerContext: .
-    # /healthz/ runs Cache/Database/DNS/Mail checks and returned 500 on Render;
-    # plugin health is enough for liveness. Inspect the failing check with
-    # /healthz/?format=json once the service is up.
-    healthCheckPath: /healthz/plugins/
+    healthCheckPath: /healthz/
     envVars:
       - key: DJANGO_ENV
         value: production
@@ -25,6 +22,9 @@ services:
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS
         value: localhost
+      # Public demo with no sensitive data: put tracebacks in the logs.
+      - key: DJANGO_LOG_TRACEBACKS
+        value: "true"
       # Render already redirects HTTP → HTTPS at its edge.
       - key: DJANGO_SECURE_SSL_REDIRECT
         value: "false"
