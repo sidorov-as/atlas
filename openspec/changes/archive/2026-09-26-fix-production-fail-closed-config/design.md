@@ -1,0 +1,31 @@
+## Context
+
+Django settings are split (`server/settings/__init__.py`) into `components/*.py` (loaded always) followed by exactly one `environments/{DJANGO_ENV}.py` (`DJANGO_ENV` defaults to `development` when unset). `components/common.py` sets defaults meant for local development — `SECRET_KEY = config("DJANGO_SECRET_KEY", default="unsafe-development-secret")` (line ~19) and `MAILERS = {"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}}` (line ~310) — with no override in `environments/production.py` today. `environments/production.py` already does the right thing for `SECURE_SSL_REDIRECT` (defaults to `True` at the Django-settings layer via `config('DJANGO_SECURE_SSL_REDIRECT', cast=bool, default=True)`); the audit's "HTTPS redirect off by default" finding is about `docker-compose.yml`'s own environment-variable default (`DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}`, line ~34), which silently overrides the Django-layer safe default for anyone running the shipped Compose file. `docker-compose.yml` also defaults `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas}` (line ~7).
+
+## Goals / Non-Goals
+
+**Goals:**
+- Starting the backend with `DJANGO_ENV=production` and a missing/placeholder/low-entropy `SECRET_KEY` SHALL fail startup with a clear error, not run with a known secret.
+- Starting the backend with `DJANGO_ENV=production` and no real mail backend configured SHALL either fail startup or disable password-recovery at runtime (design decision below), not silently discard recovery emails.
+- The Compose file's production-facing service definitions SHALL NOT silently default `POSTGRES_PASSWORD` or `DJANGO_SECURE_SSL_REDIRECT` to insecure values.
+- `python manage.py check --deploy` passes with `DJANGO_ENV=production`.
+- Local development (`DJANGO_ENV` unset or `development`) keeps working exactly as today — zero required env vars beyond what's already required.
+
+**Non-Goals:**
+- Rewriting the settings split architecture — this fits inside the existing `components/` + `environments/{env}.py` pattern.
+- Choosing or wiring up an actual production mailer (SMTP provider, etc.) — only the fail-closed *gate* is in scope; operators still bring their own mail backend.
+- Any change to `docker-compose.yml`'s development service definitions (only the production-facing ones, or a separate production Compose file if one exists — verify at implementation time whether `docker-compose.yml` is single-file with profiles or there's a distinct `docker-compose.prod.yml`).
+- The other prerelease-hardening changes (ingestion path traversal, SSRF, DNS rebinding, input limits) — unrelated files, no overlap.
+
+## Decisions
+
+- **Enforce in `environments/production.py`, not `components/common.py`.** `common.py` loads for every environment, so its defaults must stay development-friendly. `environments/production.py` loads only when `DJANGO_ENV=production` and already executes after `common.py`, so it can inspect/override/validate what `common.py` set. A `django.core.exceptions.ImproperlyConfigured` raised at settings-import time is the standard Django fail-closed mechanism (same failure mode a missing required setting already produces elsewhere in Django) and requires no new machinery.
+- **Validate `SECRET_KEY` for both absence and known-placeholder value, plus a minimum length as an entropy proxy.** Checking only "is it set" would still accept `SECRET_KEY=unsafe-development-secret` if an operator copy-pasted an example `.env` file verbatim — the audit specifically calls out "example values" as a failure mode to catch, not just "unset."
+- **For mail: disable password-recovery rather than hard-fail startup, when feasible.** A hard startup failure is more surprising for an operator who doesn't use password-recovery at all (e.g. SSO-only deployments via `auth-oidc`/`auth-gitea`) and would turn an unrelated missing setting into a full outage. Preferred: at settings-load time in production, if `MAILERS` still resolves to `locmem`, flip the relevant password-recovery feature flag/URL off (verify exact mechanism against `django-allauth`'s account settings already in `common.py`, e.g. `ACCOUNT_*` settings) rather than raising. If investigation at implementation time shows there's no clean way to disable recovery without also touching allauth internals broadly, fall back to hard-failing `check --deploy` (already partially the case) and document the requirement instead — record that fallback here if chosen.
+- **Compose defaults: drop the `:-atlas` / `:-false` fallbacks for the production-facing definitions**, so `docker compose up` against production config fails fast (Compose's own "variable not set" error) rather than the audit's silent-insecure-default path. Development Compose keeps its convenience defaults — first confirm at implementation time whether the repo has one `docker-compose.yml` with profiles/override files or genuinely separate dev/prod compose files (design.md for `backend-platform-foundation`'s "Reproducible full application runtime" requirement implies both modes are documented Compose workflows — check for `docker-compose.prod.yml` or similar before deciding where to make this edit).
+
+## Risks / Trade-offs
+
+- **A misconfigured production deployment now fails to start, instead of degrading** → this is the intended behavior change (fail closed instead of fail silent-and-insecure); mitigate operator confusion with a clear, specific error message naming exactly which variable is missing/invalid.
+- **Minimum-length/entropy check for `SECRET_KEY` could reject a legitimately strong but short custom value, or accept a long but low-entropy one** → mitigate by checking against a small denylist of known example values (the literal `"unsafe-development-secret"` and any other example strings found in the repo's own `.env.example`/docs) plus a conservative minimum length, rather than attempting real entropy estimation.
+- **Disabling password-recovery at runtime (rather than failing startup) could surprise an operator who expects it to work** → mitigate with a startup-time log warning (not just silent disablement) whenever production runs without a real mailer, in addition to `check --deploy` already flagging it.

@@ -1,0 +1,64 @@
+## Context
+
+`flow-management` (`add-flows`, `polish-flow-editor-canvas`, both archived) renders a Flow's `steps[]` as a diagram via `FlowGraph.tsx` + `flowLayout.ts`, using `@gravity-ui/graph`. Two prior decisions shape what this change can touch:
+
+- `add-flows/design.md` Decision 5: layout is a hand-written ~50-line DFS/two-pass function, chosen specifically because `steps[]` is a server-validated strict tree (Decision 4: divergence-only, no reconvergence) — a general layered-layout dependency (dagre/elk) was called out as unneeded for that constrained topology, with an explicit escape hatch ("if reconvergence is ever needed, this function is replaced by a dagre call... without changing the `steps` JSON shape").
+- `polish-flow-editor-canvas/design.md` Non-Goal: no canvas-based editing of node position or connections; node position stays fully computed. That non-goal is unchanged by this proposal — this change only replaces *how* the computed position is computed, not who authors it.
+
+`openspec/specs/flow-management/spec.md` has a locked scenario ("Live preview updates as the JSON is edited... THEN the diagram preview re-renders... without requiring a save") that today holds trivially because `layoutFlowSteps()` is synchronous. This design has to keep that scenario true with an async layout engine.
+
+The reference implementation this change draws its palette and ELK usage pattern from is vendored, non-dependency reference code at `temp/landing/src/components/GraphPlayground/Playground` — not part of Atlas's frontend, read for its `viewConfiguration.colors` shape and general ELK story pointer (`preview.gravity-ui.com/graph`, `plugins-elk--mr-tree`, `elk.direction: RIGHT`), not copied wholesale (that reference is a fully-editable canvas; this change explicitly keeps the canvas read-only).
+
+## Goals / Non-Goals
+
+**Goals:**
+- Render each transition's optional `label` on its connection line.
+- Produce the left-to-right tree layout via ELK (`elk.direction: RIGHT`) instead of the hand-written pass, while keeping the live-preview-on-keystroke UX intact (debounced, no blank/flash state).
+- Replace the default grey block/connection/canvas styling with a fixed, uniform palette.
+
+**Non-Goals:**
+- No canvas-based editing (drag, connect) — explored and rejected; canvas stays a pure view of `steps[]`. (See "Alternative considered" below.)
+- No `x`/`y` persisted on `FlowStep`, no backend/API/schema change.
+- No data-driven styling (color by entity kind, step status, etc.) — one fixed palette for all blocks/connections.
+- No relaxation of the strict-tree constraint (Decision 4 of `add-flows/design.md`) — ELK is adopted for layout quality/consistency with the reference playground, not because reconvergence support is newly needed. Topology is still tree-only, server-enforced, unchanged.
+
+## Decisions
+
+**1. ELK replaces the hand-written layout, but the tree-only data model is unchanged.**
+`layoutFlowSteps()` still builds the same forest-of-trees structure from `steps[]` (reusing `buildForest()`'s cycle/reconvergence tolerance for mid-edit invalid states); what changes is that block `x`/`y` come from `@gravity-ui/graph`'s `useElk` hook (`elk.direction: RIGHT`) instead of the manual DFS sizing/position pass. Connections are still built the same way (`sourceBlockId`/`targetBlockId`/`label`), independent of ELK. Rejected: keep the hand-written layout and only add labels/styling — leaves the visual gap with the reference playground's layout quality (edge routing, spacing) unaddressed, which was explicitly part of what the user wanted "like GraphPlayground."
+
+**1a. ELK edges declare an estimated `labels` size so layer spacing reserves room for the rendered label.** (found during manual verification, not in the original migration plan) `BlockConnection`'s label box is drawn at its exact measured text width with zero padding; without telling ELK about it, ELK treats edges as zero-width and packs adjacent layers only as far apart as the blocks themselves require. On a short edge (two adjacent 180px blocks with no branching to force extra spread) that gap was ~30px — narrower than most labels — so the label rendered clipped behind the neighboring block. `buildElkGraph()` now attaches `labels: [{ text, width, height }]` to each edge that has a `label`, using a rough width heuristic (`label.length * 8 + 16`) — confirmed via a standalone `elkjs` run that this alone makes ELK widen the layer gap to fit the label without changing node order or unrelated spacing.
+
+**2. Layout becomes async; the live-preview keystroke path is debounced and holds the last-good layout.**
+`useElk`'s `elk.layout()` returns a Promise (confirmed by reading the installed `@gravity-ui/graph` build's `useElk.js`), unlike the current synchronous function. `FlowGraph.tsx` already recomputes layout in a `useMemo` keyed on `steps` on every render (i.e., every JSON keystroke from `FlowFormPage`). Feeding that directly into an async hook on every keystroke would both hammer ELK and produce visible flicker while a result is pending. This change debounces the `steps` input to the layout hook (a few hundred ms of no change) and keeps rendering the previous layout's blocks/connections while a new one is in flight — `setEntities` is only called once ELK resolves, never with a partial/empty state. This preserves the spec's "without requiring a save" wording (still no save needed, just a short, invisible-in-practice delay) without weakening it to something save-gated.
+
+**3. Fixed palette lives in `FlowGraph.tsx`'s `GRAPH_CONFIG` and `index.css`, not a new settings surface.**
+Originally ported directly from the reference playground's `viewConfiguration.colors` shape (block background/border/selected-border, connection background/selected-background, anchor background, canvas dots/background/border) plus `.flow-graph__block`'s CSS, using its fixed dark-violet values. **Revised:** per user feedback the dark-violet look read wrong against Atlas's light UI, so the same `viewConfiguration.colors`/`.flow-graph__block` shape now carries fixed *light* values instead, modeled on `design/service-diagram.png`'s C4 diagram look (white canvas, light-blue component cards, dark text, gray relationship lines) rather than the reference playground's dark theme. This revision also added an explicit `viewConfiguration.colors.connectionLabel` block (background/text, plus hover/selected variants) — the library defaults it separately from `colors.connection` (`#EAEAEA` background / `#777677` text, per `@gravity-ui/graph`'s `initGraphColors`), which read fine against the old dark canvas by coincidence but was low-contrast against the new white one. This is still a one-time value substitution, not a new abstraction — `polish-flow-editor-canvas/design.md`'s "no graph-settings popover" non-goal stays true because nothing becomes user-toggleable, and it's still one fixed palette, not theme-driven. Rejected (both before and after this revision): deriving colors from Gravity UI theme tokens (`--g-color-*`) to track the app's light/dark theme automatically — colors stay hardcoded to this one fixed light look regardless of app theme; see Open Questions for how this was decided.
+
+**4. Alternative considered and rejected: full canvas editability (drag/connect), matching GraphPlayground exactly.**
+This was the original scope explored with the user before narrowing. Rejected for three compounding reasons: (a) it requires persisting `x`/`y` per step — a `FlowStep` schema change, migration, and a second source of truth for position alongside the tree structure; (b) canvas-drawn connections would need either client-side duplication of the server's strict-tree/no-reconvergence validation (`apps/catalog/models/flow.py`'s `validate_steps`) to give good draw-time feedback, or a worse UX where an edge draws successfully and only fails at save; (c) the reference playground's own sync model is asymmetric — canvas→JSON is continuous/ungated, but JSON→canvas is gated behind an explicit Apply/Ctrl+Enter action, specifically to stop a mid-keystroke invalid JSON from corrupting a canvas someone is simultaneously dragging in. Atlas's locked spec scenario requires *ungated* JSON→canvas live preview; introducing a second live writer (the canvas) reintroduces exactly the problem Apply exists to solve, and gating it would contradict that locked scenario. None of this trades off against the smaller, additive scope actually pursued here.
+
+## Risks / Trade-offs
+
+- **[elkjs bundling in a browser/Vite context]** `elkjs`'s default export is worker-based; using it inside Vite may need either its bundled non-worker build or worker-asset configuration → **Mitigation**: spike this first during implementation (see Open Questions) before wiring it into `flowLayout.ts` proper; `@gravity-ui/graph`'s `useElk` hook takes an already-constructed ELK instance, so the worker-vs-bundled choice is isolated to one call site.
+- **[New dependency weight]** `elkjs` adds real bundle size to a route that previously had zero layout-library cost → **Mitigation**: same lazy-loading precedent already used for Monaco (`polish-flow-editor-canvas/design.md` Decision 1) — only the flow view/edit routes pay for it, not the app shell.
+- **[Debounce tuning]** Too short a debounce re-triggers ELK excessively while typing; too long makes the live preview feel laggy compared to today's instant sync layout → **Mitigation**: start from a few-hundred-ms debounce (standard "stopped typing" heuristic), adjust after manual testing against the existing "live preview" spec scenario.
+- **[Fixed dark palette vs. app theming]** If Atlas's frontend supports a light theme, a fixed dark-violet canvas may look inconsistent next to it → **Mitigation**: explicitly deferred as an Open Question below rather than guessed at; matches Non-Goal (one fixed palette) for this change's scope.
+- **[Decision-5 reversal drift]** A future reader of `add-flows/design.md` won't see this reversal without cross-referencing → **Mitigation**: this design doc names the reversal explicitly (Goals/Non-Goals above); no edit to the archived `add-flows/design.md` itself, consistent with how archived design docs are treated as historical record elsewhere in this repo.
+
+## Migration Plan
+
+1. Add `elkjs` to `frontend/package.json`; spike its import shape (worker vs. bundled) against Vite before touching `flowLayout.ts`.
+2. Rework `flowLayout.ts`'s position-assignment pass to source `x`/`y` from ELK's `useElk` result instead of `assignPositions()`; keep `buildForest()`/`flatten()`'s tree-building and connection/label construction as-is.
+3. Add debounce + "hold last-good layout while pending" handling in `FlowGraph.tsx` around the (now async) layout call.
+4. Add `showConnectionLabels: true` to `GRAPH_CONFIG.settings`.
+5. Add the fixed color palette to `GRAPH_CONFIG.viewConfiguration.colors` and restyle `.flow-graph__block` (and related rules) in `index.css`.
+6. Manually verify: typing in the JSON editor still live-updates the diagram without a visible blank/flicker state; a step's `next_step`/`next_steps` `label` renders on its connection and hides at low zoom (existing library behavior via `showConnectionLabels`); layout direction is left-to-right; zoom/fit controls (from `polish-flow-editor-canvas`) still work against ELK-computed positions.
+
+No backend changes, no data migration, no rollback concerns beyond a standard revert of the frontend change.
+
+## Open Questions
+
+- ~~Does `elkjs` need its worker-based default export or the bundled synchronous variant in this Vite setup?~~ **Resolved:** the bundled variant, `elkjs/lib/elk.bundled.js`. Spiked by wiring each import shape into the real Vite entry (`main.tsx`) and running the actual `tsc -b && vite build` pipeline (this project's Vite build uses Rolldown): the default `elkjs` export's `main.js` unconditionally `require()`s the optional `web-worker` package inside its constructor, and Rolldown treats that as an unresolved import it refuses to silently drop, so `vite build` fails with `[vite]: Rolldown failed to resolve import "web-worker"`. `elkjs/lib/elk.bundled.js` has no such optional dependency, builds and dev-serves cleanly (esbuild pre-bundles it without issue), and type-checks under `tsc -b`. `flowLayout.ts` should import `ELK` from `elkjs/lib/elk.bundled.js`.
+- ~~Should the fixed dark-violet palette apply regardless of Atlas's app-wide theme, or does it need a light-theme variant?~~ **Resolved:** it read poorly against Atlas's light UI, so the fixed palette was swapped from dark-violet to a fixed light palette (see Decision 3), modeled on `design/service-diagram.png` rather than the dark reference playground. Still a single fixed palette, not app-theme-derived — per this change's Non-Goals.
+- Exact debounce duration (Risk above) — left as an implementation-time tuning detail, not a blocker to writing tasks.

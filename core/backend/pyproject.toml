@@ -44,7 +44,6 @@ dulwich = "1.2.15"
 paramiko = "5.0.0"
 
 [tool.poetry.group.dev.dependencies]
-atlas-example-auth-fixture = { path = "../../examples/authentication/custom-credentials/plugin", develop = true }
 pytest = "^9.1"
 pytest-django = "^4.9"
 pytest-cov = "^7.1"

@@ -4,6 +4,7 @@ x-backend-environment: &backend-environment
   DJANGO_ENV: development
   DJANGO_SETTINGS_MODULE: server.settings
   DJANGO_DEBUG: "true"
+  PYTHONPATH: /example/plugin
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?copy .env.example to .env}
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:18080}
@@ -49,6 +50,7 @@ services:
         python manage.py shell < /example/bootstrap.py
     volumes:
       - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+      - ./plugin:/example/plugin:ro
       - ./bootstrap.py:/example/bootstrap.py:ro
     depends_on:
       postgres:
@@ -61,6 +63,7 @@ services:
     environment: *backend-environment
     volumes:
       - ./generated/selected_plugins.py:/code/core/backend/server/settings/selected_plugins.py:ro
+      - ./plugin:/example/plugin:ro
     depends_on:
       initializer:
         condition: service_completed_successfully

@@ -226,7 +226,6 @@ __marimo__/
 # AI agents stuff:
 
 .codegraph
-openspec/
 .claude
 .codex
 

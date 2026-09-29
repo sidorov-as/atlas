@@ -32,11 +32,6 @@ PROVIDER_SOURCES = (
     / "backend"
     / "atlas_plugin_auth_gitea"
     / "plugin.py",
-    AUTH_EXAMPLES
-    / "custom-credentials"
-    / "plugin"
-    / "atlas_example_auth_fixture"
-    / "plugin.py",
 )
 PROVIDER_CONFIG_SOURCES = {
     "atlas.auth.oidc": (
@@ -56,14 +51,6 @@ PROVIDER_CONFIG_SOURCES = {
         / "atlas_plugin_auth_gitea"
         / "config.py",
         "GiteaConfig",
-    ),
-    "example.auth.fixture": (
-        AUTH_EXAMPLES
-        / "custom-credentials"
-        / "plugin"
-        / "atlas_example_auth_fixture"
-        / "config.py",
-        "FixtureCredentialConfig",
     ),
 }
 AUTH_NAV_PAGES = {
@@ -427,7 +414,15 @@ def validate_links(errors: list[str], paths: Iterable[Path]) -> None:
 
 def authentication_document_paths() -> list[Path]:
     docs = [DOCS / relative for relative in sorted(AUTH_NAV_PAGES)]
-    examples = sorted(AUTH_EXAMPLES.rglob("README.md"))
+    # `custom-credentials` is excluded: it documents `example.auth.fixture`,
+    # which has no source descriptor here by design (see PROVIDER_SOURCES) —
+    # that example validates its own docs against its own source in
+    # `examples/authentication/validate.py`.
+    examples = sorted(
+        path
+        for path in AUTH_EXAMPLES.rglob("README.md")
+        if "custom-credentials" not in path.parts
+    )
     return docs + examples
 
 
