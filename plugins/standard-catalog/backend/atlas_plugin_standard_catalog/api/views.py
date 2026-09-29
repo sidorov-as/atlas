@@ -12,6 +12,7 @@ response shaping, and the `_get_<kind>` 404/kind guard, not persistence.
 
 import logging
 from http import HTTPStatus
+from typing import Any
 
 from atlas_plugin_api import (
     API_VERSION,
@@ -35,6 +36,7 @@ from atlas_plugin_api import (
     blocked_by,
     blocked_by_reason,
     entity_capabilities,
+    entity_permissions,
     filter_by_field,
     filter_by_owner,
     filter_by_search,
@@ -94,7 +96,7 @@ def _not_found(message: str) -> APIError:
 # --- System ---------------------------------------------------------------
 
 
-def _system_out(instance: CatalogEntity) -> SystemOut:
+def _system_out(instance: CatalogEntity, user: Any = None) -> SystemOut:
     return SystemOut(
         id=instance.id,
         api_version=API_VERSION,
@@ -105,6 +107,7 @@ def _system_out(instance: CatalogEntity) -> SystemOut:
         blocked_by=blocked_by(instance),
         blocked_by_reason=blocked_by_reason(instance),
         capabilities=entity_capabilities(instance),
+        permissions=entity_permissions(instance, user) if user else None,
     )
 
 
@@ -159,14 +162,14 @@ class SystemListController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _system_out(entity)
+        return _system_out(entity, self.request.user)
 
 
 class SystemDetailController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(self, parsed_path: Path[EntityPath]) -> SystemOut:
-        return _system_out(_get_system(parsed_path.id))
+        return _system_out(_get_system(parsed_path.id), self.request.user)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -182,7 +185,7 @@ class SystemDetailController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _system_out(entity)
+        return _system_out(entity, self.request.user)
 
     # No `delete`: retired in favor of Remove -> Purge as the sole destructive path (D14).
 
@@ -238,7 +241,7 @@ class SystemAdoptController(AtlasController):
     ) -> SystemOut:
         instance = _get_system(parsed_path.id)
         adopt(instance, self.request, parsed_body)
-        return _system_out(instance)
+        return _system_out(instance, self.request.user)
 
 
 class SystemRemoveController(AtlasController):
@@ -248,7 +251,7 @@ class SystemRemoveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> SystemOut:
         _get_system(parsed_path.id)
         entity = remove_entity(parsed_path.id, self.request.user)
-        return _system_out(entity)
+        return _system_out(entity, self.request.user)
 
 
 class SystemReviveController(AtlasController):
@@ -258,7 +261,7 @@ class SystemReviveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> SystemOut:
         _get_system(parsed_path.id)
         entity = revive_entity(parsed_path.id, self.request.user)
-        return _system_out(entity)
+        return _system_out(entity, self.request.user)
 
 
 class SystemPurgeController(AtlasController):
@@ -273,7 +276,7 @@ class SystemPurgeController(AtlasController):
 # --- Component --------------------------------------------------------------
 
 
-def _component_out(instance: CatalogEntity) -> ComponentOut:
+def _component_out(instance: CatalogEntity, user: Any = None) -> ComponentOut:
     details = instance.component_details
     return ComponentOut(
         id=instance.id,
@@ -295,6 +298,7 @@ def _component_out(instance: CatalogEntity) -> ComponentOut:
         blocked_by=blocked_by(instance),
         blocked_by_reason=blocked_by_reason(instance),
         capabilities=entity_capabilities(instance),
+        permissions=entity_permissions(instance, user) if user else None,
     )
 
 
@@ -373,14 +377,14 @@ class ComponentListController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _component_out(entity)
+        return _component_out(entity, self.request.user)
 
 
 class ComponentDetailController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(self, parsed_path: Path[EntityPath]) -> ComponentOut:
-        return _component_out(_get_component(parsed_path.id))
+        return _component_out(_get_component(parsed_path.id), self.request.user)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -396,7 +400,7 @@ class ComponentDetailController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _component_out(entity)
+        return _component_out(entity, self.request.user)
 
     # No `delete`: retired in favor of Remove -> Purge as the sole destructive path (D14).
 
@@ -424,7 +428,7 @@ class ComponentAdoptController(AtlasController):
     ) -> ComponentOut:
         instance = _get_component(parsed_path.id)
         adopt(instance, self.request, parsed_body)
-        return _component_out(instance)
+        return _component_out(instance, self.request.user)
 
 
 class ComponentRemoveController(AtlasController):
@@ -434,7 +438,7 @@ class ComponentRemoveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ComponentOut:
         _get_component(parsed_path.id)
         entity = remove_entity(parsed_path.id, self.request.user)
-        return _component_out(entity)
+        return _component_out(entity, self.request.user)
 
 
 class ComponentReviveController(AtlasController):
@@ -444,7 +448,7 @@ class ComponentReviveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ComponentOut:
         _get_component(parsed_path.id)
         entity = revive_entity(parsed_path.id, self.request.user)
-        return _component_out(entity)
+        return _component_out(entity, self.request.user)
 
 
 class ComponentPurgeController(AtlasController):
@@ -459,7 +463,7 @@ class ComponentPurgeController(AtlasController):
 # --- Resource -------------------------------------------------------------
 
 
-def _resource_out(instance: CatalogEntity) -> ResourceOut:
+def _resource_out(instance: CatalogEntity, user: Any = None) -> ResourceOut:
     details = instance.resource_details
     return ResourceOut(
         id=instance.id,
@@ -477,6 +481,7 @@ def _resource_out(instance: CatalogEntity) -> ResourceOut:
         blocked_by=blocked_by(instance),
         blocked_by_reason=blocked_by_reason(instance),
         capabilities=entity_capabilities(instance),
+        permissions=entity_permissions(instance, user) if user else None,
     )
 
 
@@ -539,14 +544,14 @@ class ResourceListController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _resource_out(entity)
+        return _resource_out(entity, self.request.user)
 
 
 class ResourceDetailController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(self, parsed_path: Path[EntityPath]) -> ResourceOut:
-        return _resource_out(_get_resource(parsed_path.id))
+        return _resource_out(_get_resource(parsed_path.id), self.request.user)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -562,7 +567,7 @@ class ResourceDetailController(AtlasController):
             spec=parsed_body.spec,
             actor=self.request.user,
         )
-        return _resource_out(entity)
+        return _resource_out(entity, self.request.user)
 
     # No `delete`: retired in favor of Remove -> Purge as the sole destructive path (D14).
 
@@ -590,7 +595,7 @@ class ResourceAdoptController(AtlasController):
     ) -> ResourceOut:
         instance = _get_resource(parsed_path.id)
         adopt(instance, self.request, parsed_body)
-        return _resource_out(instance)
+        return _resource_out(instance, self.request.user)
 
 
 class ResourceRemoveController(AtlasController):
@@ -600,7 +605,7 @@ class ResourceRemoveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ResourceOut:
         _get_resource(parsed_path.id)
         entity = remove_entity(parsed_path.id, self.request.user)
-        return _resource_out(entity)
+        return _resource_out(entity, self.request.user)
 
 
 class ResourceReviveController(AtlasController):
@@ -610,7 +615,7 @@ class ResourceReviveController(AtlasController):
     def post(self, parsed_path: Path[EntityPath]) -> ResourceOut:
         _get_resource(parsed_path.id)
         entity = revive_entity(parsed_path.id, self.request.user)
-        return _resource_out(entity)
+        return _resource_out(entity, self.request.user)
 
 
 class ResourcePurgeController(AtlasController):

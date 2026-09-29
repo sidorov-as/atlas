@@ -835,6 +835,21 @@ GROUPS = [
 
 SYSTEMS = [
     {
+        # Owned by the unprivileged demo user's own Group (`seed_guest`), so a
+        # visitor signed in as `guest` has one System they may edit.
+        "name": "guest",
+        "title": "Guest",
+        "owner": "guest-team",
+        "description": "Sandbox System owned by the public demo guest user.",
+        "business_outcome": (
+            "Lets a demo visitor try editing the catalog without touching "
+            "anyone else's entities."
+        ),
+        "success_signal": "Visitors can create and edit entities here.",
+        "planning_question": "What would you model in your own catalog?",
+        "material_risk": "None: the demo resets nightly.",
+    },
+    {
         "name": "search-discovery",
         "title": "Search & Discovery",
         "owner": "search-team",
@@ -2944,7 +2959,10 @@ class Command(BaseCommand):
 
         self.stdout.write("Flushing database...")
         call_command("flush", interactive=False)
-        from atlas_plugin_standard_catalog.management.commands import seed_admin
+        from atlas_plugin_standard_catalog.management.commands import (
+            seed_admin,
+            seed_guest,
+        )
 
         seed_admin.bootstrap_administrator(
             username=os.environ.get("ATLAS_DEMO_ADMIN_USERNAME", "admin"),
@@ -2954,9 +2972,20 @@ class Command(BaseCommand):
             email=os.environ.get("ATLAS_DEMO_ADMIN_EMAIL", "admin@example.com"),
             group="platform",
         )
+        seed_guest.bootstrap_guest(
+            username=os.environ.get("ATLAS_DEMO_GUEST_USERNAME", "guest"),
+            password=os.environ.get(
+                "ATLAS_DEMO_GUEST_PASSWORD", "atlas-demo-guest-password"
+            ),
+            email=os.environ.get("ATLAS_DEMO_GUEST_EMAIL", "guest@example.com"),
+            group="guest-team",
+        )
 
         with transaction.atomic():
             groups = self._create_groups()
+            groups["guest-team"] = CatalogEntity.objects.get(
+                kind=KIND_GROUP, name="guest-team"
+            )
             systems = self._create_systems(groups)
             resources = self._create_resources(systems, groups)
             self._create_database_schemas(resources)

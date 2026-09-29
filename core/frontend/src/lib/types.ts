@@ -175,6 +175,12 @@ export interface SystemSpec {
   ownerId: string
 }
 
+/** What the requesting user may do with one entity — a UI hint only; the backend re-checks every write. */
+export interface EntityPermissions {
+  canEdit: boolean
+  canPurge: boolean
+}
+
 export interface SystemEntity {
   id: string
   apiVersion: string
@@ -186,6 +192,7 @@ export interface SystemEntity {
   blockedBy: string | null
   blockedByReason: ConflictReason | null
   capabilities: string[]
+  permissions?: EntityPermissions | null
 }
 
 export interface ComponentSpec {
@@ -211,6 +218,7 @@ export interface ComponentEntity {
   blockedBy: string | null
   blockedByReason: ConflictReason | null
   capabilities: string[]
+  permissions?: EntityPermissions | null
 }
 
 export interface ResourceSpec {
@@ -232,6 +240,7 @@ export interface ResourceEntity {
   blockedBy: string | null
   blockedByReason: ConflictReason | null
   capabilities: string[]
+  permissions?: EntityPermissions | null
 }
 
 export type ApiSpecSource = 'none' | 'inline' | 'url'
@@ -266,6 +275,7 @@ export interface ApiEntity {
   blockedBy: string | null
   blockedByReason: ConflictReason | null
   capabilities: string[]
+  permissions?: EntityPermissions | null
 }
 
 /** Not a `CatalogEntity` — no `kind`/`metadata` envelope, no ingestion. */
@@ -284,6 +294,8 @@ export interface FlowEntity {
   layoutEngine: 'dagre' | 'elk'
   /** Step id -> live status, for steps with a `query_ref`/`event_ref` whose reference still resolves; a step id absent from this map has no live status (no such ref, an unresolvable reference, or the APIs plugin not installed). */
   refStatus?: Record<string, FlowStepRefStatus>
+  /** Edit and Delete share one permission, decided by the Flow's system owner. A UI hint only. */
+  permissions?: { canEdit: boolean } | null
 }
 
 export interface GroupSpec {

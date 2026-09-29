@@ -9,6 +9,7 @@ from uuid import UUID
 from atlas_plugin_api import (
     ArchitectureRelationshipDeclarationIn,
     CamelModel,
+    EntityPermissionsOut,
     MetadataIn,
     MetadataOut,
     MetadataPatch,
@@ -105,6 +106,7 @@ class ApiOut(CamelModel):
     blocked_by: str | None = None
     blocked_by_reason: str | None = None
     capabilities: list[str] = Field(default_factory=list)
+    permissions: EntityPermissionsOut | None = None
 
 
 class ApiSummaryOut(CamelModel):

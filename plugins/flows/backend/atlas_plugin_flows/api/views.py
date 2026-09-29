@@ -8,6 +8,7 @@ against the Flow's `system` as the resource; list/retrieve require only `Session
 """
 
 from http import HTTPStatus
+from typing import Any
 
 from atlas_plugin_api import (
     FORBIDDEN_RESPONSE,
@@ -27,11 +28,18 @@ from dmr.errors import ErrorType, format_error
 from dmr.response import APIError
 
 from ..models import Flow, resolve_step_ref_statuses
-from ..permissions import check_flow_write_permission
-from .schemas import FlowIn, FlowListFilters, FlowOut, FlowPatch, FlowPath
+from ..permissions import can_edit_flow, check_flow_write_permission
+from .schemas import (
+    FlowIn,
+    FlowListFilters,
+    FlowOut,
+    FlowPatch,
+    FlowPath,
+    FlowPermissionsOut,
+)
 
 
-def _flow_out(instance: Flow) -> FlowOut:
+def _flow_out(instance: Flow, user: Any = None) -> FlowOut:
     return FlowOut(
         id=instance.id,
         system=instance.system.ref,
@@ -43,6 +51,11 @@ def _flow_out(instance: Flow) -> FlowOut:
         layout_direction=instance.layout_direction,
         layout_engine=instance.layout_engine,
         ref_status=resolve_step_ref_statuses(instance.steps),
+        permissions=(
+            FlowPermissionsOut(can_edit=can_edit_flow(user, instance.system))
+            if user
+            else None
+        ),
     )
 
 
@@ -115,14 +128,14 @@ class FlowListController(AtlasController):
         instance = _flow_create(parsed_body)
         check_flow_write_permission(self.request.user, instance.system)
         instance.save()
-        return _flow_out(instance)
+        return _flow_out(instance, self.request.user)
 
 
 class FlowDetailController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(self, parsed_path: Path[FlowPath]) -> FlowOut:
-        return _flow_out(_get_flow(parsed_path.id))
+        return _flow_out(_get_flow(parsed_path.id), self.request.user)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -134,7 +147,7 @@ class FlowDetailController(AtlasController):
         check_flow_write_permission(self.request.user, instance.system)
         _apply_flow_patch(instance, parsed_body)
         instance.save()
-        return _flow_out(instance)
+        return _flow_out(instance, self.request.user)
 
     @modify(status_code=HTTPStatus.NO_CONTENT, extra_responses=[FORBIDDEN_RESPONSE])
     def delete(self, parsed_path: Path[FlowPath]) -> None:

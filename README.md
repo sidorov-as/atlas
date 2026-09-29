@@ -72,6 +72,20 @@ To explore a populated catalog, load the booking demo:
 docker compose --env-file core/backend/.env -f docker-compose.dev.yml exec backend python manage.py seed_booking_demo --yes
 ```
 
+## Live demo
+
+A public demo with the booking catalog is available at
+<https://atlas-demo-j12z.onrender.com> (free tier: the first open after idle takes
+a while, and the data resets nightly).
+
+Sign in as the unprivileged guest user:
+
+- Username: `guest`
+- Password: `atlas-demo-guest-password`
+
+`guest` reads the whole catalog and can create and edit entities owned by its
+own `guest-team` Group, but cannot change anyone else's.
+
 For a walkthrough of the seeded catalog, including relationships, search, detail,
 and diagram views, follow the
 [Getting Started guide](https://sidorov-as.github.io/atlas/getting-started/).

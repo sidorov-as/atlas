@@ -38,8 +38,15 @@ from .catalog import get_catalog_entity_model
 from .entity_service import get_entity_service
 from .kinds import ValidateDeleteError, entity_deprecated
 from .kinds import registry as kind_registry
+from .permissions import get_policy_evaluator
 from .relations import entity_relations
-from .schemas import HistoryRecordOut, LinkSchema, MetadataOut, RelationOut
+from .schemas import (
+    EntityPermissionsOut,
+    HistoryRecordOut,
+    LinkSchema,
+    MetadataOut,
+    RelationOut,
+)
 from .tags import DEFAULT_TAG_COLOR, get_tag_model
 
 API_VERSION = "atlas/v1alpha1"
@@ -110,6 +117,17 @@ def metadata_out(instance: Any) -> MetadataOut:
         tags=tags,
         tag_colors=tag_colors(tags),
         links=[LinkSchema(**link) for link in instance.links],
+    )
+
+
+def entity_permissions(instance: Any, user: Any) -> EntityPermissionsOut:
+    """The requesting `user`'s edit/purge permissions on `instance`, decided
+    by the same policy evaluator the write endpoints use (edit covers
+    Remove and Revive too, which share its ownership rule)."""
+    evaluator = get_policy_evaluator()
+    return EntityPermissionsOut(
+        can_edit=evaluator.check(user, f"{instance.kind}.edit", instance),
+        can_purge=evaluator.check(user, f"{instance.kind}.purge", instance),
     )
 
 
