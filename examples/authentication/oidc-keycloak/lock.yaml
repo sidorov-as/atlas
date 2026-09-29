@@ -47,7 +47,7 @@ plugins:
     backend:
       package: atlas-plugin-c4
       version: 0.1.0
-      hash: sha256:0dc73340d6a8c5f6b739322991e9157f765db351a0c9da4e3ab41b00a3c3cf7b
+      hash: sha256:2f9c34d1a55a8d100468426fe2ced4e4327392619e2edddcbb8d3613804b69f1
     frontend:
       package: '@atlas/plugin-c4'
       version: 0.1.0

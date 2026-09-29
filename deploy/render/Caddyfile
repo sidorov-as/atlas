@@ -34,7 +34,8 @@
 	}
 
 	handle /static/* {
-		root * /var/www/django/static
+		# The request path keeps its /static prefix, so root is the parent of STATIC_ROOT.
+		root * /var/www/django
 		file_server
 	}
 
