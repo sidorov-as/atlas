@@ -10,10 +10,17 @@ import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
-_EXCLUDED_DIR_NAMES = frozenset({
-    '__pycache__', '.venv', 'node_modules', 'dist',
-    '.mypy_cache', '.ruff_cache', '.pytest_cache',
-})
+_EXCLUDED_DIR_NAMES = frozenset(
+    {
+        "__pycache__",
+        ".venv",
+        "node_modules",
+        "dist",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache",
+    }
+)
 
 
 def hash_directory(directory: Path, *, algorithm: str) -> bytes:
@@ -37,18 +44,30 @@ def _tracked_files(directory: Path) -> Iterator[Path]:
     file on disk."""
     paths = _git_listed_files(directory)
     if paths is None:
-        paths = (path for path in directory.rglob('*') if path.is_file())
+        paths = (path for path in directory.rglob("*") if path.is_file())
 
-    return iter(sorted(
-        path for path in paths
-        if _EXCLUDED_DIR_NAMES.isdisjoint(path.relative_to(directory).parts)
-    ))
+    return iter(
+        sorted(
+            path
+            for path in paths
+            if _EXCLUDED_DIR_NAMES.isdisjoint(path.relative_to(directory).parts)
+        )
+    )
 
 
 def _git_listed_files(directory: Path) -> list[Path] | None:
     try:
         completed = subprocess.run(
-            ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.'],
+            [
+                "git",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--",
+                ".",
+            ],
             cwd=directory,
             capture_output=True,
             check=True,
@@ -56,9 +75,6 @@ def _git_listed_files(directory: Path) -> list[Path] | None:
     except (OSError, subprocess.CalledProcessError):
         return None
 
-    names = completed.stdout.decode().split('\0')
+    names = completed.stdout.decode().split("\0")
     # `--cached` still lists files deleted from disk but not yet staged.
-    return [
-        path for name in names
-        if name and (path := directory / name).is_file()
-    ]
+    return [path for name in names if name and (path := directory / name).is_file()]

@@ -26,12 +26,12 @@ exports a static `PluginDescriptor`:
 
 ```python
 PLUGIN = PluginDescriptor(
-    id='atlas.your-plugin',
-    version='0.1.0',
-    compatibility={'atlasCore': '>=0.1 <1'},
-    django_apps=('atlas_plugin_your_plugin',),
-    entry_point='atlas_plugin_your_plugin.plugin:PLUGIN',
-    requires_plugins={'atlas.standard-catalog': '>=0.1 <1'},
+    id="atlas.your-plugin",
+    version="0.1.0",
+    compatibility={"atlasCore": ">=0.1 <1"},
+    django_apps=("atlas_plugin_your_plugin",),
+    entry_point="atlas_plugin_your_plugin.plugin:PLUGIN",
+    requires_plugins={"atlas.standard-catalog": ">=0.1 <1"},
 )
 ```
 

@@ -1,0 +1,35 @@
+# Render Blueprint for the public Atlas demo (booking-platform seed data).
+# Dashboard → New → Blueprint → pick this repository.
+#
+# One free web service, no external database: PostgreSQL runs inside the
+# container with the demo catalog baked into the image (deploy/render/).
+# Render's free filesystem is ephemeral, so every restart resets the demo;
+# .github/workflows/render-demo-reset.yml restarts it nightly.
+
+services:
+  - type: web
+    name: atlas-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz/
+    envVars:
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: localhost
+      # Render already redirects HTTP → HTTPS at its edge.
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "false"
+      # Must be at least 50 characters (production settings refuse shorter),
+      # e.g. python -c "import secrets; print(secrets.token_urlsafe(64))"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: ATLAS_DEMO_ADMIN_USERNAME
+        value: admin
+      - key: ATLAS_DEMO_ADMIN_PASSWORD
+        sync: false

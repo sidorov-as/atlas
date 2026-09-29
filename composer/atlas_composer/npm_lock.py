@@ -27,24 +27,28 @@ def parse_npm_lock(lock_path: Path) -> dict[str, ResolvedFrontendPackage]:
         data = json.load(lock_file)
 
     resolved: dict[str, ResolvedFrontendPackage] = {}
-    for key, entry in data.get('packages', {}).items():
-        name = entry.get('name')
-        version = entry.get('version')
+    for key, entry in data.get("packages", {}).items():
+        name = entry.get("name")
+        version = entry.get("version")
         if not key or not name or not version:
             # `""` is the root project entry; a `node_modules/` alias entry
             # for a workspace link carries neither `name` nor `version` —
             # the workspace member's own entry (keyed by its directory) does.
             continue
-        integrity = entry.get('integrity')
+        integrity = entry.get("integrity")
         if not integrity:
             # A local workspace member: its `packages` key IS its directory,
             # relative to the lockfile — no registry integrity to reuse, so
             # hash the directory ourselves.
             package_dir = (lock_path.parent / key).resolve()
-            integrity = 'sha512-' + base64.b64encode(
-                hash_directory(package_dir, algorithm='sha512'),
-            ).decode()
+            integrity = (
+                "sha512-"
+                + base64.b64encode(
+                    hash_directory(package_dir, algorithm="sha512"),
+                ).decode()
+            )
         resolved[name] = ResolvedFrontendPackage(
-            version=version, integrity=integrity,
+            version=version,
+            integrity=integrity,
         )
     return resolved

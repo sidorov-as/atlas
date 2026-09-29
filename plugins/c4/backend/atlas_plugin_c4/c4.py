@@ -20,6 +20,7 @@ from atlas_plugin_api import (
     Ok,
     get_architecture_relationship_model,
     get_catalog_entity_model,
+    get_plugin_config,
     get_relation_model,
     resolve_capability,
 )
@@ -29,9 +30,15 @@ from c4.converters.exceptions import (
 )
 from c4.converters.json.converter import diagram_from_dict
 from c4.exceptions import PlantUMLError
-from c4.renderers.plantuml import LocalPlantUMLBackend, PlantUMLRenderer
+from c4.renderers.plantuml import (
+    LocalPlantUMLBackend,
+    PlantUMLRenderer,
+    RemotePlantUMLBackend,
+)
 from c4.renderers.plantuml.backends import DiagramFormat
 from django.db.models import Q
+
+from .config import C4PluginConfig
 
 ImageFormat = Literal["svg", "png"]
 DiagramLayout = Literal[
@@ -893,16 +900,32 @@ def _merge_edges(
     return [merged[key] for key in sorted(merged)]
 
 
+def _plantuml_config() -> C4PluginConfig:
+    """The resolved ``atlas.c4`` config, or the local-renderer defaults when
+    the deployment declares none."""
+    try:
+        return get_plugin_config("atlas.c4", C4PluginConfig)
+    except LookupError:
+        return C4PluginConfig()
+
+
+def _plantuml_backend(config: C4PluginConfig):
+    if config.renderer == "remote":
+        return RemotePlantUMLBackend(
+            server_url=config.server_url,
+            timeout_seconds=config.timeout_seconds,
+        )
+    return LocalPlantUMLBackend(
+        timeout_seconds=config.timeout_seconds,
+        plantuml_args=["-DRELATIVE_INCLUDE=."],
+    )
+
+
 def render(payload: Mapping[str, Any], *, format: ImageFormat = "svg") -> bytes:
-    """Render a validated diagram through the local PlantUML executable only."""
+    """Render a validated diagram through the configured PlantUML backend."""
     try:
         diagram, _ = diagram_from_dict(payload)
-        renderer = PlantUMLRenderer(
-            backend=LocalPlantUMLBackend(
-                timeout_seconds=30,
-                plantuml_args=["-DRELATIVE_INCLUDE=."],
-            )
-        )
+        renderer = PlantUMLRenderer(backend=_plantuml_backend(_plantuml_config()))
         return renderer.render_bytes(diagram, format=DiagramFormat(format))
     except (
         ConversionError,

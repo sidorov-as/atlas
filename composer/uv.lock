@@ -32,7 +32,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atlas-plugin-api-python", directory = "/Users/ereon/PycharmProjects/open-source/atlas/plugin-api/python" },
+    { name = "atlas-plugin-api-python", editable = "../plugin-api/python" },
     { name = "pydantic", specifier = ">=2.13,<3.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
 ]
@@ -40,7 +40,7 @@ requires-dist = [
 [[package]]
 name = "atlas-plugin-api-python"
 version = "0.1.0"
-source = { directory = "/Users/ereon/PycharmProjects/open-source/atlas/plugin-api/python" }
+source = { editable = "../plugin-api/python" }
 dependencies = [
     { name = "django" },
     { name = "django-modern-rest", extra = ["pydantic"] },

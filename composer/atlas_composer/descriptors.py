@@ -26,7 +26,7 @@ def load_backend_descriptors(lock: Lock) -> dict[str, PluginDescriptor]:
     for key, locked in lock.plugins.items():
         if locked.backend is None:
             continue
-        plugin_id = key.rsplit('@', 1)[0]
+        plugin_id = key.rsplit("@", 1)[0]
         module = import_module(backend_module_path(locked.backend.package))
         descriptors[plugin_id] = module.PLUGIN
     return descriptors

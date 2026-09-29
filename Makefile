@@ -10,9 +10,10 @@ DISTRIBUTIONS := distributions/default \
 	examples/authentication/oidc-keycloak \
 	examples/authentication/oauth2-gitea \
 	examples/authentication/custom-credentials \
-	examples/ingestion
+	examples/ingestion \
+	deploy/render
 
-.PHONY: help docs dev-up dev-down migrate seed-demo lock lock-validate examples-up examples-down examples-list
+.PHONY: help docs format format-check dev-up dev-down migrate seed-demo lock lock-validate examples-up examples-down examples-list
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -21,6 +22,12 @@ help: ## Show this help
 
 docs: ## Serve the documentation site locally with live reload
 	cd docs-site && uv run zensical serve
+
+format: ## Format all Python code with ruff (each project's own [tool.ruff] settings apply)
+	uvx ruff format .
+
+format-check: ## Check Python formatting without changing files
+	uvx ruff format --check .
 
 core/backend/.env:
 	cp core/backend/.env.example $@

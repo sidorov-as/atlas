@@ -214,7 +214,8 @@ def test_gitea_example_selects_provider_specific_oauth_without_group_sync() -> N
     assert lock.auth.default == "atlas.auth.gitea"
     lock_text = (GITEA_EXAMPLE / "lock.yaml").read_text()
     assert "client_secret" not in lock_text
-    assert "GITEA_CLIENT_SECRET" not in lock_text
+    gitea_plugin = lock.plugins["atlas.auth.gitea@0.1.0"]
+    assert gitea_plugin.config["clientSecret"] == {"fromEnv": "GITEA_CLIENT_SECRET"}
 
 
 def test_gitea_bootstrap_generates_uncommitted_runtime_oauth_secret() -> None:

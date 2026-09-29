@@ -1,0 +1,104 @@
+distribution: atlas.render-demo@2026.09
+core: 0.1.0
+plugins:
+  atlas.standard-catalog@0.1.0:
+    backend:
+      package: atlas-plugin-standard-catalog
+      version: 0.1.0
+      hash: sha256:6838e4d6d1c04ac7178fb8624175109ce527122f147c2249e584b22e859121f6
+    frontend:
+      package: '@atlas/plugin-standard-catalog'
+      version: 0.1.0
+      integrity: sha512-+aKufhifGchxpZ4sYcLjhmv/UtCRQaYxWdj2R12rFLsX5CkkwRlll46BQMV0YnoChXmqjqSBdvNFas7WndielQ==
+  atlas.apis@0.1.0:
+    backend:
+      package: atlas-plugin-apis
+      version: 0.1.0
+      hash: sha256:a835130e3d9f84474ca72e89493c87aca69e78b5d98ec9c65619c1400a8d337d
+    frontend:
+      package: '@atlas/plugin-apis'
+      version: 0.1.0
+      integrity: sha512-MVYB3ISqfXJNaI7ekRIkUqLxSFyaRooOLBojN/8ftLMm9N3PvQwnkgs/SA+/GTK6wXb4SylGC0gr+4zdlvnheQ==
+  atlas.c4@0.1.0:
+    backend:
+      package: atlas-plugin-c4
+      version: 0.1.0
+      hash: sha256:2baf9e2d3a1abe8e6dcf13c6fc6c7190067206cadb685ee55a502e8b6411e0f6
+    frontend:
+      package: '@atlas/plugin-c4'
+      version: 0.1.0
+      integrity: sha512-uuEAFy9nwer1GZcuwxeUwBQBteN0s+eXsYuFR+3R5TMGlhWsUILxXfKbGyeGVZbUFyiSlGsFcqh+7B6mJ9NEFQ==
+    config:
+      renderer: remote
+      serverUrl: https://www.plantuml.com/plantuml
+  atlas.database-schema@0.1.0:
+    backend:
+      package: atlas-plugin-database-schema
+      version: 0.1.0
+      hash: sha256:3a94efd0e716aa007d63edf29914db11199cc7e83e8cb45a76de56cda79a52a5
+    frontend:
+      package: '@atlas/plugin-database-schema'
+      version: 0.1.0
+      integrity: sha512-OyFMOvdI+iNI7J+am/k2KMpLxw1DvHkpxVuWwpepowRKbMW1Pj6iLD9v06XHBzsKWAvUU27JRgXCS4FY28aqHw==
+  atlas.ingestion@0.1.0:
+    backend:
+      package: atlas-plugin-ingestion
+      version: 0.1.0
+      hash: sha256:8dbc3b8881c0b101ae9e0219aa2acbcc8e4d29817b088384b4dd3866f41599e9
+  atlas.flows@0.1.0:
+    backend:
+      package: atlas-plugin-flows
+      version: 0.1.0
+      hash: sha256:60779583ac73be6d31a9724a6f6d89aefb837c40818ef9a44fa096ff466fd406
+    frontend:
+      package: '@atlas/plugin-flows'
+      version: 0.1.0
+      integrity: sha512-+AlL3mTlCzYNw5X2Facj3YnjtWmWHY06blvk9F7ysGkwpQD4GZbHhbeaQNOc+uq7h4uJV+i6hzx2NZNZ7Rb6uA==
+auth:
+  providers:
+  - id: atlas.auth.local
+    owner: atlas.catalog
+    contractVersion: atlas.auth.providers.v1
+    flowKind: credentials
+    remoteLogout: unsupported
+    presentation:
+      displayName: Username and password
+      credentialFields:
+      - id: username
+        label: Username
+        kind: text
+        autocomplete: username
+      - id: password
+        label: Password
+        kind: secret
+        autocomplete: current-password
+    signup: disabled
+    principalProvisioning: preprovisioned
+    actorProvisioning: manual
+    profileFields: []
+    groupSync:
+      mode: none
+      snapshotRequirement: unsupported
+      maxAgeSeconds: 28800
+      mappings: {}
+    restrictedAttributes: []
+  default: atlas.auth.local
+  sessionMaxAgeSeconds: 28800
+  publicOrigin: http://localhost:8000
+  trustedProxyAddresses:
+  - 127.0.0.1
+  adminPassword:
+    mode: disabled
+    principalIds: []
+  outboundTrust:
+    allowedDestinations: []
+    allowDevelopmentHttp: false
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+    verifiedAddressesRequired: true
+    tokenMaxAgeSeconds: 3600

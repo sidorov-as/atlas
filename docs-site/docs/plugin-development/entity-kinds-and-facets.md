@@ -101,6 +101,7 @@ and the C4 plugin's diagram tab is gated on that capability rather than on
 ```python
 def register_runtime() -> None:
     from atlas_plugin_yourplugin.kinds import register_your_kinds
+
     register_your_kinds(owner=PLUGIN.id)
 ```
 

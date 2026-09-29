@@ -55,11 +55,13 @@ class Browser:
         headers = {"Accept": "application/json"}
         if data is not None:
             body = json.dumps(data).encode()
-            headers.update({
-                "Content-Type": "application/json",
-                "Origin": self.base_url,
-                "X-CSRFToken": self.csrf(),
-            })
+            headers.update(
+                {
+                    "Content-Type": "application/json",
+                    "Origin": self.base_url,
+                    "X-CSRFToken": self.csrf(),
+                }
+            )
         request = urllib.request.Request(
             f"{self.base_url}{path}", body, headers, method=method
         )
@@ -94,9 +96,7 @@ class Browser:
         )
 
     def logout(self) -> None:
-        self.request(
-            "/auth/browser/v1/session", method="DELETE", data={}, expected=204
-        )
+        self.request("/auth/browser/v1/session", method="DELETE", data={}, expected=204)
 
 
 def compose(env_file: Path, *args: str) -> subprocess.CompletedProcess[str]:

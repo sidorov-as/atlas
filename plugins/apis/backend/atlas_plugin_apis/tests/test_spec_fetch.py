@@ -90,7 +90,9 @@ class _WideFlatHandler(_QuietHandler):
 
 
 @contextmanager
-def _serve(handler_cls: type[http.server.BaseHTTPRequestHandler]) -> Iterator[tuple[str, int]]:
+def _serve(
+    handler_cls: type[http.server.BaseHTTPRequestHandler],
+) -> Iterator[tuple[str, int]]:
     server = http.server.HTTPServer(("127.0.0.1", 0), handler_cls)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -137,7 +139,9 @@ def _generate_self_signed_cert(hostname: str, tmp_path) -> tuple[str, str]:
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(days=1))
         .not_valid_after(now + datetime.timedelta(days=1))
-        .add_extension(x509.SubjectAlternativeName([x509.DNSName(hostname)]), critical=False)
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName(hostname)]), critical=False
+        )
         .sign(key, hashes.SHA256())
     )
     cert_path = tmp_path / "cert.pem"
@@ -153,7 +157,9 @@ def _generate_self_signed_cert(hostname: str, tmp_path) -> tuple[str, str]:
     return str(cert_path), str(key_path)
 
 
-def _mock_resolution(monkeypatch: pytest.MonkeyPatch, answers: dict[str, str]) -> list[str]:
+def _mock_resolution(
+    monkeypatch: pytest.MonkeyPatch, answers: dict[str, str]
+) -> list[str]:
     """See `atlas_plugin_api.tests.test_safe_http._mock_resolution` for why a
     literal IP address must pass through untouched (that's `urllib3` doing
     its own connect-time bookkeeping on an address already verified, not a
@@ -255,7 +261,9 @@ def test_fetch_rejects_a_redirect_to_a_disallowed_address(
 ) -> None:
     with _serve(_RedirectToOtherHostHandler) as (server_host, server_port):
         settings.ATLAS_APIS_SPEC_URL_ALLOWLIST = ["safe.test"]
-        _mock_resolution(monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"})
+        _mock_resolution(
+            monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"}
+        )
 
         assert fetch_spec_content(f"http://safe.test:{server_port}/start") is None
 
@@ -301,7 +309,9 @@ def test_fetch_rejects_a_deeply_nested_body(
         settings.ATLAS_APIS_SPEC_URL_ALLOWLIST = ["nested.test"]
         _mock_resolution(monkeypatch, {"nested.test": server_host})
 
-        assert fetch_spec_content(f"http://nested.test:{server_port}/openapi.yaml") is None
+        assert (
+            fetch_spec_content(f"http://nested.test:{server_port}/openapi.yaml") is None
+        )
 
 
 def test_fetch_rejects_a_body_with_too_many_nodes(
@@ -311,7 +321,9 @@ def test_fetch_rejects_a_body_with_too_many_nodes(
         settings.ATLAS_APIS_SPEC_URL_ALLOWLIST = ["wide.test"]
         _mock_resolution(monkeypatch, {"wide.test": server_host})
 
-        assert fetch_spec_content(f"http://wide.test:{server_port}/openapi.yaml") is None
+        assert (
+            fetch_spec_content(f"http://wide.test:{server_port}/openapi.yaml") is None
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -39,15 +39,15 @@ class InventoryConfig(PluginConfigSchema):
     refresh_minutes: int = 15
     api_token: str | SecretRef
 
-    PUBLIC_FIELDS = frozenset({'api_base_url', 'refresh_minutes'})
+    PUBLIC_FIELDS = frozenset({"api_base_url", "refresh_minutes"})
 
 
 PLUGIN = PluginDescriptor(
-    id='atlas.inventory',
-    version='0.1.0',
-    compatibility={'atlasCore': '>=0.1 <1'},
-    django_apps=('atlas_plugin_inventory',),
-    entry_point='atlas_plugin_inventory.plugin:PLUGIN',
+    id="atlas.inventory",
+    version="0.1.0",
+    compatibility={"atlasCore": ">=0.1 <1"},
+    django_apps=("atlas_plugin_inventory",),
+    entry_point="atlas_plugin_inventory.plugin:PLUGIN",
     config_schema=InventoryConfig,
 )
 ```
@@ -105,9 +105,9 @@ entry as a configuration or selection error:
 from server.apps.plugins.config import registry
 
 
-config = registry.get('atlas.inventory')
+config = registry.get("atlas.inventory")
 if config is None:
-    raise RuntimeError('atlas.inventory configuration was not registered')
+    raise RuntimeError("atlas.inventory configuration was not registered")
 
 assert isinstance(config, InventoryConfig)
 client = InventoryClient(base_url=config.api_base_url, token=config.api_token)

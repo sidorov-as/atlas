@@ -14,7 +14,7 @@ locked artifacts. Backend and frontend artifacts for one plugin must resolve to
 the same version.
 
 ```python
-compatibility={'atlasCore': '>=0.1 <1'}
+compatibility = {"atlasCore": ">=0.1 <1"}
 ```
 
 Composer currently resolves only workspace packages from the repository lock

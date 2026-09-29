@@ -37,9 +37,7 @@ class FormParser(HTMLParser):
         self.forms: list[dict[str, Any]] = []
         self._current: dict[str, Any] | None = None
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
         if tag == "form":
             self._current = {
@@ -50,9 +48,7 @@ class FormParser(HTMLParser):
         elif tag == "input" and self._current is not None:
             name = values.get("name")
             if name:
-                self._current["inputs"][name] = html.unescape(
-                    values.get("value") or ""
-                )
+                self._current["inputs"][name] = html.unescape(values.get("value") or "")
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "form":
@@ -94,9 +90,7 @@ class Browser:
             # resolver does not consistently implement that rule on macOS,
             # so the smoke transport connects to the published loopback port.
             url = urllib.parse.urlunsplit(
-                parsed_url._replace(
-                    netloc=f"localhost:{parsed_url.port or 80}"
-                )
+                parsed_url._replace(netloc=f"localhost:{parsed_url.port or 80}")
             )
         headers: dict[str, str] = {"Accept": "text/html,application/json"}
         body = None
@@ -110,9 +104,7 @@ class Browser:
         if authenticated_write:
             headers["Origin"] = self.base_url
             headers["X-CSRFToken"] = self.csrf()
-        call = urllib.request.Request(
-            url, data=body, headers=headers, method=method
-        )
+        call = urllib.request.Request(url, data=body, headers=headers, method=method)
         try:
             response = self.opener.open(call)
         except urllib.error.HTTPError as error:
@@ -127,9 +119,7 @@ class Browser:
         return payload
 
     def login(self, username: str, password: str) -> None:
-        config = json.loads(
-            self.request(f"{self.base_url}/auth/browser/v1/config")
-        )
+        config = json.loads(self.request(f"{self.base_url}/auth/browser/v1/config"))
         assert [item["id"] for item in config["providers"]] == [PROVIDER_ID]
         assert config["providers"][0]["flowKind"] == "redirect"
 
@@ -158,26 +148,21 @@ class Browser:
         consent_forms = [
             item
             for item in forms(result)
-            if "client_id" in item["inputs"]
-            and "oauth" in item["action"]
+            if "client_id" in item["inputs"] and "oauth" in item["action"]
         ]
         if consent_forms:
             consent = consent_forms[0]
             consent_values = dict(consent["inputs"])
             consent_values["granted"] = "true"
             self.request(
-                urllib.parse.urljoin(
-                    challenge["redirectUrl"], consent["action"]
-                ),
+                urllib.parse.urljoin(challenge["redirectUrl"], consent["action"]),
                 method="POST",
                 data=consent_values,
                 form=True,
                 expected=(200, 404),
             )
 
-        session = json.loads(
-            self.request(f"{self.base_url}/auth/browser/v1/session")
-        )
+        session = json.loads(self.request(f"{self.base_url}/auth/browser/v1/session"))
         assert session["meta"]["is_authenticated"] is True
         assert session["data"]["user"]["username"] == username
 
@@ -271,9 +256,7 @@ def main() -> None:
         authenticated_write=True,
         expected=204,
     )
-    session = json.loads(
-        second.request(f"{atlas_url}/auth/browser/v1/session")
-    )
+    session = json.loads(second.request(f"{atlas_url}/auth/browser/v1/session"))
     assert session["meta"]["is_authenticated"] is False
 
     print("Gitea OAuth2 browser smoke test passed.")

@@ -92,12 +92,12 @@ def parse_operations(
 ) -> list[ParsedOperation]:
     """Parse `spec_content` into intermediate operation records.
 
-    Raises `SpecParseError` for a spec-level failure (invalid YAML/JSON, no
-    recognizable version key, no usable `channels`/`operations`) — callers
- treat that as a whole-sync failure. A single channel/operation that
-    doesn't map cleanly is logged and skipped instead of aborting the rest of
-    the parse. `api_label`, when given, is included in that
-    per-operation log line.
+       Raises `SpecParseError` for a spec-level failure (invalid YAML/JSON, no
+       recognizable version key, no usable `channels`/`operations`) — callers
+    treat that as a whole-sync failure. A single channel/operation that
+       doesn't map cleanly is logged and skipped instead of aborting the rest of
+       the parse. `api_label`, when given, is included in that
+       per-operation log line.
     """
     try:
         spec = yaml.safe_load(spec_content)

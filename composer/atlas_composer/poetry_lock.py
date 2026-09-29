@@ -24,26 +24,31 @@ class ResolvedPythonPackage:
 
 def parse_poetry_lock(lock_path: Path) -> dict[str, ResolvedPythonPackage]:
     """Map each locked package's name to its resolved version and hash."""
-    with open(lock_path, 'rb') as lock_file:
+    with open(lock_path, "rb") as lock_file:
         data = tomllib.load(lock_file)
 
     resolved: dict[str, ResolvedPythonPackage] = {}
-    for package in data.get('package', []):
-        files = package.get('files') or []
+    for package in data.get("package", []):
+        files = package.get("files") or []
         if files:
-            package_hash = files[0]['hash']
+            package_hash = files[0]["hash"]
         else:
-            source = package.get('source') or {}
-            if source.get('type') != 'directory':
+            source = package.get("source") or {}
+            if source.get("type") != "directory":
                 # No registry hash, and not a local directory we can hash
                 # ourselves (e.g. a git source) — nothing this composer can
                 # resolve for it yet.
                 continue
-            package_dir = (lock_path.parent / source['url']).resolve()
-            package_hash = 'sha256:' + hash_directory(
-                package_dir, algorithm='sha256',
-            ).hex()
-        resolved[package['name']] = ResolvedPythonPackage(
-            version=package['version'], hash=package_hash,
+            package_dir = (lock_path.parent / source["url"]).resolve()
+            package_hash = (
+                "sha256:"
+                + hash_directory(
+                    package_dir,
+                    algorithm="sha256",
+                ).hex()
+            )
+        resolved[package["name"]] = ResolvedPythonPackage(
+            version=package["version"],
+            hash=package_hash,
         )
     return resolved

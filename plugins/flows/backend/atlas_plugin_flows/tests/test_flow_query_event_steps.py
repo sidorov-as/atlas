@@ -1,5 +1,4 @@
-"""Tests for `query_ref`/`event_ref` step validation.
-"""
+"""Tests for `query_ref`/`event_ref` step validation."""
 
 import pytest
 from atlas_plugin_apis.models import ApiEndpoint, ApiOperation

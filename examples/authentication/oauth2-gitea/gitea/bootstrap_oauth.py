@@ -14,22 +14,17 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "atlas-oauth2-example"
-CALLBACK = (
-    "http://localhost:18080/auth/browser/v1/providers/"
-    "atlas.auth.gitea/callback"
-)
+CALLBACK = "http://localhost:18080/auth/browser/v1/providers/atlas.auth.gitea/callback"
 
 
 def request(path: str, *, method: str = "GET", data: Any = None) -> Any:
     origin = os.environ["GITEA_INTERNAL_ORIGIN"].rstrip("/")
     credentials = (
-        f"{os.environ['GITEA_ADMIN_USERNAME']}:"
-        f"{os.environ['GITEA_ADMIN_PASSWORD']}"
+        f"{os.environ['GITEA_ADMIN_USERNAME']}:{os.environ['GITEA_ADMIN_PASSWORD']}"
     )
     headers = {
         "Accept": "application/json",
-        "Authorization": "Basic "
-        + base64.b64encode(credentials.encode()).decode(),
+        "Authorization": "Basic " + base64.b64encode(credentials.encode()).decode(),
     }
     body = None
     if data is not None:

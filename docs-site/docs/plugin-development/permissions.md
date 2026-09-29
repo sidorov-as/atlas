@@ -20,7 +20,8 @@ reports both owners.
 ```python
 from atlas_plugin_api import PluginDescriptor, register_permission
 
-WIDGET_EDIT = 'atlas.inventory.widget.edit'
+WIDGET_EDIT = "atlas.inventory.widget.edit"
+
 
 def register_runtime() -> None:
     register_permission(WIDGET_EDIT, owner=PLUGIN.id)
@@ -36,9 +37,10 @@ control is only a convenience; the backend must enforce the decision.
 from django.core.exceptions import PermissionDenied
 from atlas_plugin_api import get_policy_evaluator
 
+
 def update_widget(request, entity, payload):
     if not get_policy_evaluator().check(request.user, WIDGET_EDIT, entity):
-        raise PermissionDenied('You cannot edit this widget.')
+        raise PermissionDenied("You cannot edit this widget.")
     # validate and persist payload
 ```
 

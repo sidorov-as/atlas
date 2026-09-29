@@ -43,7 +43,9 @@ class _QuietHandler(http.server.BaseHTTPRequestHandler):
 
 
 @contextmanager
-def _serve(handler_cls: type[http.server.BaseHTTPRequestHandler]) -> Iterator[tuple[str, int]]:
+def _serve(
+    handler_cls: type[http.server.BaseHTTPRequestHandler],
+) -> Iterator[tuple[str, int]]:
     server = http.server.HTTPServer(("127.0.0.1", 0), handler_cls)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -90,7 +92,9 @@ def _generate_self_signed_cert(hostname: str, tmp_path) -> tuple[str, str]:
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(days=1))
         .not_valid_after(now + datetime.timedelta(days=1))
-        .add_extension(x509.SubjectAlternativeName([x509.DNSName(hostname)]), critical=False)
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName(hostname)]), critical=False
+        )
         .sign(key, hashes.SHA256())
     )
     cert_path = tmp_path / "cert.pem"
@@ -106,7 +110,9 @@ def _generate_self_signed_cert(hostname: str, tmp_path) -> tuple[str, str]:
     return str(cert_path), str(key_path)
 
 
-def _mock_resolution(monkeypatch: pytest.MonkeyPatch, answers: dict[str, str]) -> list[str]:
+def _mock_resolution(
+    monkeypatch: pytest.MonkeyPatch, answers: dict[str, str]
+) -> list[str]:
     """Point `socket.getaddrinfo` at fixed answers for specific hostnames and
     return the list of hostnames it was actually asked to resolve, in order.
 
@@ -214,9 +220,7 @@ def test_dns_rebinding_does_not_bypass_the_initial_verification(
         calls = _mock_resolution(monkeypatch, {"rebind.test": server_host})
         monkeypatch.setattr(safe_http, "_is_allowed_address", lambda ip: True)
 
-        response = safe_request(
-            f"http://rebind.test:{server_port}/ok", allow_http=True
-        )
+        response = safe_request(f"http://rebind.test:{server_port}/ok", allow_http=True)
 
         assert response.status_code == 200
         assert response.content == b"ok"
@@ -256,7 +260,9 @@ def test_exempt_hosts_does_not_extend_to_a_redirect_target(
     wherever it points — each hop's hostname is checked against
     `exempt_hosts` on its own, not the request's original hostname."""
     with _serve(_RedirectToOtherHostHandler) as (server_host, server_port):
-        _mock_resolution(monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"})
+        _mock_resolution(
+            monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"}
+        )
 
         with pytest.raises(BlockedAddressError) as exc_info:
             safe_request(
@@ -341,12 +347,16 @@ class _RedirectLoopHandler(_QuietHandler):
         self.end_headers()
 
 
-def test_follows_redirect_to_a_verified_address(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_follows_redirect_to_a_verified_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     with _serve(_RedirectOnceHandler) as (server_host, server_port):
         _mock_resolution(monkeypatch, {"safe.test": server_host})
         monkeypatch.setattr(safe_http, "_is_allowed_address", lambda ip: True)
 
-        response = safe_request(f"http://safe.test:{server_port}/start", allow_http=True)
+        response = safe_request(
+            f"http://safe.test:{server_port}/start", allow_http=True
+        )
 
         assert response.status_code == 200
         assert response.content == b"ok"
@@ -357,12 +367,16 @@ def test_redirect_to_disallowed_address_is_not_followed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with _serve(_RedirectToOtherHostHandler) as (server_host, server_port):
-        _mock_resolution(monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"})
+        _mock_resolution(
+            monkeypatch, {"safe.test": server_host, "evil.test": "10.0.0.5"}
+        )
         # Only the test server's own real (loopback) address is "allowed"
         # here — isolates the redirect-following mechanics from address
         # policy, which is covered by the dedicated address-verification
         # tests above.
-        monkeypatch.setattr(safe_http, "_is_allowed_address", lambda ip: ip == server_host)
+        monkeypatch.setattr(
+            safe_http, "_is_allowed_address", lambda ip: ip == server_host
+        )
 
         with pytest.raises(BlockedAddressError) as exc_info:
             safe_request(f"http://safe.test:{server_port}/start", allow_http=True)
@@ -376,7 +390,11 @@ def test_zero_max_redirects_follows_nothing(monkeypatch: pytest.MonkeyPatch) -> 
         monkeypatch.setattr(safe_http, "_is_allowed_address", lambda ip: True)
 
         with pytest.raises(TooManyRedirectsError):
-            safe_request(f"http://safe.test:{server_port}/start", allow_http=True, max_redirects=0)
+            safe_request(
+                f"http://safe.test:{server_port}/start",
+                allow_http=True,
+                max_redirects=0,
+            )
 
 
 def test_too_many_redirects_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -385,7 +403,11 @@ def test_too_many_redirects_raises(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(safe_http, "_is_allowed_address", lambda ip: True)
 
         with pytest.raises(TooManyRedirectsError):
-            safe_request(f"http://safe.test:{server_port}/start", allow_http=True, max_redirects=2)
+            safe_request(
+                f"http://safe.test:{server_port}/start",
+                allow_http=True,
+                max_redirects=2,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -413,7 +435,9 @@ class _BigBodyHandler(_QuietHandler):
             type(self).chunks_fully_sent += 1
 
 
-def test_oversized_response_is_aborted_mid_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_oversized_response_is_aborted_mid_stream(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _BigBodyHandler.chunks_fully_sent = 0
     with _serve(_BigBodyHandler) as (server_host, server_port):
         _mock_resolution(monkeypatch, {"safe.test": server_host})
@@ -421,7 +445,9 @@ def test_oversized_response_is_aborted_mid_stream(monkeypatch: pytest.MonkeyPatc
 
         with pytest.raises(ResponseTooLargeError):
             safe_request(
-                f"http://safe.test:{server_port}/big", allow_http=True, max_response_bytes=1024
+                f"http://safe.test:{server_port}/big",
+                allow_http=True,
+                max_response_bytes=1024,
             )
 
     # The client must have given up long before the server finished writing

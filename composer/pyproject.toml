@@ -19,3 +19,6 @@ atlas-plugin-api-python = { path = "../plugin-api/python", develop = true }
 
 [tool.poetry.scripts]
 atlas-compose = "atlas_composer.cli:main"
+
+[tool.uv.sources]
+atlas-plugin-api-python = { path = "../plugin-api/python", editable = true }

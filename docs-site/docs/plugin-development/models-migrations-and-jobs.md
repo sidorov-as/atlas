@@ -42,9 +42,12 @@ tolerates a job that is not yet present in a fresh job store.
 
 ```python
 PLUGIN = PluginDescriptor(
-    id='atlas.inventory', version='0.1.0', compatibility={'atlasCore': '>=0.1 <1'},
-    django_apps=('atlas_plugin_inventory',),
-    entry_point='atlas_plugin_inventory.plugin:PLUGIN', job_ids=('atlas.inventory.refresh',),
+    id="atlas.inventory",
+    version="0.1.0",
+    compatibility={"atlasCore": ">=0.1 <1"},
+    django_apps=("atlas_plugin_inventory",),
+    entry_point="atlas_plugin_inventory.plugin:PLUGIN",
+    job_ids=("atlas.inventory.refresh",),
 )
 ```
 

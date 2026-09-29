@@ -120,8 +120,7 @@ def entity_capabilities(instance: Any) -> list[str]:
 
 
 def ingested_from(instance: Any) -> str | None:
-    """`"<source_id>/<path>"`, matching `RegisteredRepository.__str__`
-    """
+    """`"<source_id>/<path>"`, matching `RegisteredRepository.__str__`"""
     return str(instance.ingested_from) if instance.ingested_from_id else None
 
 

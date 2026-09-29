@@ -1,5 +1,4 @@
-"""Admin-status and read-only-status endpoint tests.
-"""
+"""Admin-status and read-only-status endpoint tests."""
 
 import pytest
 

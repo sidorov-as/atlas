@@ -1,0 +1,46 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+
+	# Render's proxy connects from a private address; trust its X-Forwarded-For
+	# so Django's per-client rate limits see real client IPs (the backend trusts
+	# 127.0.0.1 via trustedProxyAddresses in deploy/render/manifest.yaml).
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+# Render terminates TLS and forwards plain HTTP to $PORT.
+:{$PORT:10000} {
+	encode zstd gzip
+	header -Server
+
+	# Render's health check: always sent with Host=localhost so it passes
+	# DJANGO_ALLOWED_HOSTS regardless of the public hostname.
+	handle /healthz/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up Host localhost
+		}
+	}
+
+	@backend path /api/* /auth/* /accounts/* /_allauth/* /admin/*
+	handle @backend {
+		reverse_proxy 127.0.0.1:8000 {
+			# Render only serves the public URL over HTTPS; tell Django so
+			# secure cookies and CSRF referer checks behave correctly.
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	handle /static/* {
+		root * /var/www/django/static
+		file_server
+	}
+
+	handle {
+		root * /srv/atlas
+		try_files {path} /index.html
+		file_server
+	}
+}

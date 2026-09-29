@@ -8,17 +8,17 @@ from atlas_plugin_standard_catalog.models import GroupDetails
 
 Entity = get_catalog_entity_model()
 
-for group_name in ('search-team', 'booking-team', 'payments-team'):
+for group_name in ("search-team", "booking-team", "payments-team"):
     entity, _ = Entity.objects.get_or_create(kind=KIND_GROUP, name=group_name)
-    GroupDetails.objects.update_or_create(entity=entity, defaults={'type': 'team'})
+    GroupDetails.objects.update_or_create(entity=entity, defaults={"type": "team"})
 
 for repo_path in (
-    'atlas-demo/search-discovery',
-    'atlas-demo/payments-payouts',
-    'atlas-demo/booking-reservations',
+    "atlas-demo/search-discovery",
+    "atlas-demo/payments-payouts",
+    "atlas-demo/booking-reservations",
 ):
     RegisteredRepository.objects.update_or_create(
-        source_id='gitea-primary',
+        source_id="gitea-primary",
         path=repo_path,
-        defaults={'default_branch': 'main'},
+        defaults={"default_branch": "main"},
     )

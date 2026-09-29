@@ -41,6 +41,7 @@ def _fake_success(
         content=text.encode(),
     )
 
+
 INLINE_OPENAPI_SPEC = """
 openapi: "3.0.0"
 paths:

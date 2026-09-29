@@ -23,11 +23,12 @@ wheels = [
 [[package]]
 name = "atlas-plugin-api-python"
 version = "0.1.0"
-source = { directory = "/Users/ereon/PycharmProjects/open-source/atlas/plugin-api/python" }
+source = { editable = "../../../plugin-api/python" }
 dependencies = [
     { name = "django" },
     { name = "django-modern-rest", extra = ["pydantic"] },
     { name = "pydantic" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -35,6 +36,7 @@ requires-dist = [
     { name = "django", specifier = ">=6.1,<6.2" },
     { name = "django-modern-rest", extras = ["pydantic"], specifier = ">=0.14.0,<0.15.0" },
     { name = "pydantic", specifier = ">=2.13,<3.0" },
+    { name = "requests", specifier = ">=2.34,<3.0" },
 ]
 
 [[package]]
@@ -50,7 +52,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atlas-plugin-api-python", directory = "/Users/ereon/PycharmProjects/open-source/atlas/plugin-api/python" },
+    { name = "atlas-plugin-api-python", editable = "../../../plugin-api/python" },
     { name = "django", specifier = ">=6.1,<6.2" },
     { name = "django-allauth", extras = ["socialaccount"], specifier = "==65.19.1" },
     { name = "requests", specifier = ">=2.34,<3.0" },

@@ -570,9 +570,7 @@ def test_connects_to_originally_validated_address_despite_later_dns_change(
             # The first (validation) lookup sees the real, safe address; any
             # further lookup would see a different, unreachable one.
             answer = server_host if len(calls) == 1 else "203.0.113.1"
-            return [
-                (socket.AF_INET, socket.SOCK_STREAM, 6, "", (answer, 0))
-            ]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (answer, 0))]
 
         monkeypatch.setattr(
             "atlas_plugin_auth_oidc.provider.socket.getaddrinfo",

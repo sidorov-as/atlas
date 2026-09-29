@@ -1,5 +1,4 @@
-"""Ref-string parser/resolver contract tests.
-"""
+"""Ref-string parser/resolver contract tests."""
 
 import pytest
 

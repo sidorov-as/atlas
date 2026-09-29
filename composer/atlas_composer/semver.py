@@ -11,27 +11,27 @@ needs more.
 
 import re
 
-_CLAUSE = re.compile(r'(>=|<=|==|>|<)\s*(\d+(?:\.\d+){0,2})')
+_CLAUSE = re.compile(r"(>=|<=|==|>|<)\s*(\d+(?:\.\d+){0,2})")
 
 _OPERATORS = {
-    '>=': lambda version, bound: version >= bound,
-    '<=': lambda version, bound: version <= bound,
-    '>': lambda version, bound: version > bound,
-    '<': lambda version, bound: version < bound,
-    '==': lambda version, bound: version == bound,
+    ">=": lambda version, bound: version >= bound,
+    "<=": lambda version, bound: version <= bound,
+    ">": lambda version, bound: version > bound,
+    "<": lambda version, bound: version < bound,
+    "==": lambda version, bound: version == bound,
 }
 
 
 class InvalidRangeError(ValueError):
     def __init__(self, range_expr: str) -> None:
         super().__init__(
-            f'{range_expr!r} is not a supported compatibility range',
+            f"{range_expr!r} is not a supported compatibility range",
         )
         self.range_expr = range_expr
 
 
 def _parse_version(version: str) -> tuple[int, int, int]:
-    parts = [int(part) for part in version.split('.')[:3]]
+    parts = [int(part) for part in version.split(".")[:3]]
     parts += [0] * (3 - len(parts))
     return parts[0], parts[1], parts[2]
 
