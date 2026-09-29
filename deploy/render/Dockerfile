@@ -80,7 +80,13 @@ COPY core/backend .
 # a remote PlantUML server instead of a local JVM, which would not fit in the
 # free plan's 512 MB. Regenerate with deploy/render/compose.sh.
 COPY deploy/render/selected_plugins.py server/settings/selected_plugins.py
-COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
+# The official image gives caddy the cap_net_bind_service file capability. A
+# non-root user without it in its bounding set gets "Operation not permitted"
+# on exec, so copy the bytes only (no xattrs); we listen on $PORT >= 1024.
+COPY --from=caddy /usr/bin/caddy /tmp/caddy-with-caps
+RUN cat /tmp/caddy-with-caps > /usr/bin/caddy \
+    && chmod 755 /usr/bin/caddy \
+    && rm /tmp/caddy-with-caps
 COPY --from=frontend /app/core/frontend/dist /srv/atlas
 COPY deploy/render/Caddyfile /etc/caddy/Caddyfile
 COPY deploy/render/start.sh /usr/local/bin/atlas-render-start
