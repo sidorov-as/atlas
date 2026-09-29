@@ -121,6 +121,7 @@ features = [
 ]
 logo = "assets/atlas-logo.svg"
 favicon = "assets/favicon.ico"
+repo = "fontawesome/brands/github"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
