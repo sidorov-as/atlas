@@ -1,0 +1,10 @@
+title = "atlas gitleaks config"
+
+[extend]
+useDefault = true
+
+# OpenSpec documents are prose; the generic-api-key entropy heuristic
+# false-positives on phrases like "Principal/Actor provisioning".
+[allowlist]
+description = "OpenSpec markdown prose"
+paths = ['''^openspec/.*\.md$''']
