@@ -4,12 +4,12 @@ COMPOSE_DEV := docker compose --env-file core/backend/.env -f docker-compose.dev
 # `resolve` and `validate` import each locked plugin's backend module, so the plugins must be installed.
 COMPOSE := uv run --project composer $(addprefix --with-editable ,$(wildcard plugins/*/backend examples/authentication/*/plugin)) atlas-compose
 
-# Packages linted by .github/workflows/ruff.yml; each is passed to ruff as a
-# path from the repo root, exactly like CI: ruff resolves isort's first-party
-# `src` relative to the working directory when the package has no [tool.ruff].
-RUFF_PACKAGES := core/backend plugin-api/python plugins/apis/backend plugins/auth-gitea/backend \
-	plugins/auth-oidc/backend plugins/c4/backend plugins/database-schema/backend \
-	plugins/flows/backend plugins/ingestion/backend plugins/standard-catalog/backend
+# `.github/ruff-packages.txt` is the single source of truth for this list —
+# `.github/workflows/ruff.yml`'s matrix reads the same file, so the two
+# cannot drift apart. Each package is passed to ruff as a path from the repo
+# root, exactly like CI: ruff resolves isort's first-party `src` relative to
+# the working directory when the package has no [tool.ruff].
+RUFF_PACKAGES := $(shell cat .github/ruff-packages.txt)
 
 # Every directory holding a manifest.yaml + lock.yaml pair.
 DISTRIBUTIONS := distributions/default \
@@ -20,7 +20,7 @@ DISTRIBUTIONS := distributions/default \
 	examples/ingestion \
 	deploy/render
 
-.PHONY: help docs format format-check dev-up dev-down migrate seed-demo lock lock-validate examples-up examples-down examples-list
+.PHONY: help docs format format-check ci dev-up dev-down migrate seed-demo lock lock-validate examples-up examples-down examples-list
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -39,6 +39,9 @@ format: ## Apply ruff lint fixes (per package, as in CI) and format all Python c
 
 format-check: ## Check Python formatting without changing files
 	uvx ruff format --check .
+
+ci: ## Run the fast local checks CI runs on every PR: ruff, frontend, backend pytest, migration checks
+	@RUFF_PACKAGES="$(RUFF_PACKAGES)" .ci/run.sh
 
 core/backend/.env:
 	cp core/backend/.env.example $@

@@ -21,7 +21,7 @@ ArtifactSource = Literal[
     "npm",
 ]
 """Where the composer resolves a plugin artifact from. `workspace` resolves
-against this monorepo's own native lock files (`poetry.lock`,
+against this monorepo's own native lock files (`uv.lock`,
 `package-lock.json`) — the only source `resolver.py` currently implements.
 The registry sources match `docs/plugin-architecture.md:511-524`'s
 illustrative manifest and are accepted by the schema for forward

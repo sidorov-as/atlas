@@ -93,7 +93,7 @@ administrator without putting its password in an argument or repository file:
 
 ```shell
 export ATLAS_BOOTSTRAP_PASSWORD='use-a-generated-secret-of-15-or-more-characters'
-poetry run python manage.py seed_admin --username admin --email admin@example.com
+uv run python manage.py seed_admin --username admin --email admin@example.com
 unset ATLAS_BOOTSTRAP_PASSWORD
 ```
 

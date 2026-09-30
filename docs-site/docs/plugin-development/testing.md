@@ -12,12 +12,12 @@ can compose. The commands below use the repository's current toolchains.
 
 | Concern | Check |
 | --- | --- |
-| Python unit/API behavior | `cd core/backend && poetry run pytest <plugin tests> -q` |
-| Plugin API contracts | `cd core/backend && poetry run pytest ../../plugin-api/python/atlas_plugin_api/tests -q` |
+| Python unit/API behavior | `cd core/backend && uv run pytest <plugin tests> -q` |
+| Plugin API contracts | `cd core/backend && uv run pytest ../../plugin-api/python/atlas_plugin_api/tests -q` |
 | Frontend behavior | `cd core/frontend && npm test -- --run` |
 | Frontend type/build boundary | `cd core/frontend && npm run build` |
 | Composition | `uv run --project composer atlas-compose validate distributions/default/manifest.yaml distributions/default/lock.yaml` |
-| Migration safety | `cd core/backend && poetry run django-safe-migrations && poetry run python manage.py check_migration_boundaries` |
+| Migration safety | `cd core/backend && uv run django-safe-migrations && uv run python manage.py check_migration_boundaries` |
 
 ## What to cover
 

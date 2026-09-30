@@ -65,7 +65,7 @@ or service boundary. Run the following test for the contract registry:
 
 ```shell
 cd core/backend
-poetry run pytest ../../plugin-api/python/atlas_plugin_api/tests/test_permissions.py -q
+uv run pytest ../../plugin-api/python/atlas_plugin_api/tests/test_permissions.py -q
 ```
 
 Next: [testing plugins](testing.md), [frontend contributions](extension-points.md), and the

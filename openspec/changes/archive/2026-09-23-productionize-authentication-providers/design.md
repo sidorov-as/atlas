@@ -148,8 +148,8 @@ Illustrative contract shape:
 
 ```python
 class AuthFlowKind(StrEnum):
-    CREDENTIALS = 'credentials'
-    REDIRECT = 'redirect'
+    CREDENTIALS = "credentials"
+    REDIRECT = "redirect"
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +190,9 @@ class RedirectAuthenticationProvider(Protocol):
     descriptor: AuthenticationProviderDescriptor
 
     def begin(self, context: RedirectFlowContext) -> RedirectChallenge: ...
-    def complete(self, context: RedirectCallbackContext) -> VerifiedIdentity | AuthenticationFailure: ...
+    def complete(
+        self, context: RedirectCallbackContext
+    ) -> VerifiedIdentity | AuthenticationFailure: ...
 ```
 
 Contexts expose the minimum safe request/session collaboration required by the flow rather than raw Core registries or models. A result cannot carry Django `User`, Actor, Group, permissions, `is_staff`, or `is_superuser` assignments.

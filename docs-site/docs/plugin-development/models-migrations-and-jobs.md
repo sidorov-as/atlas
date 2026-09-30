@@ -24,8 +24,8 @@ Run the repository checks before proposing a destructive operation:
 
 ```shell
 cd core/backend
-poetry run django-safe-migrations
-poetry run python manage.py check_migration_boundaries
+uv run django-safe-migrations
+uv run python manage.py check_migration_boundaries
 ```
 
 The latter reports the app, migration, and conflicting plugin ownership. A

@@ -1,0 +1,25 @@
+# Throwaway PostgreSQL for `make ci`'s backend pytest step (see .ci/run.sh).
+#
+# Isolated from docker-compose.dev.yml's own `postgres`: `make ci` (see
+# .ci/run.sh) runs this under its own Compose project name, and it's
+# published on its own port (CI_POSTGRES_PORT, default 55432, distinct from
+# the dev stack's 5432), so `make ci` can run alongside a running
+# `make dev-up` dev stack without a port or data clash.
+#
+# No volume: this database's data is only meant to live for a single
+# `make ci` run, and `.ci/run.sh` tears the container down (`--volumes`)
+# when that run ends, pass or fail.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: atlas
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas
+    ports:
+      - "${CI_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

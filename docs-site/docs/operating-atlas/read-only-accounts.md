@@ -78,7 +78,7 @@ default and requires the exact username and a non-blank audit reason. From
 `core/backend`, preview the change first:
 
 ```shell
-poetry run python manage.py clear_read_only exact-username \
+uv run python manage.py clear_read_only exact-username \
   --reason "approved incident or ticket reference"
 ```
 
@@ -87,7 +87,7 @@ proposed values, and reason. Apply the same exact operation only after that
 review:
 
 ```shell
-poetry run python manage.py clear_read_only exact-username \
+uv run python manage.py clear_read_only exact-username \
   --reason "approved incident or ticket reference" \
   --confirm
 ```
@@ -110,14 +110,14 @@ exist creates a writable window and is not equivalent:
    trusted provider administration surface, never an email or display name:
 
    ```bash
-   poetry run python manage.py manage_auth_identity link \
+   uv run python manage.py manage_auth_identity link \
      --provider atlas.auth.oidc \
      --source https://idp.example \
      --subject 248289761001 \
      --principal-id 42 \
      --reason "approved read-only external access"
 
-   poetry run python manage.py manage_auth_identity link \
+   uv run python manage.py manage_auth_identity link \
      --provider atlas.auth.oidc \
      --source https://idp.example \
      --subject 248289761001 \

@@ -36,16 +36,19 @@ ENV DJANGO_ENV=production \
     PYTHONFAULTHANDLER=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    POETRY_VERSION=2.4.1 \
-    POETRY_HOME=/usr/local \
-    POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/usr/local \
     PGDATA=/var/lib/atlas/pgdata \
     POSTGRES_DB=atlas \
     POSTGRES_USER=atlas \
     POSTGRES_PASSWORD=atlas \
     DJANGO_DATABASE_HOST=127.0.0.1 \
     DJANGO_DATABASE_PORT=5432
+
+# uv's documented Docker install method: copy the static binary from its own
+# published image, pinned to the version this repo's lock files were produced
+# with — no network install step, no interpreter of its own to mismatch.
+COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /usr/local/bin/
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
       build-essential ca-certificates curl graphviz libpq-dev \
@@ -56,12 +59,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
       > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update && apt-get install --no-install-recommends -y postgresql-17 \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL https://install.python-poetry.org | python - \
     && groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin appuser
 
 WORKDIR /code/core/backend
-COPY core/backend/poetry.lock core/backend/pyproject.toml ./
+COPY core/backend/uv.lock core/backend/pyproject.toml ./
 COPY composer /code/composer
 COPY plugin-api/python /code/plugin-api/python
 COPY plugins/auth-oidc/backend /code/plugins/auth-oidc/backend
@@ -72,7 +74,7 @@ COPY plugins/c4/backend /code/plugins/c4/backend
 COPY plugins/database-schema/backend /code/plugins/database-schema/backend
 COPY plugins/ingestion/backend /code/plugins/ingestion/backend
 COPY plugins/flows/backend /code/plugins/flows/backend
-RUN poetry install --no-root --only main
+RUN uv sync --frozen --no-dev
 
 COPY core/backend .
 # Demo distribution (deploy/render/manifest.yaml): C4 diagrams are rendered by

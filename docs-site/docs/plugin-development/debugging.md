@@ -26,7 +26,7 @@ Useful first commands:
 
 ```shell
 uv run --project composer atlas-compose validate distributions/default/manifest.yaml distributions/default/lock.yaml
-cd core/backend && poetry run python manage.py check_migration_boundaries
+cd core/backend && uv run python manage.py check_migration_boundaries
 ```
 
 For runtime symptoms, keep the original composition or request error in the

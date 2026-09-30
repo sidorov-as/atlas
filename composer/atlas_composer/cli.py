@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> None:
         "--repo-root",
         type=Path,
         default=Path.cwd(),
-        help="Monorepo root containing core/backend/poetry.lock and package-lock.json.",
+        help="Monorepo root containing core/backend/uv.lock and package-lock.json.",
     )
 
     validate_parser = subparsers.add_parser(

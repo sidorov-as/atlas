@@ -93,7 +93,7 @@ The backend image (used for both the Django backend service and the ingestion wo
 - **THEN** the backend container still reads and writes the mounted source directory successfully under the non-root user
 
 ### Requirement: Backend images contain no out-of-scope example or fixture source
-Neither the `development` nor `production` target of `core/backend/Dockerfile`, nor `deploy/render/Dockerfile`, SHALL copy source from `examples/` into the image. Any source an image's build copies in SHALL belong to a dependency group that image's own `poetry install` invocation actually installs.
+Neither the `development` nor `production` target of `core/backend/Dockerfile`, nor `deploy/render/Dockerfile`, SHALL copy source from `examples/` into the image. Any source an image's build copies in SHALL belong to a dependency group that image's own `uv sync` invocation actually installs.
 
 #### Scenario: Production image is built
 - **WHEN** the `production` target of `core/backend/Dockerfile` or `deploy/render/Dockerfile` is built
@@ -101,4 +101,4 @@ Neither the `development` nor `production` target of `core/backend/Dockerfile`, 
 
 #### Scenario: Development image is built
 - **WHEN** the `development` target of `core/backend/Dockerfile` is built
-- **THEN** `poetry install` succeeds without requiring any path under `examples/` to exist
+- **THEN** `uv sync` succeeds without requiring any path under `examples/` to exist

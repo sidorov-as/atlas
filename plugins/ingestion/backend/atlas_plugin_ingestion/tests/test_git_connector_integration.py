@@ -42,10 +42,13 @@ def _docker_available() -> bool:
     return shutil.which("docker") is not None and probe.returncode == 0
 
 
-pytestmark = pytest.mark.skipif(
-    not _docker_available(),
-    reason="docker is not available",
-)
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.skipif(
+        not _docker_available(),
+        reason="docker is not available",
+    ),
+]
 
 
 class _GiteaServer:

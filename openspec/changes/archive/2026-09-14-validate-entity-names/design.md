@@ -30,6 +30,7 @@
 ```python
 _NAME_FORBIDDEN_CHARS = ("/", ":")
 
+
 def _validate_name(value: str) -> str:
     stripped = value.strip()
     if not stripped:

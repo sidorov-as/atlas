@@ -5,7 +5,7 @@
 Follow [Getting Started](../getting-started/index.md) for the Docker-based development setup. To work on the
 backend or frontend directly on the host:
 
-- `core/backend/README.md`: Poetry install, host Django server, `pytest`, and the migration
+- `core/backend/README.md`: `uv sync`, host Django server, `pytest`, and the migration
   safety linter.
 - `core/frontend/README.md`: `npm ci`, the Vite dev server, lint, tests, and build.
 
