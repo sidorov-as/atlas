@@ -118,10 +118,26 @@ class _ParamikoChannelWrapper:
         self._channel.sendall(data)
 
     def read(self, n: int | None = None) -> bytes:
-        data = self._channel.recv(n if n is not None else 65536)
-        if not data:
+        # dulwich treats this like a file object: `read(n)` must return
+        # exactly `n` bytes unless the stream ended. `Channel.recv` returns
+        # whatever has arrived (often less), which surfaces as a flaky
+        # "Length of pkt read ... does not match length prefix" error.
+        if n is None:
+            data = self._channel.recv(65536)
+            if not data:
+                raise ConnectionError("git-over-ssh connection closed unexpectedly")
+            return data
+        chunks: list[bytes] = []
+        remaining = n
+        while remaining > 0:
+            data = self._channel.recv(remaining)
+            if not data:
+                break
+            chunks.append(data)
+            remaining -= len(data)
+        if not chunks:
             raise ConnectionError("git-over-ssh connection closed unexpectedly")
-        return data
+        return b"".join(chunks)
 
     def close(self) -> None:
         self._channel.close()
