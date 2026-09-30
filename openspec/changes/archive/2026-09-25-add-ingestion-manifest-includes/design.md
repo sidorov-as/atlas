@@ -69,8 +69,11 @@ If an `Include` resolves to a path whose basename is `catalog-info.yaml`, that p
 ```python
 class IngestionIssue(models.Model):
     repository = models.ForeignKey(
-        'RegisteredRepository', null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='ingestion_issues',
+        "RegisteredRepository",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ingestion_issues",
     )
     repo_full_name = models.CharField(max_length=255)
     path = models.CharField(max_length=1024, blank=True)

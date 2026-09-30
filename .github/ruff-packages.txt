@@ -1,0 +1,10 @@
+core/backend
+plugin-api/python
+plugins/apis/backend
+plugins/auth-gitea/backend
+plugins/auth-oidc/backend
+plugins/c4/backend
+plugins/database-schema/backend
+plugins/flows/backend
+plugins/ingestion/backend
+plugins/standard-catalog/backend

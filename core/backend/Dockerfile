@@ -13,26 +13,34 @@ ENV DJANGO_ENV=${DJANGO_ENV} \
     PYTHONFAULTHANDLER=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    POETRY_VERSION=2.4.1 \
-    POETRY_HOME=/usr/local \
-    POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1
+    UV_PYTHON_DOWNLOADS=never
+# `docker-compose.dev.yml` bind-mounts `./core/backend` (and each plugin's own source
+# dir) straight over its `/code/...` path in the `development` target, which would
+# shadow a project-local `.venv` built at `/code/core/backend/.venv` with whatever (if
+# anything) sits there on the host. Installing into the system Python instead — the
+# same place Poetry's `POETRY_VIRTUALENVS_CREATE=false` installed to — sidesteps that
+# entirely; editable plugin installs still resolve back to the bind-mounted source
+# dirs, so live-editing without a rebuild keeps working.
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
+
+# uv's documented Docker install method: copy the static binary from its own
+# published image, pinned to the version this repo's lock files were produced
+# with — no network install step, no interpreter of its own to mismatch.
+COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /usr/local/bin/
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
       build-essential curl default-jre-headless graphviz libpq-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL https://install.python-poetry.org | python - \
     && curl -fsSL -o /opt/plantuml.jar \
       https://github.com/plantuml/plantuml/releases/download/v1.2026.6/plantuml-1.2026.6.jar \
     && echo '89948f14c93756c7a3fb7b69078ff37e8489fd79dd430c582b931e2f65358690  /opt/plantuml.jar' | sha256sum -c - \
     && groupadd --gid "${APP_GID}" appuser \
     && useradd --uid "${APP_UID}" --gid "${APP_GID}" --create-home --shell /usr/sbin/nologin appuser
-ENV PATH="/usr/local/bin:${PATH}"
 ENV PLANTUML_BIN="" \
     PLANTUML_JAR=/opt/plantuml.jar
 
 WORKDIR /code/core/backend
-COPY core/backend/poetry.lock core/backend/pyproject.toml ./
+COPY core/backend/uv.lock core/backend/pyproject.toml ./
 COPY composer /code/composer
 COPY plugin-api/python /code/plugin-api/python
 COPY plugins/auth-oidc/backend /code/plugins/auth-oidc/backend
@@ -43,7 +51,7 @@ COPY plugins/c4/backend /code/plugins/c4/backend
 COPY plugins/database-schema/backend /code/plugins/database-schema/backend
 COPY plugins/ingestion/backend /code/plugins/ingestion/backend
 COPY plugins/flows/backend /code/plugins/flows/backend
-RUN poetry install --no-root $(if [ "$DJANGO_ENV" = production ]; then echo --only main; fi)
+RUN uv sync --frozen $(if [ "$DJANGO_ENV" = production ]; then echo --no-dev; fi)
 # Keep the renderer self-contained: the C4 library is bundled by c4-diagrams
 # and PlantUML runs locally, with no server URL or source mount dependency.
 RUN dot -V \

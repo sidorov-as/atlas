@@ -2,7 +2,7 @@
 
 Resolves each manifest-declared plugin's exact artifact version and
 integrity by cross-referencing this monorepo's own native lock files
-(`poetry.lock` for backend, the root `package-lock.json` for frontend)
+(`uv.lock` for backend, the root `package-lock.json` for frontend)
 rather than re-deriving hashes independently. Only
 the `workspace` artifact source is resolvable this way; the other sources
 `manifest.ArtifactSource` accepts name real package registries this
@@ -30,7 +30,7 @@ from .lock import (
 )
 from .manifest import Manifest, PluginArtifact
 from .npm_lock import ResolvedFrontendPackage, parse_npm_lock
-from .poetry_lock import ResolvedPythonPackage, parse_poetry_lock
+from .uv_lock import ResolvedPythonPackage, parse_uv_lock
 
 
 class ResolutionError(Exception):
@@ -79,8 +79,8 @@ class NativeLocks:
     @classmethod
     def from_repo_root(cls, repo_root: Path) -> "NativeLocks":
         return cls(
-            python=parse_poetry_lock(
-                repo_root / "core" / "backend" / "poetry.lock",
+            python=parse_uv_lock(
+                repo_root / "core" / "backend" / "uv.lock",
             ),
             npm=parse_npm_lock(repo_root / "package-lock.json"),
         )
@@ -96,7 +96,7 @@ def _resolve_backend(
         raise UnsupportedSourceError(artifact.package, artifact.source)
     resolved = locks.python.get(artifact.package)
     if resolved is None:
-        raise UnknownPackageError(artifact.package, "poetry.lock")
+        raise UnknownPackageError(artifact.package, "uv.lock")
     if resolved.version != version:
         raise VersionMismatchError(plugin_id, version, resolved.version)
     return LockedBackendArtifact(

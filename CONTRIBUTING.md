@@ -11,7 +11,7 @@ Follow the [Getting Started guide](https://sidorov-as.github.io/atlas/getting-st
 for the Docker-based development setup. To work on a single component directly on
 the host instead:
 
-- [`core/backend/README.md`](core/backend/README.md): Poetry install, host Django
+- [`core/backend/README.md`](core/backend/README.md): `uv sync`, host Django
   server, `pytest`, and the migration safety linter.
 - [`core/frontend/README.md`](core/frontend/README.md): `npm ci`, the Vite dev
   server, lint, tests, and build.

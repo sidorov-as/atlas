@@ -6,4 +6,4 @@ files:
   - tests/test_plugin.py
 validation:
   working-directory: core/backend
-  command: poetry run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests -q
+  command: uv run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests -q

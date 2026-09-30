@@ -52,8 +52,8 @@ then deletes only with `--confirm` while the plugin is still selected.
 
 ```shell
 cd core/backend
-poetry run python manage.py purge_plugin atlas.inventory
-poetry run python manage.py purge_plugin atlas.inventory --confirm
+uv run python manage.py purge_plugin atlas.inventory
+uv run python manage.py purge_plugin atlas.inventory --confirm
 ```
 
 See [plugin lifecycle](../operating-atlas/plugin-lifecycle.md) for the

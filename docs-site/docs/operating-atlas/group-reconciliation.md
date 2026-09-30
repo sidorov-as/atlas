@@ -56,17 +56,17 @@ The data migration preserves each historical Actor/Group pair as a manual
 List unresolved grants:
 
 ```shell
-poetry run python manage.py check_membership_grants
+uv run python manage.py check_membership_grants
 ```
 
 For each reviewed grant, either retain it as manual or transfer it to the
 exact identity that should own it. Both forms preview by default:
 
 ```shell
-poetry run python manage.py classify_membership_grant 123 \
+uv run python manage.py classify_membership_grant 123 \
   --as-manual --reason 'confirmed operator-managed'
 
-poetry run python manage.py classify_membership_grant 123 \
+uv run python manage.py classify_membership_grant 123 \
   --identity-link-id 45 --external-key engineering \
   --reason 'historical OIDC membership'
 ```

@@ -1,6 +1,6 @@
 """Deterministic content hash for a local workspace package directory.
 
-Used by `poetry_lock.py` and `npm_lock.py` when a native lock records a
+Used by `uv_lock.py` and `npm_lock.py` when a native lock records a
 package as a local path/link source (a `workspace`-sourced plugin in this
 monorepo) with no registry-issued hash to reuse.
 """

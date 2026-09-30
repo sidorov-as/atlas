@@ -3,17 +3,27 @@ name = "atlas-plugin-api-python"
 description = "Atlas Plugin API (Python): the internal 0.x contract package for backend plugins — definitions, protocols, and value types only, no core implementation"
 version = "0.1.0"
 requires-python = "==3.13.13"
+dependencies = [
+    "pydantic>=2.13,<3.0",
+    "django>=6.1,<6.2",
+    "django-modern-rest[pydantic]>=0.14.0,<0.15.0",
+    "requests>=2.34,<3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10.0",
+    "pytest-django>=4.9,<5.0",
+]
 
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
 
-[tool.poetry]
-packages = [{ include = "atlas_plugin_api" }]
-
-[tool.poetry.dependencies]
-python = "==3.13.13"
-pydantic = "^2.13"
-django = ">=6.1,<6.2"
-django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }
-requests = "^2.34"
+# `uv_build`'s defaults assume the importable module lives at
+# `src/<normalized-project-name>/`; this package predates that convention
+# (flat layout, module name shorter than the distribution name), so both are
+# pinned explicitly rather than renamed to fit.
+[tool.uv.build-backend]
+module-name = "atlas_plugin_api"
+module-root = ""

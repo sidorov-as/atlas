@@ -3,16 +3,18 @@ name = "atlas-plugin-standard-catalog"
 description = "Atlas Standard Catalog plugin: System, Component, Resource, Team, and Actor"
 version = "0.1.0"
 requires-python = "==3.13.13"
+dependencies = [
+    "atlas-plugin-api-python",
+    "django>=6.1,<6.2",
+    "django-modern-rest[pydantic]>=0.14.0,<0.15.0",
+]
 
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
 
-[tool.poetry]
-packages = [{ include = "atlas_plugin_standard_catalog" }]
+[tool.uv.build-backend]
+module-root = ""
 
-[tool.poetry.dependencies]
-python = "==3.13.13"
-atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
-django = ">=6.1,<6.2"
-django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }
+[tool.uv.sources]
+atlas-plugin-api-python = { path = "../../../plugin-api/python", editable = true }

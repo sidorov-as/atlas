@@ -1,18 +1,30 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
 context: |
- Tech stack: Python, TypeScript, React, Node.js, Gravity UI
+  Tech stack: Python, TypeScript, React, Node.js, Gravity UI.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Files under `local/` are working context only.
+  The agent MAY read and use their contents for reasoning.
+  The agent MUST NOT:
+  - mention `local/` file paths in generated artifacts;
+  - cite or link to files under `local/`;
+  - make generated artifacts depend on those files.
+
+  Any information taken from `local/` that is needed by an artifact
+  must be incorporated into the artifact itself rather than referenced
+  by file path.
+
+rules:
+  proposal:
+    - Focus on the problem and desired outcome, not the implementation.
+    - Clearly state what is in scope and out of scope.
+    - Identify affected capabilities and any user-visible or API behavior changes.
+    - Do not introduce implementation decisions unless they are necessary to define the scope.
+
+  design:
+    - Explain significant design decisions and the reasoning behind them.
+    - For every significant design decision, consider at least three viable approaches before choosing one.
+    - Document meaningful alternatives and explain why they were not chosen.
+    - Prefer the simplest solution that satisfies the requirements and existing architectural constraints.
+    - Reuse existing project patterns and abstractions unless there is a concrete reason not to.
+    - Explicitly identify important trade-offs, risks, migration concerns, and backward-compatibility implications.

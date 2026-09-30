@@ -150,7 +150,7 @@ contract tests exercise the same boundary:
 
 ```shell
 cd core/backend
-poetry run pytest \
+uv run pytest \
   ../../plugin-api/python/atlas_plugin_api/tests/test_config.py \
   server/apps/plugins/tests/test_config.py -q
 ```

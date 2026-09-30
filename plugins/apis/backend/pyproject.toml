@@ -3,19 +3,21 @@ name = "atlas-plugin-apis"
 description = "Atlas APIs plugin: the API Entity Kind, spec-source resolution, and its CRUD API"
 version = "0.1.0"
 requires-python = "==3.13.13"
+dependencies = [
+    "atlas-plugin-api-python",
+    "django>=6.1,<6.2",
+    "django-modern-rest[pydantic]>=0.14.0,<0.15.0",
+    "requests>=2.34,<3.0",
+    "pyyaml>=6.0,<7.0",
+    "jsonpointer>=3.0,<4.0",
+]
 
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
 
-[tool.poetry]
-packages = [{ include = "atlas_plugin_apis" }]
+[tool.uv.build-backend]
+module-root = ""
 
-[tool.poetry.dependencies]
-python = "==3.13.13"
-atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
-django = ">=6.1,<6.2"
-django-modern-rest = { version = "^0.14.0", extras = ["pydantic"] }
-requests = "^2.34"
-pyyaml = "^6.0"
-jsonpointer = "^3.0"
+[tool.uv.sources]
+atlas-plugin-api-python = { path = "../../../plugin-api/python", editable = true }

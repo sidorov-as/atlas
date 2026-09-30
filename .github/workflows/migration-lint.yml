@@ -23,33 +23,28 @@ jobs:
       DJANGO_SETTINGS_MODULE: server.settings
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          fetch-depth: 0
 
-      - name: Fetch base branch
-        run: git fetch origin "${{ github.base_ref }}"
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - name: Set up backend environment
+        uses: ./.github/actions/setup-python-env
         with:
           python-version: "3.13.13"
-
-      - name: Install Poetry
-        run: pipx install poetry
-
-      - name: Install dependencies
-        working-directory: core/backend
-        run: poetry install
+          working-directory: core/backend
 
       - name: Block destructive migrations outside maintenance mode
         working-directory: core/backend
         # `check-migrations` (the console script) doesn't add the cwd to
         # sys.path, so `server.settings` can't be imported from it; `-m`
         # does (matching how `manage.py`/pytest-django resolve it too).
+        # `--baseline` (not `--diff origin/${{ base_ref }}`) so this runs
+        # against a committed file, not a freshly fetched base branch: the
+        # exact same command, against the exact same file, produces the
+        # same verdict here and in `make ci`, with no git-ref-freshness
+        # dependence in either place.
         run: >
-          poetry run python -m django_safe_migrations.cli
-          --diff "origin/${{ github.base_ref }}"
+          uv run python -m django_safe_migrations.cli
+          --baseline .migration-baseline.json
           --format=github
 
       - name: Check cross-plugin migration dependencies
         working-directory: core/backend
-        run: poetry run python manage.py check_migration_boundaries
+        run: uv run python manage.py check_migration_boundaries

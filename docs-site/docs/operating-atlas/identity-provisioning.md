@@ -54,7 +54,7 @@ authorization state cannot be provider-managed fields.
 Use exact identifiers and run a preview first:
 
 ```shell
-poetry run python manage.py manage_auth_identity link \
+uv run python manage.py manage_auth_identity link \
   --provider atlas.auth.oidc \
   --source https://idp.example \
   --subject 248289761001 \
@@ -77,7 +77,7 @@ first login. [Read-only accounts](read-only-accounts.md) owns that restriction.
 ## Inspect and audit
 
 ```shell
-poetry run python manage.py manage_auth_identity inspect \
+uv run python manage.py manage_auth_identity inspect \
   --provider atlas.auth.oidc \
   --source https://idp.example \
   --subject 248289761001

@@ -115,21 +115,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - name: Set up backend environment
+        uses: ./.github/actions/setup-python-env
         with:
           python-version: "3.13.13"
-
-      - name: Install Poetry
-        run: pipx install poetry
-
-      - name: Install backend release-test dependencies
-        working-directory: core/backend
-        run: poetry install
+          working-directory: core/backend
 
       - name: Run authentication security-negative journeys
         working-directory: core/backend
         run: >-
-          poetry run pytest -q
+          uv run pytest -q
           server/apps/catalog/tests/test_auth_hardening.py::test_admin_password_login_defaults_to_disabled
           server/apps/catalog/tests/test_auth_hardening.py::test_break_glass_rejects_unlisted_or_inactive_staff
           server/apps/catalog/tests/test_auth_security.py::test_inactive_principal_is_rejected_on_the_next_session_request

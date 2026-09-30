@@ -179,7 +179,7 @@ files:
   - tests/test_plugin.py
 validation:
   working-directory: core/backend
-  command: poetry run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests
+  command: uv run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests
 ```
 
 - `id` is unique across `docs-site/examples/` and matches the directory name.
@@ -208,12 +208,12 @@ bundle manifests must not contain unresolved tokens.
 
 | Example kind | Required validation command | Additional rule |
 | --- | --- | --- |
-| YAML syntax | From `core/backend`: `poetry run python -c "from pathlib import Path; import yaml; yaml.safe_load(Path('<repo-relative-file>').read_text())"` | Syntax parsing is only the floor. Catalog manifests also run the focused Ingestion parser test; distribution files use `atlas-compose` below. |
-| Python | From `core/backend`: `poetry run ruff check <paths>` and `poetry run ruff format --check <paths>`; then `poetry run pytest <focused-test-path>` | The focused test must import or execute the authoritative example, not paste a second copy into the test. |
+| YAML syntax | From `core/backend`: `uv run python -c "from pathlib import Path; import yaml; yaml.safe_load(Path('<repo-relative-file>').read_text())"` | Syntax parsing is only the floor. Catalog manifests also run the focused Ingestion parser test; distribution files use `atlas-compose` below. |
+| Python | From `core/backend`: `uv run ruff check <paths>` and `uv run ruff format --check <paths>`; then `uv run pytest <focused-test-path>` | The focused test must import or execute the authoritative example, not paste a second copy into the test. |
 | TypeScript / TSX | From the repository root: `npm run lint --workspace <workspace>` and `npm run build --workspace <workspace>`; behavior examples also run `npm test --workspace <workspace> -- <focused-test-file>` | Keep the example in a declared npm workspace or test it through one; `tsc`/Vite build must type-check the same file shown to readers. |
 | Shell | From the repository root: `bash -n <script>` followed by the bundle's safe smoke test | Scripts start with `set -euo pipefail`, contain no real secret, and make destructive behavior opt-in. Syntax-only validation is insufficient for commands that claim an observable result. |
 | `.env` / Compose configuration | From the repository root: `docker compose --env-file <env-file> -f <compose-file> config --quiet` | Validate once per topology the example claims to support. Use placeholders for secrets, never working credentials. |
-| Distribution manifest and lock | From `core/backend`: `poetry run atlas-compose validate ../../<manifest> ../../<lock>` | A manifest-only tutorial step also runs `atlas-compose resolve` to a temporary output and compares the expected lock facts without overwriting the checked-in lock. |
+| Distribution manifest and lock | From `core/backend`: `uv run atlas-compose validate ../../<manifest> ../../<lock>` | A manifest-only tutorial step also runs `atlas-compose resolve` to a temporary output and compares the expected lock facts without overwriting the checked-in lock. |
 | Zensical/TOML/navigation configuration | From `docs-site`: `uv run zensical build --clean` | The clean build is required after navigation, Markdown extension, or site configuration examples change. |
 
 An example that falls into more than one row runs every applicable check. For

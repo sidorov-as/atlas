@@ -6,7 +6,7 @@
 # special hard-coded build.
 #
 # `source: workspace` for every artifact: this manifest builds against the monorepo's own
-# packages (via `core/backend/poetry.lock` and the root `package-lock.json`), not a
+# packages (via `core/backend/uv.lock` and the root `package-lock.json`), not a
 # published registry — the only source `resolver.py` currently resolves.
 #
 # Plugin order matches the pre-composer `SELECTED_PLUGINS`/`installedFrontendPlugins`

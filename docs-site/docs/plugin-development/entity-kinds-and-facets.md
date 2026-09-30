@@ -207,7 +207,7 @@ The checked-in contract and Core regression suites are useful baselines:
 
 ```shell
 cd core/backend
-poetry run pytest \
+uv run pytest \
   ../../plugin-api/python/atlas_plugin_api/tests/test_kinds.py \
   server/apps/catalog/tests/test_entity_kind_registry.py \
   server/apps/catalog/tests/test_entity_service.py \

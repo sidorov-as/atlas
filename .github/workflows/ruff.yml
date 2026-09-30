@@ -22,24 +22,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  discover:
+    # `.github/ruff-packages.txt` is the single source of truth for the
+    # package list, shared with the root `Makefile`'s `RUFF_PACKAGES`
+    # (`make ci`/`make format`/`make format-check` read the same file) — a
+    # matrix can't read a file directly, so this job turns it into JSON once
+    # for the `ruff` job below to consume.
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.packages.outputs.packages }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - id: packages
+        run: |
+          packages=$(jq -R -s -c 'split("\n") | map(select(length > 0))' .github/ruff-packages.txt)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+
   ruff:
+    needs: discover
     name: ruff check / ${{ matrix.package }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        package:
-          - core/backend
-          - plugin-api/python
-          - plugins/apis/backend
-          - plugins/auth-gitea/backend
-          - plugins/auth-oidc/backend
-          - plugins/c4/backend
-          - plugins/database-schema/backend
-          - plugins/flows/backend
-          - plugins/ingestion/backend
-          - plugins/standard-catalog/backend
+        package: ${{ fromJson(needs.discover.outputs.packages) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 

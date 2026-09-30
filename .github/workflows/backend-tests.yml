@@ -40,25 +40,20 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - name: Set up backend environment
+        # `atlas-backend`'s pyproject.toml pulls in composer, plugin-api/python,
+        # and every plugin backend as editable path dependencies, so this
+        # single `uv sync` covers all of them.
+        uses: ./.github/actions/setup-python-env
         with:
           python-version: "3.13.13"
-
-      - name: Install Poetry
-        run: pipx install poetry
-
-      - name: Install backend dependencies
-        # `atlas-backend`'s pyproject.toml pulls in composer, plugin-api/python,
-        # and every plugin backend as develop-mode path dependencies, so this
-        # single install covers all of them.
-        working-directory: core/backend
-        run: poetry install
+          working-directory: core/backend
 
       - name: Run full backend test suite
         # The repo-root `pytest.ini` fans this one invocation out across
         # core/backend, composer, plugin-api/python, and every plugin
         # backend's own tests/ (see its `testpaths`) — but only when pytest
         # runs with cwd == rootdir (repo root), per that file's own header
-        # comment. `-P core/backend` points Poetry at the environment just
-        # installed without changing the working directory.
-        run: poetry -P core/backend run pytest
+        # comment. `--project core/backend` points uv at the environment just
+        # synced without changing the working directory.
+        run: uv run --project core/backend pytest

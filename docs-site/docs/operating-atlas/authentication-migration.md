@@ -87,7 +87,7 @@ Changing an OIDC issuer, Gitea instance, or directory namespace creates a new
 authority. Preview a source migration using exact identifiers:
 
 ```shell
-poetry run python manage.py manage_auth_identity source-migrate \
+uv run python manage.py manage_auth_identity source-migrate \
   --provider atlas.auth.oidc \
   --source https://old-idp.example \
   --to-source https://new-idp.example \
@@ -105,7 +105,7 @@ links, sessions, or grants.
 Preview an exact link revocation, then apply it:
 
 ```shell
-poetry run python manage.py manage_auth_identity revoke \
+uv run python manage.py manage_auth_identity revoke \
   --provider atlas.auth.oidc --source https://idp.example \
   --subject 248289761001 --operator-id 7 \
   --reason 'employment ended'

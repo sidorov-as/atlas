@@ -130,9 +130,9 @@ The bundle test imports the exact descriptor file and asserts its composition
 metadata. From `core/backend`, run:
 
 ```shell
-poetry run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests -q
-poetry run ruff check ../../docs-site/examples/first-plugin/first-plugin-backend
-poetry run ruff format --check ../../docs-site/examples/first-plugin/first-plugin-backend
+uv run pytest ../../docs-site/examples/first-plugin/first-plugin-backend/tests -q
+uv run ruff check ../../docs-site/examples/first-plugin/first-plugin-backend
+uv run ruff format --check ../../docs-site/examples/first-plugin/first-plugin-backend
 ```
 
 The focused test, lint, and format checks should pass. Keep an equivalent
