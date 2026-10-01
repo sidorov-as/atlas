@@ -9,9 +9,28 @@ SELECTED_PLUGINS = (
     "atlas_plugin_database_schema.plugin",
     "atlas_plugin_ingestion.plugin",
     "atlas_plugin_flows.plugin",
+    "atlas_plugin_mcp.plugin",
 )
 
 DISABLED_PLUGINS = frozenset({})
+
+PLUGIN_CONFIGS = {
+    "atlas.auth.oidc": {
+        "discoveryUrl": "http://keycloak.localhost:18081/realms/atlas-example/.well-known/openid-configuration",
+        "expectedIssuer": "http://localhost:18081/realms/atlas-example",
+        "clientId": "atlas-example",
+        "clientSecret": {"fromEnv": "ATLAS_OIDC_CLIENT_SECRET"},
+        "scopes": ["openid", "profile", "email", "groups"],
+        "groupsClaim": "groups",
+        "allowedAlgorithms": ["RS256"],
+        "allowedDestinations": [
+            "http://keycloak.localhost:18081",
+            "http://localhost:18081",
+        ],
+        "allowDevelopmentHttp": True,
+        "remoteLogout": False,
+    }
+}
 
 AUTHENTICATION = {
     "providers": (

@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}{{ media }}{% endblock %}
+{% block bodyclass %}{{ block.super }} app-catalog model-personalaccesstoken change-form{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumbs">
+<li><a href="{% url 'admin:index' %}">Home</a></li>
+<li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+<li><a href="{% url 'admin:catalog_personalaccesstoken_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+<li aria-current="page">Issue {{ opts.verbose_name }}</li>
+</ol>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+{% if issued %}
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <p class="help">Token issued for <strong>{{ issued.instance.owner }}</strong>.
+        Copy it now: Atlas stores only a hash, so it <strong>cannot be shown again</strong>.</p>
+    </div>
+    <div class="form-row">
+      <div class="flex-container">
+        <label>Token:</label>
+        <code style="font-size: 1.1em; user-select: all; word-break: break-all;">{{ issued.plaintext }}</code>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="flex-container">
+        <label>Scopes:</label>
+        <div class="readonly">{{ issued.instance.scopes|join:", "|default:"(none)" }}</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="flex-container">
+        <label>Expires:</label>
+        <div class="readonly">{{ issued.instance.expires_at|default:"never" }}</div>
+      </div>
+    </div>
+  </fieldset>
+  <div class="submit-row">
+    <a class="button" href="{% url 'admin:catalog_personalaccesstoken_changelist' %}">Back to tokens</a>
+  </div>
+{% else %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if adminform.form.errors %}
+      <p class="errornote">Please correct the errors below.</p>
+      {{ adminform.form.non_field_errors }}
+    {% endif %}
+    {% for fieldset in adminform %}
+      {% include "admin/includes/fieldset.html" %}
+    {% endfor %}
+    <div class="submit-row">
+      <input type="submit" value="Issue token" class="default">
+    </div>
+  </form>
+{% endif %}
+</div>
+{% endblock %}

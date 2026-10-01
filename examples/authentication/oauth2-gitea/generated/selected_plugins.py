@@ -9,9 +9,22 @@ SELECTED_PLUGINS = (
     "atlas_plugin_database_schema.plugin",
     "atlas_plugin_ingestion.plugin",
     "atlas_plugin_flows.plugin",
+    "atlas_plugin_mcp.plugin",
 )
 
 DISABLED_PLUGINS = frozenset({})
+
+PLUGIN_CONFIGS = {
+    "atlas.auth.gitea": {
+        "instanceOrigin": "http://gitea.localhost:18082",
+        "clientId": "generated-by-runtime-bootstrap",
+        "clientSecret": {"fromEnv": "GITEA_CLIENT_SECRET"},
+        "scopes": ["read:user"],
+        "oauthPkceEnabled": True,
+        "allowedDestinations": ["http://gitea.localhost:18082"],
+        "allowDevelopmentHttp": True,
+    }
+}
 
 AUTHENTICATION = {
     "providers": (

@@ -63,3 +63,15 @@ if apps.is_installed("atlas_plugin_flows"):
     from atlas_plugin_flows.api.urls import router as flows_router
 
     urlpatterns.append(flows_router.to_urlpatterns())
+
+if apps.is_installed("atlas_plugin_mcp"):
+    # mcp-plugin spec's "Distribution without atlas.mcp composes
+    # successfully" scenario requires no MCP-facing routes to be registered
+    # when the plugin is deselected — gated here like every other optional
+    # plugin's router above. `atlas_plugin_mcp.api.urls.router` is itself
+    # built fresh at that module's import time (after every plugin's app is
+    # already registered), so its own Flow routes already reflect whether
+    # `atlas.flows` is installed in this same distribution.
+    from atlas_plugin_mcp.api.urls import router as mcp_router
+
+    urlpatterns.append(mcp_router.to_urlpatterns())

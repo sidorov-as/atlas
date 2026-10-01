@@ -11,11 +11,15 @@ return it to a plugin without `atlas_plugin_api` ever importing `server`
 the same shared "load
 selected runtime entry points" phase (`server.apps.plugins.runtime`) that
 populates the Entity Kind registry. It does the same for the `PolicyEvaluator`
-singleton (`bind_policy_evaluator()`) and for the `adopt`/
+singleton (`bind_policy_evaluator()`), for the `adopt`/
 `blocked_by`/`blocked_by_reason` functions (`bind_entity_helpers()` —
 these need Core's own `EntityWritePermission` and a
 conditionally-installed plugin, neither of which `atlas_plugin_api` may
-depend on). The APIs plugin
+depend on), and for the PAT validation function (`bind_pat_validator()` —
+`atlas_plugin_api.auth.PATBearerAuth` needs it the same way a plugin
+calling `EntityService` needs `bind_entity_service()`, since
+`PersonalAccessToken` is a real Django model `atlas_plugin_api` cannot
+import). The APIs plugin
 moved the last kind core registered directly (`api`) out to
 `atlas_plugin_apis`, so these are this app's only runtime registrations left.
 """
@@ -27,6 +31,7 @@ from atlas_plugin_api import (
 from atlas_plugin_api.entity_helpers import bind_entity_helpers
 from atlas_plugin_api.entity_service import bind_entity_service
 from atlas_plugin_api.membership import bind_membership_service
+from atlas_plugin_api.pat import bind_pat_validator
 from atlas_plugin_api.permissions import bind_policy_evaluator
 
 from .auth_descriptors import LOCAL_PROVIDER_DESCRIPTOR
@@ -58,6 +63,9 @@ def register_runtime() -> None:
     from server.apps.catalog.local_authentication import LocalCredentialProvider
     from server.apps.catalog.membership import membership_service
     from server.apps.catalog.services.entity_service import entity_service
+    from server.apps.catalog.services.pat_service import (
+        validate_personal_access_token,
+    )
 
     register_authentication_provider(LocalCredentialProvider(), owner=PLUGIN.id)
 
@@ -69,3 +77,4 @@ def register_runtime() -> None:
         blocked_by=blocked_by,
         blocked_by_reason=blocked_by_reason,
     )
+    bind_pat_validator(validate_personal_access_token)

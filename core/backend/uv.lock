@@ -89,6 +89,7 @@ dependencies = [
     { name = "atlas-plugin-database-schema" },
     { name = "atlas-plugin-flows" },
     { name = "atlas-plugin-ingestion" },
+    { name = "atlas-plugin-mcp" },
     { name = "atlas-plugin-standard-catalog" },
     { name = "django", extra = ["argon2"] },
     { name = "django-allauth", extra = ["socialaccount"] },
@@ -135,6 +136,7 @@ requires-dist = [
     { name = "atlas-plugin-database-schema", editable = "../../plugins/database-schema/backend" },
     { name = "atlas-plugin-flows", editable = "../../plugins/flows/backend" },
     { name = "atlas-plugin-ingestion", editable = "../../plugins/ingestion/backend" },
+    { name = "atlas-plugin-mcp", editable = "../../plugins/mcp/backend" },
     { name = "atlas-plugin-standard-catalog", editable = "../../plugins/standard-catalog/backend" },
     { name = "django", extras = ["argon2"], specifier = ">=6.1,<6.2" },
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.19.1" },
@@ -356,6 +358,23 @@ requires-dist = [
     { name = "django-modern-rest", extras = ["pydantic"], specifier = ">=0.14.0,<0.15.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
     { name = "requests", specifier = ">=2.34,<3.0" },
+]
+
+[[package]]
+name = "atlas-plugin-mcp"
+version = "0.1.0"
+source = { editable = "../../plugins/mcp/backend" }
+dependencies = [
+    { name = "atlas-plugin-api-python" },
+    { name = "django" },
+    { name = "django-modern-rest", extra = ["pydantic"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "atlas-plugin-api-python", editable = "../../plugin-api/python" },
+    { name = "django", specifier = ">=6.1,<6.2" },
+    { name = "django-modern-rest", extras = ["pydantic"], specifier = ">=0.14.0,<0.15.0" },
 ]
 
 [[package]]

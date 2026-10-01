@@ -9,6 +9,7 @@ SELECTED_PLUGINS = (
     "atlas_plugin_database_schema.plugin",
     "atlas_plugin_ingestion.plugin",
     "atlas_plugin_flows.plugin",
+    "atlas_plugin_mcp.plugin",
 )
 
 DISABLED_PLUGINS = frozenset({})

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from atlas_plugin_standard_catalog.api.schemas import (
     SystemSpecIn,
     SystemSpecOut,
+    SystemSpecPatch,
 )
 from atlas_plugin_standard_catalog.models import SystemDetails
 
@@ -20,6 +21,7 @@ from atlas_plugin_standard_catalog.models import SystemDetails
 class SystemKindHandler:
     kind_id = KIND_SYSTEM
     spec_schema: type[BaseModel] = SystemSpecIn
+    patch_schema: type[BaseModel] = SystemSpecPatch
     provides: ClassVar[list] = [ARCHITECTURE_SUBJECT_V1]
 
     def create_details(self, entity: CatalogEntity, spec: BaseModel) -> None:

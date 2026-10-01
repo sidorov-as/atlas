@@ -33,7 +33,6 @@ from atlas_plugin_api import (
     delete_blocked,
     entity_capabilities,
     entity_permissions,
-    entity_relations,
     filter_by_field,
     filter_by_owner,
     filter_by_search,
@@ -60,6 +59,7 @@ from dmr import Body, Path, Query, ResponseSpec, modify
 from dmr.errors import ErrorModel, ErrorType, format_error
 from dmr.response import APIError
 
+from ..consumers import channel_participants, operation_provider_service
 from ..models import (
     ApiEndpoint,
     ApiOperation,
@@ -472,25 +472,6 @@ class ApiEndpointSearchController(AtlasController):
 # itself gets.
 
 
-def _operation_provider_service(api: CatalogEntity) -> CatalogEntity | None:
-    """The API document's own owning Service, found via its `apiProvidedBy`
-    relation — `None` if the API has no declared provider."""
-    provider_relation = next(
-        (
-            relation
-            for relation in entity_relations(api)
-            if relation[0] == "apiProvidedBy"
-        ),
-        None,
-    )
-    if provider_relation is None:
-        return None
-    _predicate, _ref, _kind, provider_id = provider_relation
-    return (
-        get_catalog_entity_model().objects.select_related("owner").get(pk=provider_id)
-    )
-
-
 def _operation_provider_out(
     provider: CatalogEntity | None, direction: str
 ) -> OperationProviderOut | None:
@@ -564,7 +545,7 @@ class ApiOperationListController(AtlasController):
                 | Q(summary__icontains=parsed_query.search)
                 | Q(operation_id__icontains=parsed_query.search),
             )
-        provider = _operation_provider_service(api)
+        provider = operation_provider_service(api)
         return [_operation_out(instance, provider) for instance in queryset]
 
 
@@ -575,7 +556,7 @@ class ApiOperationDetailController(AtlasController):
         check_operation_read_permission(self.request.user)
         api = _get_api(parsed_path.api_id)
         operation = _get_operation(api, parsed_path.id)
-        return _operation_out(operation, _operation_provider_service(api))
+        return _operation_out(operation, operation_provider_service(api))
 
 
 class ApiOperationPurgeController(AtlasController):
@@ -614,7 +595,7 @@ class ApiOperationPurgeController(AtlasController):
 class ApiOperationSearchController(AtlasController):
     """Cross-API Operation search — mirrors `ApiEndpointSearchController` exactly, backing the
     Flow "Add Step" Event picker. `provider` is omitted (never resolved) for
-    each result — deriving it per API via `_operation_provider_service()`
+    each result — deriving it per API via `operation_provider_service()`
     would cost one extra relation lookup per matching API on every
     keystroke, for a field the picker doesn't render."""
 
@@ -945,7 +926,7 @@ class OperationServicesController(AtlasController):
         operation = _get_operation_by_id(parsed_path.operation_id)
         service = _get_service(parsed_body.service_id)
         check_operation_dependency_create_permission(self.request.user, service)
-        provider = _operation_provider_service(operation.api)
+        provider = operation_provider_service(operation.api)
         if provider is not None and provider.id == service.id:
             raise _conflict(
                 "This Service is the Operation's own document owner — its role is "
@@ -1010,57 +991,6 @@ class OperationServiceController(AtlasController):
         usage.delete()
 
 
-def _channel_participants(
-    operations: list[ApiOperation],
-) -> list[OperationConsumerParticipantOut]:
-    """Every publisher/subscriber for a channel, aggregated across every
-    `ApiOperation` sharing it — each operation's own
-    document-owner implied role, plus every explicit `ServiceOperationUsage`
-    row, deduplicated by (service, role) since the same Service can
-    independently reach the same role from more than one contributing
-    operation."""
-    apis_by_id = {}
-    for operation in operations:
-        apis_by_id.setdefault(operation.api_id, operation.api)
-    providers = {
-        api_id: _operation_provider_service(api) for api_id, api in apis_by_id.items()
-    }
-    seen: set[tuple] = set()
-    participants: list[OperationConsumerParticipantOut] = []
-    for operation in operations:
-        provider = providers[operation.api_id]
-        if provider is None:
-            continue
-        role = (
-            "publisher"
-            if operation.direction == ApiOperation.DIRECTION_SEND
-            else "subscriber"
-        )
-        key = (provider.id, role)
-        if key in seen:
-            continue
-        seen.add(key)
-        participants.append(
-            OperationConsumerParticipantOut(
-                service=_service_summary_out(provider), role=role
-            )
-        )
-    usages = ServiceOperationUsage.objects.filter(
-        operation__in=operations,
-    ).select_related("service", "service__owner")
-    for usage in usages:
-        key = (usage.service_id, usage.role)
-        if key in seen:
-            continue
-        seen.add(key)
-        participants.append(
-            OperationConsumerParticipantOut(
-                service=_service_summary_out(usage.service), role=usage.role
-            ),
-        )
-    return participants
-
-
 class OperationConsumersController(AtlasController):
     auth = (SessionAuth(),)
 
@@ -1083,5 +1013,10 @@ class OperationConsumersController(AtlasController):
                 direction=operation.direction,
                 status=operation.status,
             ),
-            participants=_channel_participants(aggregated),
+            participants=[
+                OperationConsumerParticipantOut(
+                    service=_service_summary_out(service), role=role
+                )
+                for service, role in channel_participants(aggregated)
+            ],
         )

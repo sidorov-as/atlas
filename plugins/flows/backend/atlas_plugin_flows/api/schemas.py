@@ -14,6 +14,7 @@ from atlas_plugin_api import (
 from pydantic import BaseModel, Field, field_validator
 
 from ..models import StepValidationError, validate_steps
+from .step_schemas import StepIn
 
 __all__ = [
     "FlowIn",
@@ -22,12 +23,27 @@ __all__ = [
     "FlowPatch",
     "FlowPath",
     "FlowPermissionsOut",
+    "StepIn",
 ]
 
 
-def _validate_flow_steps(steps: list[dict]) -> list[dict]:
+def _validate_flow_steps(steps: list[StepIn]) -> list[StepIn]:
+    """Runs after `StepIn`'s own per-step validation already passed —
+    `validate_steps()` only ever sees shape `StepIn` has already guaranteed,
+    so it's checking exactly what it can't on its own: ref *resolution*
+    (a DB round-trip) and the transition graph's acyclicity (a whole-list
+    concern, not a single step's). `.model_dump(exclude_none=True)` (no
+    `by_alias`: `StepIn` has no camelCase aliasing, matching the snake_case
+    keys the web UI's own `flowStepSchema.ts`-validated JSON already uses)
+    reproduces exactly the sparse `list[dict]` shape `validate_steps()` has
+    always taken — `exclude_none` matters here: an *unset* optional field
+    (e.g. `query_ref.summary`) must come out as an absent key, not an
+    explicit `None` one, since `_validate_ref_shape()`'s own "optional
+    fields must be strings" check only inspects keys that are actually
+    present.
+    """
     try:
-        validate_steps(steps)
+        validate_steps([step.model_dump(exclude_none=True) for step in steps])
     except StepValidationError as exc:
         raise ValueError(str(exc)) from exc
     return steps
@@ -49,7 +65,7 @@ class FlowIn(CamelModel):
     name: str
     description: str = Field(default="", max_length=_DESCRIPTION_MAX_LENGTH)
     documentation: str = Field(default="", max_length=_DOCUMENTATION_MAX_LENGTH)
-    steps: list[dict] = Field(default_factory=list, max_length=_STEPS_MAX_ITEMS)
+    steps: list[StepIn] = Field(default_factory=list, max_length=_STEPS_MAX_ITEMS)
     autolayout_enabled: bool = True
     layout_direction: LayoutDirection = "LAYOUT_LEFT_RIGHT"
     layout_engine: LayoutEngine = "dagre"
@@ -66,7 +82,7 @@ class FlowPatch(CamelModel):
     documentation: str | None = Field(
         default=None, max_length=_DOCUMENTATION_MAX_LENGTH
     )
-    steps: list[dict] | None = Field(default=None, max_length=_STEPS_MAX_ITEMS)
+    steps: list[StepIn] | None = Field(default=None, max_length=_STEPS_MAX_ITEMS)
     autolayout_enabled: bool | None = None
     layout_direction: LayoutDirection | None = None
     layout_engine: LayoutEngine | None = None
@@ -76,7 +92,7 @@ class FlowPatch(CamelModel):
 
     @field_validator("steps")
     @classmethod
-    def _validate_steps(cls, value: list[dict] | None) -> list[dict] | None:
+    def _validate_steps(cls, value: list[StepIn] | None) -> list[StepIn] | None:
         return value if value is None else _validate_flow_steps(value)
 
 

@@ -28,6 +28,7 @@ class _StubHandler:
     def __init__(self, kind_id, provides=(), deprecated=False):
         self.kind_id = kind_id
         self.spec_schema = None
+        self.patch_schema = None
         self.provides = list(provides)
         self._deprecated = deprecated
 

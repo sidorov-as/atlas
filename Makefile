@@ -20,7 +20,7 @@ DISTRIBUTIONS := distributions/default \
 	examples/ingestion \
 	deploy/render
 
-.PHONY: help docs format format-check ci dev-up dev-down migrate seed-demo lock lock-validate examples-up examples-down examples-list
+.PHONY: help docs format format-check ci dev-up dev-down migrate seed-demo issue-pat lock lock-validate examples-up examples-down examples-list
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -57,6 +57,22 @@ migrate: core/backend/.env ## Apply database migrations against the running deve
 
 seed-demo: core/backend/.env ## Wipe the dev database and load the booking-platform demo catalog
 	$(COMPOSE_DEV) exec backend python manage.py seed_booking_demo --yes
+
+
+# `make issue-pat <username>` takes its argument positionally rather than as
+# `USERNAME=...`: every word in $(MAKECMDGOALS) after `issue-pat` is the
+# username, declared as a no-op target below so plain `make` doesn't then
+# fail trying to build it as a target of its own.
+ifeq (issue-pat,$(firstword $(MAKECMDGOALS)))
+  ISSUE_PAT_USERNAME := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(ISSUE_PAT_USERNAME):;@:)
+endif
+
+issue-pat: core/backend/.env ## Issue a fully-scoped Atlas Personal Access Token: make issue-pat <username>
+	@test -n "$(ISSUE_PAT_USERNAME)" || { echo "Usage: make issue-pat <username>" >&2; exit 1; }
+	$(COMPOSE_DEV) exec backend python manage.py issue_pat $(ISSUE_PAT_USERNAME) \
+		--scope catalog:read --scope catalog:write \
+		--scope flows:read --scope flows:write
 
 lock: ## Re-resolve every lock.yaml (hashes change with any edit under plugins/); use DIST=<dir> for one
 	@for d in $(or $(DIST),$(DISTRIBUTIONS)); do \

@@ -65,6 +65,16 @@ class EntityKindHandler(Protocol):
 
     kind_id: str
     spec_schema: type[BaseModel]
+    # The partial-update counterpart of `spec_schema` — every field optional,
+    # `update_details` reads only what `spec.model_fields_set` actually
+    # contains (the existing REST PATCH convention every handler's own
+    # `update_details` already follows). Published here, alongside
+    # `spec_schema`, so a kind-agnostic caller (`atlas.mcp`'s catalog write
+    # tools) can validate a generic `spec` payload for *either* create or
+    # update without importing a specific kind-owning plugin's schemas
+    # directly (mcp-plugin spec: "Catalog operations route through
+    # EntityService").
+    patch_schema: type[BaseModel]
     # Semantic capability identifiers this kind provides, independent of any particular consuming plugin — e.g. `system`
     # and `component` declare `architecture.subject.v1` so `atlas.c4` can
     # target them via `entitySupports(...)` instead of naming their kind ids.

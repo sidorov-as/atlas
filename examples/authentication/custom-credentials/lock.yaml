@@ -61,6 +61,11 @@ plugins:
       package: '@atlas/plugin-flows'
       version: 0.1.0
       integrity: sha512-+AlL3mTlCzYNw5X2Facj3YnjtWmWHY06blvk9F7ysGkwpQD4GZbHhbeaQNOc+uq7h4uJV+i6hzx2NZNZ7Rb6uA==
+  atlas.mcp@0.1.0:
+    backend:
+      package: atlas-plugin-mcp
+      version: 0.1.0
+      hash: sha256:07cccab985918f872c91058a0e2a24f18d29d1208da96d2b16157bf8e518994a
 auth:
   providers:
   - id: example.auth.fixture

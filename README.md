@@ -127,27 +127,6 @@ and [repository ingestion](examples/ingestion/README.md). For host-only developm
 see the [backend](core/backend/README.md) and [frontend](core/frontend/README.md)
 guides.
 
-## Local checks before pushing
-
-Prerequisites: Docker (Compose v2), [`uv`](https://docs.astral.sh/uv/), and Node 22.
-
-```shell
-make ci
-```
-
-Runs, in one command and without needing Docker matrices or network access
-beyond `npm ci`: Ruff linting and formatting, the frontend test/build/lint
-suite, the backend `pytest` suite against a throwaway PostgreSQL it starts
-and stops for the run (a different port than the dev stack's, so it can run
-alongside `make dev-up`), and the migration safety checks. It reports which
-step failed, if any, and exits non-zero.
-
-It's a fast pre-push gate, not a full local mirror of CI: the
-`authentication-examples-integration` Docker-topology matrix, `npm audit`/
-`pip-audit`, and `gitleaks` stay CI-only — they're either too slow for a
-pre-push loop, need network access, or both. CI still runs all of it on
-every pull request.
-
 ## Contributing
 
 The [contributor guide](https://sidorov-as.github.io/atlas/contributing/) describes

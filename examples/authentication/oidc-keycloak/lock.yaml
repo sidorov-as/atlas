@@ -5,7 +5,7 @@ plugins:
     backend:
       package: atlas-plugin-auth-oidc
       version: 0.1.0
-      hash: sha256:60796068b9be7efbeb4ea6a2d4eba3b5bbd043f257331e363b738b89ff6be509
+      hash: sha256:13b50d0daf8129e0aeec0b4b5f9f426e343c1149447c6e22e40366b654ce9d18
     config:
       discoveryUrl: http://keycloak.localhost:18081/realms/atlas-example/.well-known/openid-configuration
       expectedIssuer: http://localhost:18081/realms/atlas-example
@@ -29,7 +29,7 @@ plugins:
     backend:
       package: atlas-plugin-standard-catalog
       version: 0.1.0
-      hash: sha256:6838e4d6d1c04ac7178fb8624175109ce527122f147c2249e584b22e859121f6
+      hash: sha256:835d1ed01e057bce26196274c8cba1be1a96085f9894414189739552f3187e9c
     frontend:
       package: '@atlas/plugin-standard-catalog'
       version: 0.1.0
@@ -38,7 +38,7 @@ plugins:
     backend:
       package: atlas-plugin-apis
       version: 0.1.0
-      hash: sha256:a835130e3d9f84474ca72e89493c87aca69e78b5d98ec9c65619c1400a8d337d
+      hash: sha256:e7a1c6f4de1717446b22bd88dd7062b8516410d8b02cf81207713df6ef592a9a
     frontend:
       package: '@atlas/plugin-apis'
       version: 0.1.0
@@ -47,7 +47,7 @@ plugins:
     backend:
       package: atlas-plugin-c4
       version: 0.1.0
-      hash: sha256:2f9c34d1a55a8d100468426fe2ced4e4327392619e2edddcbb8d3613804b69f1
+      hash: sha256:5a306856a78dca70b3878a91670ca589cd1f1db61a1907bf6b13b7a3162f349a
     frontend:
       package: '@atlas/plugin-c4'
       version: 0.1.0
@@ -56,7 +56,7 @@ plugins:
     backend:
       package: atlas-plugin-database-schema
       version: 0.1.0
-      hash: sha256:3a94efd0e716aa007d63edf29914db11199cc7e83e8cb45a76de56cda79a52a5
+      hash: sha256:43a5f26c0749b734648bfcfe8b1489ccfbbb41f733ead519ba3e23e47747f9c4
     frontend:
       package: '@atlas/plugin-database-schema'
       version: 0.1.0
@@ -65,16 +65,21 @@ plugins:
     backend:
       package: atlas-plugin-ingestion
       version: 0.1.0
-      hash: sha256:8dbc3b8881c0b101ae9e0219aa2acbcc8e4d29817b088384b4dd3866f41599e9
+      hash: sha256:0d03d93b721a98beca35332835f65bbbec2e2481285a25799ee0fbebca09fd2d
   atlas.flows@0.1.0:
     backend:
       package: atlas-plugin-flows
       version: 0.1.0
-      hash: sha256:60779583ac73be6d31a9724a6f6d89aefb837c40818ef9a44fa096ff466fd406
+      hash: sha256:b1246b9c6820c4b732d4253dbd2f57fd60fcd59bbbd4cfb833fb134a01ec2450
     frontend:
       package: '@atlas/plugin-flows'
       version: 0.1.0
-      integrity: sha512-+AlL3mTlCzYNw5X2Facj3YnjtWmWHY06blvk9F7ysGkwpQD4GZbHhbeaQNOc+uq7h4uJV+i6hzx2NZNZ7Rb6uA==
+      integrity: sha512-DTsoCSo0owMdL5JGqiSLDSXWoJZ2qJQddsXF4w+6a1TndmzNXf9ppCsfIWMUYSjuVo/Z61dpR0jfqV46TjfQ9Q==
+  atlas.mcp@0.1.0:
+    backend:
+      package: atlas-plugin-mcp
+      version: 0.1.0
+      hash: sha256:07cccab985918f872c91058a0e2a24f18d29d1208da96d2b16157bf8e518994a
 auth:
   providers:
   - id: atlas.auth.oidc

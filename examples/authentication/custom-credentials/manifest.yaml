@@ -106,3 +106,9 @@ plugins:
     frontend:
       package: "@atlas/plugin-flows"
       source: workspace
+
+  - id: atlas.mcp
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-mcp
+      source: workspace

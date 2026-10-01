@@ -28,6 +28,7 @@ from atlas_plugin_standard_catalog.models import ComponentDetails
 class ComponentKindHandler:
     kind_id = KIND_COMPONENT
     spec_schema: type[BaseModel] = ComponentSpecIn
+    patch_schema: type[BaseModel] = ComponentSpecPatch
     provides: ClassVar[list] = [ARCHITECTURE_SUBJECT_V1]
 
     def create_details(self, entity: CatalogEntity, spec: ComponentSpecIn) -> None:

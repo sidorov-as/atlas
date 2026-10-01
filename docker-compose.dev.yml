@@ -39,6 +39,7 @@ services:
       - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
+      - ./plugins/mcp/backend:/code/plugins/mcp/backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,6 +63,7 @@ services:
       - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
+      - ./plugins/mcp/backend:/code/plugins/mcp/backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -118,6 +120,7 @@ services:
       - ./plugins/database-schema/backend:/code/plugins/database-schema/backend
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
+      - ./plugins/mcp/backend:/code/plugins/mcp/backend
     depends_on:
       migrate:
         condition: service_completed_successfully

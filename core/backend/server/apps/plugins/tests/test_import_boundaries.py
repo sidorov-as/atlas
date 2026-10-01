@@ -65,6 +65,13 @@ first-party plugins actually do:
   two (the *dependent* plugin reaches into the *owning* plugin's published
   registry, not the other way around), but it's the same "published,
   namespaced extension point" contract surface in every case.
+  `atlas_plugin_flows`'s own pair is the fourth: `atlas_plugin_mcp`'s Flow
+  tools (`list_flows`/`get_flow`) call `atlas_plugin_flows.extension_points.
+  get_flow_service()` and reuse `atlas_plugin_flows.contracts.FlowIn`/
+  `FlowPatch`/`FlowNotFoundError`, rather than importing `atlas_plugin_flows`'s
+  `Flow` model or REST controllers directly — the same "published contract,
+  not the owning plugin's implementation" shape every other entry here
+  documents.
 """
 
 import ast
@@ -102,6 +109,14 @@ ALLOWED_PLUGIN_TO_PLUGIN_EDGES = frozenset(
         # `.contracts`/`.extension_points` surface (ORM row construction needs
         # the real model class).
         ("flows", "atlas_plugin_apis"),
+        # `atlas_plugin_mcp`'s own API-tool controller tests
+        # (`tests/test_api_endpoint_controllers.py`) build `ApiEndpoint`/
+        # `ApiOperation`/`Service*Usage` fixture rows and swap
+        # `atlas_plugin_apis.permissions`'s policy evaluator to simulate a
+        # denied user — same first-party-test-only rationale as the `flows`
+        # entry above; the controllers themselves only ever import
+        # `atlas_plugin_apis.extension_points`.
+        ("mcp", "atlas_plugin_apis"),
     }
 )
 
@@ -118,6 +133,10 @@ DECLARED_CONTRACT_SUBMODULES: dict[str, tuple[str, ...]] = {
         "atlas_plugin_apis.extension_points",
     ),
     "atlas_plugin_ingestion": ("atlas_plugin_ingestion.extension_points",),
+    "atlas_plugin_flows": (
+        "atlas_plugin_flows.contracts",
+        "atlas_plugin_flows.extension_points",
+    ),
 }
 
 AUTHENTICATION_CONTRACT_SYMBOLS = frozenset(

@@ -24,6 +24,7 @@ from ..spec_fetch import apply_api_spec_source
 class ApiKindHandler:
     kind_id = KIND_API
     spec_schema: type[BaseModel] = ApiSpecIn
+    patch_schema: type[BaseModel] = ApiSpecPatch
     # APIs can appear inside C4 diagrams (an optional atlas.apis
     # dependency) but aren't themselves a diagram subject yet — declares no
     # capability.
