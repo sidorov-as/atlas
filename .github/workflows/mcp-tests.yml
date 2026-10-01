@@ -32,8 +32,12 @@ jobs:
           python-version: "3.13.13"
           working-directory: mcp
 
+      # From `mcp/` itself: from the repo root, pytest would pick up the root
+      # `pytest.ini` (Django settings, `core/backend/conftest.py`) instead of
+      # stopping at `mcp/pyproject.toml`.
       - name: Run mcp/ pytest suite
-        run: uv run --project mcp pytest
+        working-directory: mcp
+        run: uv run pytest
 
   docker-build:
     name: mcp/ docker build (no publish)
