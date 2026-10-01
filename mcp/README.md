@@ -107,6 +107,40 @@ run atlas-mcp` form above), point `command`/`args` at that instead:
 }
 ```
 
+### Against a deployed Atlas
+
+For an Atlas deployed at a public address (for example
+`atlas.mycompany.com`), set `ATLAS_API_URL` to its base URL — scheme and
+host only, no `/api` and no trailing slash. This process appends
+`/api/plugins/atlas.mcp/openapi.json` and every other API path itself, and
+no `host.docker.internal` is involved:
+
+```json
+{
+  "mcpServers": {
+    "atlas": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "ATLAS_API_URL",
+        "-e", "ATLAS_PAT",
+        "atlas-mcp"
+      ],
+      "env": {
+        "ATLAS_API_URL": "https://atlas.mycompany.com",
+        "ATLAS_PAT": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+The deployment must route `/api/*` to the backend (the bundled Caddy does
+this), select the `atlas.mcp` plugin, and the token must be issued on that
+same instance. The `atlas.flows` plugin is needed for the Flow tools.
+
 Restart the client after editing its config so it relaunches the server.
 
 ## Verify the connection
@@ -136,6 +170,14 @@ reports no tools available, or every call fails, see
   the needed `catalog:write`/`flows:write` scope. A `403` distinct from an
   authentication failure means the token itself is valid but under-scoped,
   or the underlying user's own RBAC denies the operation.
+- **`describe_kinds`, `list_relationships`, or `validate_flow` is rejected
+  with a `403`**: these read tools need the `catalog:read` (first two) or
+  `flows:read` scope, unlike `search_catalog`/`get_entity`.
+- **A write is rejected with a `400` naming an unknown field**: `create_entity`
+  and `update_entity` refuse `spec`/`metadata` keys the kind doesn't accept
+  (and `spec.relationships`; use `create_relationship`). Call `describe_kinds`
+  for the accepted fields. Add `dryRun` to any authoring write to preview it
+  without saving.
 - **Flow tools (`list_flows`, etc.) are missing**: the distribution
   `ATLAS_API_URL` points at doesn't have `atlas.flows` selected alongside
   `atlas.mcp` — this process only ever exposes what that distribution's own
@@ -159,6 +201,14 @@ both after bumping `@gravity-ui/icons` in `plugins/flows/frontend`'s
 ```shell
 python scripts/sync_gravity_icons.py
 ```
+
+## Skills
+
+The [`skills/`](../skills/README.md) directory holds three assistant skills
+(`atlas-scout`, `atlas-flow`, `atlas-curator`) that use these tools to fill the
+catalog from a codebase and to build flows from a conversation. Install them
+together; see [Catalog authoring skills](https://sidorov-as.github.io/atlas/features/mcp-skills/)
+for installation, token scopes, and a worked example.
 
 ## Tests
 

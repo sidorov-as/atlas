@@ -12,11 +12,11 @@ MCP tool-calling support SHALL be provided entirely by the `atlas.mcp` plugin; a
 - **THEN** composition succeeds, and no MCP-facing routes or OpenAPI document are present
 
 ### Requirement: The MCP API exposes a curated tool surface, not the existing internal API
-`atlas.mcp` SHALL publish its own, purpose-built set of operations (`search_catalog`, `get_entity`, catalog create/update/delete, and — when available per the optional Flow dependency below — `list_flows`, `get_flow`, `create_flow`, `update_flow`, `delete_flow`) under its own OpenAPI document, distinct from Atlas's existing SPA-facing API. It SHALL NOT re-expose the SPA-facing API's endpoints under this document.
+`atlas.mcp` SHALL publish its own, purpose-built set of operations (`search_catalog`, `get_entity`, `describe_kinds`, catalog create/update/delete, `list_relationships`, `create_relationship`, `update_relationship`, `delete_relationship`, and — when available per the optional Flow dependency below — `list_flows`, `get_flow`, `create_flow`, `update_flow`, `delete_flow`, `validate_flow`) under its own OpenAPI document, distinct from Atlas's existing SPA-facing API. It SHALL NOT re-expose the SPA-facing API's endpoints under this document.
 
 #### Scenario: MCP OpenAPI document lists only the curated operations
 - **WHEN** the MCP plugin's OpenAPI document is generated
-- **THEN** it contains only the curated catalog and (if available) Flow operations, and no route from the existing SPA-facing API
+- **THEN** it contains only the curated catalog, relationship, and (if available) Flow operations, and no route from the existing SPA-facing API
 
 ### Requirement: The MCP OpenAPI document is available over HTTP, PAT-authenticated
 `atlas.mcp` SHALL serve its own OpenAPI document at an HTTP endpoint under this plugin's own prefix, gated by the same Atlas Personal Access Token requirement as every other operation it exposes — so a consumer with no Django import of its own (the MCP transport process) can fetch the current tool surface without calling any Atlas Python function directly.
@@ -30,7 +30,7 @@ MCP tool-calling support SHALL be provided entirely by the `atlas.mcp` plugin; a
 - **THEN** the response is the same document `atlas_plugin_mcp.api.openapi.build_openapi_schema()` returns for the distribution's current plugin selection
 
 ### Requirement: Catalog operations route through EntityService
-Every catalog read or write exposed by the MCP API SHALL be performed through `EntityService`, never through direct ORM access, so authorization, validation, transaction handling, and audit recording are identical to the existing web UI/REST catalog paths.
+Every catalog read or write exposed by the MCP API SHALL be performed through `EntityService`, and every Architecture Relationship read or write through the published Architecture Relationship service, never through direct ORM access, so authorization, validation, transaction handling, and audit recording are identical to the existing web UI/REST catalog paths.
 
 #### Scenario: Creating a catalog entity via MCP produces the same audit trail as the web UI
 - **WHEN** a catalog entity is created through the MCP API's create operation
@@ -39,6 +39,10 @@ Every catalog read or write exposed by the MCP API SHALL be performed through `E
 #### Scenario: A write rejected by RBAC through the web UI is also rejected through MCP
 - **WHEN** the authenticated actor lacks the permission a catalog write would require
 - **THEN** the MCP API rejects the request the same way `EntityService` would for any other caller
+
+#### Scenario: A relationship write follows the REST rules
+- **WHEN** a relationship is created or changed through the MCP API
+- **THEN** the same origin and source-permission rules apply as for the REST endpoints, because both call the same service
 
 ### Requirement: Flow tools are present only when atlas.flows is installed
 `atlas.mcp` SHALL treat `atlas.flows` as an optional, code-level dependency, not a manifest `requires_plugins` entry: `list_flows`, `get_flow`, `create_flow`, `update_flow`, and `delete_flow` SHALL be part of the MCP API and its OpenAPI document only when `atlas.flows` is also selected by the distribution. Composition SHALL succeed either way, and no Flow-related MCP operation SHALL exist to be called when `atlas.flows` is absent.
@@ -124,3 +128,26 @@ Every Endpoint/Operation MCP tool SHALL enforce the same RBAC read permission it
 #### Scenario: A valid PAT with no particular scope can call every new read tool
 - **WHEN** a request to any of the six new tools carries a valid Bearer PAT with no scopes granted
 - **THEN** the request is not rejected for lacking a scope
+
+### Requirement: Entity write operations reject unknown fields instead of ignoring them
+`create_entity` and `update_entity` SHALL reject, with a 400 error, any key in `spec` or `metadata` that is not a field the target kind accepts through MCP. The error SHALL name each unknown key and SHALL suggest the closest valid field when one is similar. A `relationships` key in `spec` SHALL be rejected with a message that directs the caller to the relationship tools. A rejected request SHALL create or modify nothing.
+
+#### Scenario: Misspelled spec field is rejected
+- **WHEN** a client calls `update_entity` with `spec` containing `dependOn` instead of `dependsOn`
+- **THEN** the request is rejected with an error naming `dependOn` and suggesting `dependsOn`, and the entity is unchanged
+
+#### Scenario: Unknown spec field is rejected on create
+- **WHEN** a client calls `create_entity` with a `spec` key the kind does not define
+- **THEN** the request is rejected, and no entity is created
+
+#### Scenario: Relationships in spec are rejected with a pointer
+- **WHEN** a client calls `create_entity` or `update_entity` with `relationships` in `spec`
+- **THEN** the request is rejected with an error stating that relationships are managed through the relationship tools, and nothing is persisted
+
+#### Scenario: Unknown metadata field is rejected
+- **WHEN** a client calls `create_entity` with an unknown key in `metadata`
+- **THEN** the request is rejected and nothing is created
+
+#### Scenario: Ingestion is unaffected
+- **WHEN** an ingested manifest declares `spec.relationships`
+- **THEN** ingestion continues to reconcile them as YAML-origin Architecture Relationships exactly as before

@@ -31,18 +31,35 @@ from typing import Any
 
 from atlas_plugin_api import (
     KIND_SYSTEM,
+    RefError,
     filter_by_search,
     filter_by_system,
     filter_by_team,
     resolve_ref,
 )
 from django.db.models import QuerySet
+from pydantic import ValidationError
 
+from .api.schemas import STEPS_MAX_ITEMS
+from .api.step_schemas import StepIn
 from .contracts import FlowIn, FlowNotFoundError, FlowPatch
-from .models import Flow
+from .models import Flow, collect_step_violations
 from .permissions import check_flow_write_permission
 
 __all__ = ["FlowService", "get_flow_service"]
+
+
+Violations = list[str]
+# Alias: `FlowService.list` shadows the builtin inside the class body.
+
+
+def _describe_errors(exc: ValidationError) -> list[str]:
+    return [
+        f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+        if error["loc"]
+        else error["msg"]
+        for error in exc.errors()
+    ]
 
 
 class FlowService:
@@ -77,6 +94,67 @@ class FlowService:
         queryset = filter_by_team(queryset, team)
         queryset = filter_by_search(queryset, search)
         return queryset
+
+    def validate(
+        self, *, body: dict[str, Any], flow_id: int | None = None
+    ) -> Violations:
+        """Check a flow body against every rule a save applies, without saving
+        and without a write-permission check, and return *all* violations
+        (empty when valid). `body` is a plain dict shaped like `FlowIn`
+        (snake_case or camelCase keys); `flow_id` names the flow being
+        replaced, if any — it must exist (`FlowNotFoundError`), and its own
+        name does not collide with itself.
+
+        Field-level rules (name, size limits, layout choices) come from
+        `FlowIn` itself and per-step shape from `StepIn`, so they cannot
+        drift from `create`/`update`; step references and the transition
+        graph come from `collect_step_violations`, run only once every step
+        parses (otherwise a transition to a malformed step would be reported
+        as a missing one).
+        """
+        if flow_id is not None:
+            self.get(flow_id)
+        violations: Violations = []
+
+        raw_steps = body.get("steps") or []
+        if len(raw_steps) > STEPS_MAX_ITEMS:
+            violations.append(
+                f"steps: at most {STEPS_MAX_ITEMS} steps are allowed, got {len(raw_steps)}"
+            )
+        try:
+            FlowIn.model_validate({**body, "steps": []})
+        except ValidationError as exc:
+            violations.extend(_describe_errors(exc))
+
+        system = None
+        if isinstance(body.get("system"), str):
+            try:
+                system = resolve_ref(body["system"], expected_kind=KIND_SYSTEM)
+            except RefError as exc:
+                violations.append(f"system: {exc}")
+        name = body.get("name")
+        if system is not None and isinstance(name, str):
+            clash = Flow.objects.filter(system=system, name=name)
+            if flow_id is not None:
+                clash = clash.exclude(pk=flow_id)
+            if clash.exists():
+                violations.append(
+                    f"name: a flow named {name!r} already exists in {body['system']!r}"
+                )
+
+        steps: list[dict] = []
+        steps_parse = True
+        for index, raw in enumerate(raw_steps):
+            try:
+                steps.append(StepIn.model_validate(raw).model_dump(exclude_none=True))
+            except ValidationError as exc:
+                steps_parse = False
+                label = raw.get("id") if isinstance(raw, dict) else None
+                where = f"step {label!r}" if label else f"step #{index + 1}"
+                violations.extend(f"{where}: {line}" for line in _describe_errors(exc))
+        if steps_parse:
+            violations.extend(collect_step_violations(steps))
+        return violations
 
     def create(self, *, body: FlowIn, actor: Any) -> Flow:
         instance = Flow()

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import ClassVar
 
 from atlas_plugin_api import (
@@ -209,16 +210,39 @@ def validate_steps(steps: list[dict]) -> None:
     `flow_ref`, `link_url`; and a step with a non-empty `entity_ref`,
     `query_ref`, `event_ref`, or `flow_ref` does not also carry a non-empty
     `title`/`summary`. Raises
-    `StepValidationError` on the first violation found.
+    `StepValidationError` on the first violation found; `collect_step_violations`
+    reports every violation instead.
     """
+    violations = collect_step_violations(steps)
+    if violations:
+        raise StepValidationError(violations[0])
+
+
+def collect_step_violations(steps: list[dict]) -> list[str]:
+    """Every violation `validate_steps` would find, in the order it would
+    find them, instead of only the first — so a client can fix a flow in one
+    pass. Empty when `steps` is valid."""
+    violations: list[str] = []
+
+    def _collect(check: Callable[[], None]) -> bool:
+        try:
+            check()
+        except StepValidationError as exc:
+            violations.append(str(exc))
+            return False
+        return True
+
     step_ids: set[str] = set()
+    ordered_ids: list[str] = []
     for step in steps:
         step_id = step.get("id")
         if not step_id:
-            raise StepValidationError("Every step must have an id")
+            violations.append("Every step must have an id")
+            continue
         if step_id in step_ids:
-            raise StepValidationError(f"Duplicate step id: {step_id!r}")
+            violations.append(f"Duplicate step id: {step_id!r}")
         step_ids.add(step_id)
+        ordered_ids.append(step_id)
 
     adjacency: dict[str, list[str]] = {}
 
@@ -229,42 +253,62 @@ def validate_steps(steps: list[dict]) -> None:
             )
         adjacency.setdefault(source_id, []).append(target_id)
 
-    for step in steps:
-        step_id = step["id"]
+    def _check_entity_ref(step_id: str, entity_ref: str) -> None:
+        try:
+            resolve_ref(entity_ref)
+        except RefError as exc:
+            raise StepValidationError(
+                f"Step {step_id!r} has an unresolvable entity_ref: {exc}",
+            ) from exc
 
-        _validate_step_shape(step)
-
-        entity_ref = step.get("entity_ref")
-        if entity_ref:
-            try:
-                resolve_ref(entity_ref)
-            except RefError as exc:
-                raise StepValidationError(
-                    f"Step {step_id!r} has an unresolvable entity_ref: {exc}",
-                ) from exc
-
-        query_ref = step.get("query_ref")
-        if query_ref:
-            _resolve_query_or_event_ref(step_id, query_ref, kind="query")
-
-        event_ref = step.get("event_ref")
-        if event_ref:
-            _resolve_query_or_event_ref(step_id, event_ref, kind="event")
-
-        flow_ref = step.get("flow_ref")
-        if flow_ref and not Flow.objects.filter(pk=flow_ref).exists():
+    def _check_flow_ref(step_id: str, flow_ref: int) -> None:
+        if not Flow.objects.filter(pk=flow_ref).exists():
             raise StepValidationError(
                 f"Step {step_id!r} has a flow_ref that does not resolve to any existing Flow: {flow_ref!r}",
             )
 
+    for step in steps:
+        step_id = step.get("id")
+        if not step_id:
+            continue
+
+        shape_ok = _collect(lambda step=step: _validate_step_shape(step))
+
+        # A malformed ref has no meaningful resolution; only its shape error
+        # is reported. Transitions are still checked below.
+        entity_ref = step.get("entity_ref") if shape_ok else None
+        if entity_ref:
+            _collect(lambda s=step_id, r=entity_ref: _check_entity_ref(s, r))
+
+        query_ref = step.get("query_ref") if shape_ok else None
+        if query_ref:
+            _collect(
+                lambda s=step_id, r=query_ref: _resolve_query_or_event_ref(
+                    s, r, kind="query"
+                )
+            )
+
+        event_ref = step.get("event_ref") if shape_ok else None
+        if event_ref:
+            _collect(
+                lambda s=step_id, r=event_ref: _resolve_query_or_event_ref(
+                    s, r, kind="event"
+                )
+            )
+
+        flow_ref = step.get("flow_ref") if shape_ok else None
+        if flow_ref:
+            _collect(lambda s=step_id, r=flow_ref: _check_flow_ref(s, r))
+
         next_step = step.get("next_step")
         if next_step:
-            _register_transition(step_id, next_step["id"])
+            _collect(lambda s=step_id, t=next_step["id"]: _register_transition(s, t))
 
         for transition in step.get("next_steps") or []:
-            _register_transition(step_id, transition["id"])
+            _collect(lambda s=step_id, t=transition["id"]: _register_transition(s, t))
 
-    _check_no_cycles([step["id"] for step in steps], adjacency)
+    _collect(lambda: _check_no_cycles(ordered_ids, adjacency))
+    return violations
 
 
 def _check_no_cycles(step_ids: list[str], adjacency: dict[str, list[str]]) -> None:

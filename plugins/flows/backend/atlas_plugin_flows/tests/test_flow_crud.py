@@ -15,7 +15,7 @@ from server.apps.catalog.tests.factories import create_system
 from atlas_plugin_flows.api.schemas import (
     _DESCRIPTION_MAX_LENGTH,
     _DOCUMENTATION_MAX_LENGTH,
-    _STEPS_MAX_ITEMS,
+    STEPS_MAX_ITEMS,
 )
 from atlas_plugin_flows.models import Flow
 
@@ -141,7 +141,7 @@ def test_patch_flow_with_oversized_documentation_is_rejected(owner_client, syste
 
 
 def test_create_flow_with_too_many_steps_is_rejected(owner_client, system):
-    too_many_steps = [_step(f"step-{i}") for i in range(_STEPS_MAX_ITEMS + 1)]
+    too_many_steps = [_step(f"step-{i}") for i in range(STEPS_MAX_ITEMS + 1)]
     response = owner_client.post(
         "/api/flows/",
         {
@@ -158,7 +158,7 @@ def test_patch_flow_with_too_many_steps_is_rejected(owner_client, system):
     flow = Flow.objects.create(
         system=system, name="patchable-flow-3", steps=[_step("start")]
     )
-    too_many_steps = [_step(f"step-{i}") for i in range(_STEPS_MAX_ITEMS + 1)]
+    too_many_steps = [_step(f"step-{i}") for i in range(STEPS_MAX_ITEMS + 1)]
     response = owner_client.patch(
         f"/api/flows/{flow.id}/",
         {"steps": too_many_steps},

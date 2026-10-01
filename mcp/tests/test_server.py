@@ -117,6 +117,31 @@ def test_build_server_passes_instructions_mentioning_atlas(monkeypatch, config):
     assert "search_catalog" in captured["instructions"]
 
 
+def test_build_server_instructions_describe_the_authoring_workflow(monkeypatch, config):
+    _patch_schema_fetch(monkeypatch, {"paths": {}})
+    captured = _patch_from_openapi(monkeypatch)
+
+    server_module.build_server(config)
+
+    for expected in ("describe_kinds", "create_relationship", "dryRun"):
+        assert expected in captured["instructions"]
+
+
+def test_build_server_instructions_mention_validate_flow_only_with_flows(
+    monkeypatch, config
+):
+    _patch_schema_fetch(monkeypatch, {"paths": {"/api/plugins/atlas.mcp/flows/": {}}})
+    with_flows = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    _patch_schema_fetch(monkeypatch, {"paths": {}})
+    without_flows = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    assert "validate_flow" in with_flows["instructions"]
+    assert "validate_flow" not in without_flows["instructions"]
+
+
 def test_build_server_instructions_mention_flow_tools_only_when_flows_are_present(
     monkeypatch, config
 ):

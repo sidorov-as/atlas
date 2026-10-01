@@ -48,15 +48,21 @@ are not offered.
 |-------------------------------|-----------------------------------------------------------------------------------------------------|-----------------|
 | `search_catalog`              | Search entities by free text, kind, owner, tags, or status                                          | none            |
 | `get_entity`                  | Read one entity's full detail                                                                       | none            |
+| `describe_kinds`              | Show the `spec` fields, enum values, and required fields of each writable kind                      | `catalog:read`  |
 | `create_entity`               | Create a System, Component, Resource, or API                                                        | `catalog:write` |
 | `update_entity`               | Partially update an entity                                                                          | `catalog:write` |
 | `remove_entity`               | Soft-remove an entity                                                                               | `catalog:write` |
 | `purge_entity`                | Permanently delete a removed entity                                                                 | `catalog:write` |
+| `list_relationships`          | List the Architecture Relationships an entity is the source or target of, with origin               | `catalog:read`  |
+| `create_relationship`         | Create a manual Architecture Relationship                                                           | `catalog:write` |
+| `update_relationship`         | Partially update a manual Architecture Relationship                                                 | `catalog:write` |
+| `delete_relationship`         | Delete a manual Architecture Relationship                                                           | `catalog:write` |
 | `list_flows`\*                | Search Flows across Systems                                                                         | none            |
 | `get_flow`\*                  | Read one Flow's steps and documentation                                                             | none            |
 | `create_flow`\*               | Create a Flow                                                                                       | `flows:write`   |
 | `update_flow`\*               | Partially update a Flow                                                                             | `flows:write`   |
 | `delete_flow`\*               | Delete a Flow                                                                                       | `flows:write`   |
+| `validate_flow`\*             | Check a Flow body against every save rule and list all violations, without saving                   | `flows:read`    |
 | `search_api_endpoints`\*\*    | Search HTTP endpoints across all APIs, or within one                                                | none            |
 | `get_api_endpoint`\*\*        | Read one endpoint: parameters, body, responses, security                                            | none            |
 | `get_endpoint_consumers`\*\*  | List the Services linked to an endpoint as consumers                                                | none            |
@@ -75,6 +81,31 @@ are read-only through MCP, as they are in the REST API. Deleting takes two
 steps, as in the web UI: `remove_entity`, then `purge_entity`. Writes are
 audited like web UI changes, with the token's owner as the actor. A tool only
 returns or changes what its token's owner could in the web UI.
+
+### Strict validation
+
+`create_entity` and `update_entity` reject any key in `spec` or `metadata`
+that the kind does not accept, with an error naming the key and, when one is
+close, the field it probably meant (for example `dependOn` instead of
+`dependsOn`). Nothing is created or changed when a request is rejected. Use
+`describe_kinds` to read the accepted fields. `relationships` is not a `spec`
+field for MCP writes: manage Architecture Relationships with the
+relationship tools. Relationships declared in an ingested `catalog-info.yaml`
+keep the origin `yaml`; they are managed by ingestion and the relationship
+tools refuse to change or delete them.
+
+### Previewing a write with `dryRun`
+
+`create_entity`, `update_entity`, `create_flow`, `update_flow`,
+`create_relationship`, `update_relationship`, and `delete_relationship`
+accept a `dryRun` flag. With `dryRun` true the write runs through the real
+validation, permission, and reference checks, then is rolled back: nothing is
+saved and no audit record is written. The response has `dryRun: true`, the
+resulting `result` (with `id` null for a create), a `changes` list of fields
+with their current and proposed values, and `warnings`. A dry-run is rejected
+with the same error a real write would give, and still needs the write scope.
+When an API's `specSource` is `url`, a dry-run does not fetch the URL and
+warns that a real write would.
 
 ## Authentication
 
@@ -119,9 +150,9 @@ allow it. The available scopes are:
 
 | Scope           | Grants                                                                                         |
 |-----------------|------------------------------------------------------------------------------------------------|
-| `catalog:read`  | No effect today: every read tool is open to any valid token. Reserved for a future read gate. |
-| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`                              |
-| `flows:read`    | No effect today, same as `catalog:read`                                                        |
+| `catalog:read`  | `describe_kinds`, `list_relationships`. Other read tools are open to any valid token.         |
+| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`, and the relationship writes |
+| `flows:read`    | `validate_flow`. Other read tools are open to any valid token.                                 |
 | `flows:write`   | `create_flow`, `update_flow`, `delete_flow`                                                    |
 
 A token with no scopes can read but not write, which makes it a safe default

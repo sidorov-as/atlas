@@ -28,6 +28,9 @@ from atlas_plugin_api import (
     AuthenticationProviderContribution,
     PluginDescriptor,
 )
+from atlas_plugin_api.architecture_relationships import (
+    bind_architecture_relationship_service,
+)
 from atlas_plugin_api.entity_helpers import bind_entity_helpers
 from atlas_plugin_api.entity_service import bind_entity_service
 from atlas_plugin_api.membership import bind_membership_service
@@ -62,6 +65,9 @@ def register_runtime() -> None:
     from server.apps.catalog.authorization import policy_evaluator
     from server.apps.catalog.local_authentication import LocalCredentialProvider
     from server.apps.catalog.membership import membership_service
+    from server.apps.catalog.services.architecture_relationship_service import (
+        architecture_relationship_service,
+    )
     from server.apps.catalog.services.entity_service import entity_service
     from server.apps.catalog.services.pat_service import (
         validate_personal_access_token,
@@ -70,6 +76,7 @@ def register_runtime() -> None:
     register_authentication_provider(LocalCredentialProvider(), owner=PLUGIN.id)
 
     bind_entity_service(entity_service)
+    bind_architecture_relationship_service(architecture_relationship_service)
     bind_policy_evaluator(policy_evaluator)
     bind_membership_service(membership_service)
     bind_entity_helpers(

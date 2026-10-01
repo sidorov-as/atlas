@@ -57,7 +57,7 @@ LayoutEngine = Literal["dagre", "elk"]
 # limits (`atlas_plugin_api.schemas`) for consistency across plugins.
 _DESCRIPTION_MAX_LENGTH = 4096
 _DOCUMENTATION_MAX_LENGTH = 1024 * 1024  # 1 MiB
-_STEPS_MAX_ITEMS = 500
+STEPS_MAX_ITEMS = 500
 
 
 class FlowIn(CamelModel):
@@ -65,7 +65,7 @@ class FlowIn(CamelModel):
     name: str
     description: str = Field(default="", max_length=_DESCRIPTION_MAX_LENGTH)
     documentation: str = Field(default="", max_length=_DOCUMENTATION_MAX_LENGTH)
-    steps: list[StepIn] = Field(default_factory=list, max_length=_STEPS_MAX_ITEMS)
+    steps: list[StepIn] = Field(default_factory=list, max_length=STEPS_MAX_ITEMS)
     autolayout_enabled: bool = True
     layout_direction: LayoutDirection = "LAYOUT_LEFT_RIGHT"
     layout_engine: LayoutEngine = "dagre"
@@ -82,7 +82,7 @@ class FlowPatch(CamelModel):
     documentation: str | None = Field(
         default=None, max_length=_DOCUMENTATION_MAX_LENGTH
     )
-    steps: list[StepIn] | None = Field(default=None, max_length=_STEPS_MAX_ITEMS)
+    steps: list[StepIn] | None = Field(default=None, max_length=STEPS_MAX_ITEMS)
     autolayout_enabled: bool | None = None
     layout_direction: LayoutDirection | None = None
     layout_engine: LayoutEngine | None = None

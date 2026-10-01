@@ -41,6 +41,20 @@ or answer from training data alone.
 Start broad with search_catalog (free-text query, kind, owner, tags), then
 call get_entity for one result's full detail and spec."""
 
+_AUTHORING_INSTRUCTIONS = """\
+
+Writing to the catalog (create_entity, update_entity, and the relationship
+tools list_relationships/create_relationship/update_relationship/
+delete_relationship): call describe_kinds first to see which `spec` fields,
+enum values, and required fields each kind accepts instead of guessing them.
+Unknown or misspelled `spec`/`metadata` keys are rejected, never silently
+ignored, so read the error and fix the key. `relationships` is not part of an
+entity's `spec`: link entities with create_relationship (manual relationships
+only; ones with origin `yaml` come from ingested manifests and cannot be
+changed here). Before any write the user hasn't already seen exactly, repeat
+it with `dryRun` true, show the user the returned `changes` and `warnings`,
+and only then repeat it without `dryRun`. A dry-run saves nothing."""
+
 _FLOW_INSTRUCTIONS = """\
 
 Flow tools (list_flows, get_flow, and — with the right PAT scope —
@@ -50,7 +64,11 @@ booking or a payment moves through several components end to end. Use
 list_flows/get_flow the same way search_catalog/get_entity are used for
 entities. Before writing a step's `icon` field, call search_flow_icons to
 find a real @gravity-ui/icons component name for it — icon values aren't
-validated, so a guessed or made-up name silently renders as no icon at all."""
+validated, so a guessed or made-up name silently renders as no icon at all.
+While drafting a flow, call validate_flow with the body (and `flowId` when
+replacing an existing flow): it lists every rule violation at once without
+saving, so fix them together; then use `dryRun` on create_flow/update_flow
+to confirm."""
 
 _API_INSTRUCTIONS = """\
 
@@ -104,7 +122,7 @@ def build_server(config: Config) -> FastMCP:
     openapi_spec = _fetch_openapi_spec(config)
     has_flow_tools = _has_flow_tools(openapi_spec)
 
-    instructions = _BASE_INSTRUCTIONS
+    instructions = _BASE_INSTRUCTIONS + _AUTHORING_INSTRUCTIONS
     if has_flow_tools:
         instructions += _FLOW_INSTRUCTIONS
     if _has_api_tools(openapi_spec):

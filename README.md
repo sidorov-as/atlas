@@ -121,6 +121,9 @@ for details.
   describes the public backend and frontend contracts used to extend Atlas.
 - [Reference](https://sidorov-as.github.io/atlas/reference/) lists manifests,
   configuration, registries, management commands, and authentication contracts.
+- [Catalog authoring skills](https://sidorov-as.github.io/atlas/features/mcp-skills/)
+  (source in [`skills/`](skills/README.md)) let an AI assistant fill the catalog
+  from a codebase and build flows through the MCP server.
 
 Runnable examples are available for [authentication](examples/authentication/README.md)
 and [repository ingestion](examples/ingestion/README.md). For host-only development,

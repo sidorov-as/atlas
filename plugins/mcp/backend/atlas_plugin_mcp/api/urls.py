@@ -20,6 +20,11 @@ after every plugin's Django app is already registered.
 from django.apps import apps as django_apps
 from dmr.routing import Router, external_path, path
 
+from .kind_views import DescribeKindsController
+from .relationship_views import (
+    RelationshipDetailController,
+    RelationshipListController,
+)
 from .schema_views import openapi_schema_view
 from .views import (
     CreateEntityController,
@@ -31,10 +36,17 @@ from .views import (
 
 _CATALOG_URLS = [
     path(
-        "catalog/search/", SearchCatalogController.as_view(), name="mcp-search-catalog"
+        "catalog/search/",
+        SearchCatalogController.as_view(),
+        name="mcp-search-catalog",
     ),
+    path("kinds/", DescribeKindsController.as_view(), name="mcp-describe-kinds"),
     path("catalog/", CreateEntityController.as_view(), name="mcp-create-entity"),
-    path("catalog/<uuid:id>/", EntityDetailController.as_view(), name="mcp-get-entity"),
+    path(
+        "catalog/<uuid:id>/",
+        EntityDetailController.as_view(),
+        name="mcp-get-entity",
+    ),
     path(
         "catalog/<uuid:id>/remove/",
         EntityRemoveController.as_view(),
@@ -45,12 +57,25 @@ _CATALOG_URLS = [
         EntityPurgeController.as_view(),
         name="mcp-purge-entity",
     ),
+    path(
+        "relationships/",
+        RelationshipListController.as_view(),
+        name="mcp-relationships",
+    ),
+    path(
+        "relationships/<int:id>/",
+        RelationshipDetailController.as_view(),
+        name="mcp-relationship",
+    ),
     # `openapi=None` keeps this plugin's own schema document out of the
     # document it serves — a plain Django view (see `schema_views`'s
     # docstring), not a `Controller`, so it has no operation metadata of its
     # own for `get_schema()` to collect anyway.
     external_path(
-        "openapi.json", openapi_schema_view, openapi=None, name="mcp-openapi-schema"
+        "openapi.json",
+        openapi_schema_view,
+        openapi=None,
+        name="mcp-openapi-schema",
     ),
 ]
 
@@ -59,11 +84,24 @@ def _flow_urls() -> list:
     if not django_apps.is_installed("atlas_plugin_flows"):
         return []
 
-    from .flow_views import FlowDetailController, FlowListController
+    from .flow_views import (
+        FlowDetailController,
+        FlowListController,
+        ValidateFlowController,
+    )
 
     return [
         path("flows/", FlowListController.as_view(), name="mcp-list-flows"),
-        path("flows/<int:id>/", FlowDetailController.as_view(), name="mcp-get-flow"),
+        path(
+            "flows/validate/",
+            ValidateFlowController.as_view(),
+            name="mcp-validate-flow",
+        ),
+        path(
+            "flows/<int:id>/",
+            FlowDetailController.as_view(),
+            name="mcp-get-flow",
+        ),
     ]
 
 

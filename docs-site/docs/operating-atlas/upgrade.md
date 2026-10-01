@@ -25,6 +25,11 @@ page-type: how-to
 
 ## Known breaking changes
 
+- **MCP entity writes reject unknown `spec` and `metadata` keys.** An MCP
+  client that sent extra or misspelled keys (including `spec.relationships`)
+  to `create_entity` or `update_entity` used to get a success response with
+  the key ignored; it now gets a 400 naming the key. Update such clients
+  before upgrading. See [Strict validation](../features/mcp.md#strict-validation).
 - **Catalog branding moved from environment variables to a frontend file.**
   The `CATALOG_TITLE`/`CATALOG_DESCRIPTION` environment variables and the
   backend `GET /api/catalog-configuration/` endpoint are removed. A
