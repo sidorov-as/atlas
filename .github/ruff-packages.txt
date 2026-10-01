@@ -1,4 +1,5 @@
 core/backend
+mcp
 plugin-api/python
 plugins/apis/backend
 plugins/auth-gitea/backend
@@ -7,4 +8,5 @@ plugins/c4/backend
 plugins/database-schema/backend
 plugins/flows/backend
 plugins/ingestion/backend
+plugins/mcp/backend
 plugins/standard-catalog/backend

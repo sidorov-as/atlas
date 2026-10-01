@@ -109,9 +109,29 @@ run_migration_safety_check() {
     uv run python -m django_safe_migrations.cli --baseline .migration-baseline.json)
 }
 
+# `mcp/` is a separate, uncomposed project (design.md Decision 7: it holds
+# no Django import and isn't part of `core/backend`'s own `uv sync`), so it
+# gets its own pytest invocation here rather than riding along with
+# `run_backend_pytest` above. Run from `mcp/` itself (like `mcp-tests.yml`'s
+# `working-directory: mcp`): from the repo root, pytest would pick up the root
+# `pytest.ini` (Django settings, `core/backend/conftest.py`) instead of
+# stopping at `mcp/pyproject.toml`.
+run_mcp_pytest() {
+  (cd mcp && uv run pytest)
+}
+
+# Build-only, matching `mcp-tests.yml`'s own `docker-build` job: this
+# repository does not publish or version this image (design.md's
+# Non-Goals), so there is no push step to mirror here either.
+run_mcp_docker_build() {
+  docker build -t atlas-mcp:ci-local mcp
+}
+
 run_step "ruff + format-check" run_lint
 run_step "frontend (test/build/lint)" run_frontend
 run_step "backend pytest" run_backend_pytest
+run_step "mcp/ pytest" run_mcp_pytest
+run_step "mcp/ docker build" run_mcp_docker_build
 run_step "check_migration_boundaries" run_check_migration_boundaries
 run_step "migration safety check" run_migration_safety_check
 

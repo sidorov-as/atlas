@@ -22,7 +22,7 @@ from .architecture_relationships import (
     get_architecture_relationship_model,
 )
 from .audit import AUDIT_RECORD_LABEL, entity_history, get_audit_record_model
-from .auth import SessionAuth
+from .auth import PATBearerAuth, SessionAuth, require_scope
 from .authentication import (
     AUTHENTICATION_PROVIDER_CONTRACT_V1,
     AssuredAttribute,
@@ -160,6 +160,12 @@ from .membership import (
     bind_membership_service,
     get_membership_grant_model,
     get_membership_service,
+)
+from .pat import (
+    PATValidator,
+    ResolvedPersonalAccessToken,
+    bind_pat_validator,
+    get_pat_validator,
 )
 from .permissions import (
     DuplicatePermissionError,
@@ -320,6 +326,8 @@ __all__ = [
     "MissingSecretEnvError",
     "MissingSecretFileError",
     "Ok",
+    "PATBearerAuth",
+    "PATValidator",
     "PageOut",
     "PaginatedOut",
     "PermissionEffect",
@@ -337,6 +345,7 @@ __all__ = [
     "RefError",
     "RelationOut",
     "RemoteLogoutCapability",
+    "ResolvedPersonalAccessToken",
     "ResponseTooLargeError",
     "SafeHttpError",
     "SafeHttpResponse",
@@ -354,6 +363,7 @@ __all__ = [
     "bind_actor_provisioning_service",
     "bind_entity_helpers",
     "bind_membership_service",
+    "bind_pat_validator",
     "bind_plugin_config",
     "bind_policy_evaluator",
     "blocked_by",
@@ -381,6 +391,7 @@ __all__ = [
     "get_entity_service",
     "get_membership_grant_model",
     "get_membership_service",
+    "get_pat_validator",
     "get_plugin_config",
     "get_policy_evaluator",
     "get_relation_model",
@@ -405,6 +416,7 @@ __all__ = [
     "registry",
     "relations_out",
     "remove_entity",
+    "require_scope",
     "resolve_capability",
     "resolve_ref",
     "resolve_secrets",

@@ -22,6 +22,7 @@ from atlas_plugin_standard_catalog.api.schemas import (
     ActorProfileOut,
     ActorSpecIn,
     ActorSpecOut,
+    ActorSpecPatch,
 )
 from atlas_plugin_standard_catalog.models import ActorDetails
 
@@ -29,6 +30,7 @@ from atlas_plugin_standard_catalog.models import ActorDetails
 class ActorKindHandler:
     kind_id = KIND_ACTOR
     spec_schema: type[BaseModel] = ActorSpecIn
+    patch_schema: type[BaseModel] = ActorSpecPatch
     provides: ClassVar[list] = [ARCHITECTURE_ACTOR_V1]
 
     def create_details(self, entity: CatalogEntity, spec: ActorSpecIn) -> None:

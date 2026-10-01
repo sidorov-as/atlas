@@ -20,13 +20,18 @@ from atlas_plugin_api import (
 )
 from pydantic import BaseModel
 
-from atlas_plugin_standard_catalog.api.schemas import GroupSpecIn, GroupSpecOut
+from atlas_plugin_standard_catalog.api.schemas import (
+    GroupSpecIn,
+    GroupSpecOut,
+    GroupSpecPatch,
+)
 from atlas_plugin_standard_catalog.models import GroupDetails
 
 
 class GroupKindHandler:
     kind_id = KIND_GROUP
     spec_schema: type[BaseModel] = GroupSpecIn
+    patch_schema: type[BaseModel] = GroupSpecPatch
     provides: ClassVar[list] = [ARCHITECTURE_ACTOR_V1]
 
     def create_details(self, entity: CatalogEntity, spec: GroupSpecIn) -> None:

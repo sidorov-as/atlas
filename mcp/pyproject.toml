@@ -1,0 +1,37 @@
+[project]
+name = "atlas-mcp"
+description = "Atlas MCP transport: a stdio MCP server bridging MCP clients (e.g. Claude Desktop) to the atlas.mcp plugin's curated HTTP API"
+version = "0.1.0"
+requires-python = "==3.13.13"
+readme = "README.md"
+dependencies = [
+    "fastmcp>=4.0.0,<5.0",
+    # `FastMCP.from_openapi()`'s own HTTP client type — fastmcp vendors this
+    # fork of `httpx` rather than accepting a plain `httpx.AsyncClient`
+    # (still accepted, but only via a deprecated compatibility path). Its
+    # public API otherwise mirrors `httpx`'s exactly, so this is the only
+    # HTTP client dependency this project needs — see `server.py`'s
+    # docstring.
+    "httpx2>=2.13,<3.0",
+]
+
+[project.scripts]
+atlas-mcp = "atlas_mcp.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10.0",
+]
+
+[tool.pytest.ini_options]
+# Stops pytest's config-file search here instead of walking up to the
+# repo-root `pytest.ini` (whose `DJANGO_SETTINGS_MODULE`/`testpaths` are for
+# the Django plugin suite this project deliberately isn't part of — design.md
+# Decision 1: this process holds no Django import at all).
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""

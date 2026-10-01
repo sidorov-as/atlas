@@ -46,6 +46,8 @@ lifecycle surface used by the other feature areas.
    operations.
 7. [Git connector](git-connector.md): the built-in, provider-agnostic
    repository source integration used by Ingestion.
+8. [MCP](mcp.md): a curated, PAT-authenticated HTTP API for MCP tool-calling
+   clients such as Claude Desktop.
 
 ## Section boundary
 

@@ -18,6 +18,13 @@ from .base import CatalogEntity
 from .catalog_home_settings import CatalogHomeSettings
 from .external_identity import ExternalIdentityLink
 from .membership_grant import GroupMembershipGrant, MembershipGrantAuditRecord
+from .personal_access_token import (
+    LOOKUP_PREFIX_LENGTH,
+    TOKEN_SECRET_PREFIX,
+    PersonalAccessToken,
+    generate_token_secret,
+    hash_token_secret,
+)
 from .provisioning import (
     AuthenticationPolicyState,
     AuthenticationPrincipalState,
@@ -41,7 +48,9 @@ __all__ = [
     "KIND_GROUP",
     "KIND_RESOURCE",
     "KIND_SYSTEM",
+    "LOOKUP_PREFIX_LENGTH",
     "TAG_PALETTE",
+    "TOKEN_SECRET_PREFIX",
     "AccountAccess",
     "AccountAccessAuditRecord",
     "ArchitectureRelationship",
@@ -57,9 +66,12 @@ __all__ = [
     "ExternalIdentityLink",
     "GroupMembershipGrant",
     "MembershipGrantAuditRecord",
+    "PersonalAccessToken",
     "ProvisioningAuditRecord",
     "PurgeGrant",
     "Relation",
     "Tag",
     "ensure_tags_exist",
+    "generate_token_secret",
+    "hash_token_secret",
 ]

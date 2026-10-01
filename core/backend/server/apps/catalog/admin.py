@@ -1,7 +1,18 @@
+from datetime import timedelta
+
+from django import forms
 from django.contrib import admin
+from django.contrib.admin import helpers
 from django.contrib.admin.options import ActionLocation, BaseModelAdmin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from .authorization import is_account_read_only
 from .models import (
@@ -14,9 +25,11 @@ from .models import (
     ExternalIdentityLink,
     GroupMembershipGrant,
     MembershipGrantAuditRecord,
+    PersonalAccessToken,
     ProvisioningAuditRecord,
     PurgeGrant,
 )
+from .services.pat_service import issue_personal_access_token
 
 User = get_user_model()
 
@@ -253,6 +266,115 @@ class MembershipGrantAuditRecordAdmin(admin.ModelAdmin):
 class PurgeGrantAdmin(admin.ModelAdmin):
     list_display = ("group", "grantee", "granted_by", "created_at")
     autocomplete_fields = ("group", "grantee", "granted_by")
+
+
+class IssuePersonalAccessTokenForm(forms.Form):
+    owner = forms.ModelChoiceField(queryset=User.objects.filter(is_active=True))
+    name = forms.CharField(
+        max_length=255,
+        required=False,
+        help_text="Optional label, e.g. the client the token is for.",
+    )
+    scopes = forms.MultipleChoiceField(
+        choices=PersonalAccessToken.SCOPE_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text=(
+            "Scopes narrow, never broaden, the owner's own permissions. "
+            "A token with no scopes can authenticate but cannot write."
+        ),
+    )
+    expires_in_days = forms.IntegerField(
+        min_value=1,
+        required=False,
+        help_text="Leave empty for a token that never expires.",
+    )
+
+
+@admin.register(PersonalAccessToken)
+class PersonalAccessTokenAdmin(admin.ModelAdmin):
+    """Browsing, issuance, and revocation for Personal Access Tokens.
+
+    "Add" is replaced by `issue_view`: a token is minted through
+    `issue_personal_access_token()` (the same path as `manage.py issue_pat`)
+    and its plaintext is rendered once, directly in that POST response —
+    never redirected to or stored, since Atlas keeps only a hash. Django
+    admin's own add form would instead write the model fields directly, so
+    `prefix`/`token_hash` stay read-only, identification only. Revocation is
+    the `revoke_tokens` bulk action (sets `revoked_at`, keeping the row for
+    audit).
+    """
+
+    list_display = (
+        "owner",
+        "name",
+        "prefix",
+        "scopes",
+        "expires_at",
+        "revoked_at",
+        "last_used_at",
+        "created_at",
+    )
+    list_filter = ("revoked_at",)
+    search_fields = ("owner__username", "name", "prefix")
+    autocomplete_fields = ("owner",)
+    readonly_fields = ("prefix", "token_hash", "last_used_at", "created_at")
+    actions = ("revoke_tokens",)
+
+    def get_urls(self):
+        return [
+            path(
+                "issue/",
+                self.admin_site.admin_view(self.issue_view),
+                name="catalog_personalaccesstoken_issue",
+            ),
+            *super().get_urls(),
+        ]
+
+    def add_view(self, request, form_url="", extra_context=None):
+        return redirect("admin:catalog_personalaccesstoken_issue")
+
+    @method_decorator(never_cache)
+    def issue_view(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        form = IssuePersonalAccessTokenForm(
+            request.POST or None, initial={"owner": request.user.pk}
+        )
+        issued = None
+        if request.method == "POST" and form.is_valid():
+            days = form.cleaned_data["expires_in_days"]
+            issued = issue_personal_access_token(
+                owner=form.cleaned_data["owner"],
+                name=form.cleaned_data["name"],
+                scopes=form.cleaned_data["scopes"],
+                expires_at=timezone.now() + timedelta(days=days)
+                if days
+                else None,
+            )
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Issue personal access token",
+            "adminform": helpers.AdminForm(
+                form,
+                [(None, {"fields": list(form.fields)})],
+                {},
+                model_admin=self,
+            ),
+            "media": self.media + form.media,
+            "issued": issued,
+        }
+        return TemplateResponse(
+            request, "admin/catalog/personalaccesstoken/issue.html", context
+        )
+
+    @admin.action(description="Revoke selected tokens", permissions=["change"])
+    def revoke_tokens(self, request, queryset):
+        revoked = queryset.filter(revoked_at__isnull=True).update(
+            revoked_at=timezone.now()
+        )
+        self.message_user(request, f"Revoked {revoked} token(s).")
 
 
 class AccountAccessInline(admin.StackedInline):

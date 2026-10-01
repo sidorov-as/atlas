@@ -32,6 +32,10 @@ queries while still giving other plugins something real to call:
   `query_ref`/`event_ref` id in one `filter(pk__in=...)` call per kind
   rather than one `resolve_endpoint()`/`resolve_operation()` call per step
   (an N+1 pattern for a Flow with many such steps).
+- `search_endpoints()`/`search_operations()`/`get_endpoint_consumers()`/`get_operation_consumers()`:
+  read-only search and consumer lookups for `atlas_plugin_mcp`'s curated API tools. Unlike
+  `resolve_*`, each takes the acting user and enforces the same `permissions.py` read check its
+  REST controller counterpart does, so the caller can't forget it.
 """
 
 import logging
@@ -39,9 +43,24 @@ import uuid
 from collections.abc import Callable, Iterable
 
 from atlas_plugin_api import CatalogEntity
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.core.exceptions import ValidationError
+from django.core.paginator import Page, Paginator
+from django.db.models import Q
 
-from .models import ApiDetails, ApiEndpoint, ApiOperation
+from .consumers import channel_participants
+from .models import (
+    ApiDetails,
+    ApiEndpoint,
+    ApiOperation,
+    ServiceEndpointUsage,
+)
+from .permissions import (
+    check_endpoint_dependency_read_permission,
+    check_endpoint_read_permission,
+    check_operation_dependency_read_permission,
+    check_operation_read_permission,
+)
 from .spec_fetch import resolve_api_spec_url
 
 logger = logging.getLogger("atlas_plugin_apis")
@@ -52,12 +71,18 @@ __all__ = [
     "DuplicateDeleteGuardError",
     "delete_guards",
     "due_for_spec_refresh",
+    "get_endpoint",
+    "get_endpoint_consumers",
+    "get_operation",
+    "get_operation_consumers",
     "register_delete_guard",
     "resolve_endpoint",
     "resolve_endpoints",
     "resolve_operation",
     "resolve_operations",
     "run_delete_guards",
+    "search_endpoints",
+    "search_operations",
 ]
 
 
@@ -146,6 +171,120 @@ def resolve_operations(operation_ids: Iterable[object]) -> dict[str, ApiOperatio
         str(operation.id): operation
         for operation in ApiOperation.objects.filter(pk__in=_valid_uuids(operation_ids))
     }
+
+
+def _scoped_to_api(queryset, api_id):
+    """Narrows `queryset` to one API; a malformed `api_id` matches nothing rather than raising."""
+    if api_id is None:
+        return queryset
+    valid = _valid_uuids([api_id])
+    return queryset.filter(api_id=valid[0]) if valid else queryset.none()
+
+
+def search_endpoints(
+    actor: AbstractBaseUser,
+    query: str = "",
+    api_id=None,
+    page: int = 1,
+    page_size: int = 20,
+) -> Page:
+    """Page of active `ApiEndpoint` rows (with `.api` pre-fetched) matching `query` against
+    path/summary/operation id — across every API, or only `api_id`'s when given. Mirrors
+    `ApiEndpointSearchController`'s query shape. Raises `APIError` (403) without endpoint read
+    permission; raises `EmptyPage` for an out-of-range `page`, like the REST controller."""
+    check_endpoint_read_permission(actor)
+    queryset = _scoped_to_api(
+        ApiEndpoint.objects.filter(status=ApiEndpoint.STATUS_ACTIVE).select_related(
+            "api"
+        ),
+        api_id,
+    )
+    if query:
+        queryset = queryset.filter(
+            Q(path__icontains=query)
+            | Q(summary__icontains=query)
+            | Q(operation_id__icontains=query),
+        )
+    return Paginator(queryset, page_size).page(page)
+
+
+def search_operations(
+    actor: AbstractBaseUser,
+    query: str = "",
+    api_id=None,
+    page: int = 1,
+    page_size: int = 20,
+) -> Page:
+    """Mirrors `search_endpoints()` for `ApiOperation`, matching `query` against channel
+    address/summary/operation id; gated on operation read permission."""
+    check_operation_read_permission(actor)
+    queryset = _scoped_to_api(
+        ApiOperation.objects.filter(status=ApiOperation.STATUS_ACTIVE).select_related(
+            "api"
+        ),
+        api_id,
+    )
+    if query:
+        queryset = queryset.filter(
+            Q(channel_address__icontains=query)
+            | Q(summary__icontains=query)
+            | Q(operation_id__icontains=query),
+        )
+    return Paginator(queryset, page_size).page(page)
+
+
+def get_endpoint(actor: AbstractBaseUser, endpoint_id) -> ApiEndpoint | None:
+    """`resolve_endpoint()` gated on endpoint read permission — for a caller reading one
+    Endpoint on a user's behalf rather than resolving a stored reference. `None` if it doesn't
+    resolve; a `removed` Endpoint still resolves. Raises `APIError` (403) without permission."""
+    check_endpoint_read_permission(actor)
+    return resolve_endpoint(endpoint_id)
+
+
+def get_operation(actor: AbstractBaseUser, operation_id) -> ApiOperation | None:
+    """Mirrors `get_endpoint()` for an Operation, gated on operation read permission."""
+    check_operation_read_permission(actor)
+    return resolve_operation(operation_id)
+
+
+def get_endpoint_consumers(
+    actor: AbstractBaseUser, endpoint_id
+) -> list[CatalogEntity] | None:
+    """The Services explicitly linked to an Endpoint via `ServiceEndpointUsage` (with `.owner`
+    pre-fetched), ordered by title then name — never the coarser Component-level `consumesApi`
+    relation. `None` if `endpoint_id` doesn't resolve (see `resolve_endpoint()`); `[]` if it
+    resolves with no links. Raises `APIError` (403) without endpoint dependency read
+    permission."""
+    check_endpoint_dependency_read_permission(actor)
+    endpoint = resolve_endpoint(endpoint_id)
+    if endpoint is None:
+        return None
+    usages = (
+        ServiceEndpointUsage.objects.filter(endpoint=endpoint)
+        .select_related("service", "service__owner")
+        .order_by("service__title", "service__name")
+    )
+    return [usage.service for usage in usages]
+
+
+def get_operation_consumers(
+    actor: AbstractBaseUser, operation_id
+) -> list[tuple[CatalogEntity, str]] | None:
+    """`(service, role)` pairs (`role` is `publisher`/`subscriber`) for an Operation's channel,
+    aggregated exactly as `OperationConsumersController` does: every Operation sharing its
+    channel address contributes its document-owning Service's implied role, plus every explicit
+    `ServiceOperationUsage` link. `None` if `operation_id` doesn't resolve. Raises `APIError`
+    (403) without operation dependency read permission."""
+    check_operation_dependency_read_permission(actor)
+    operation = resolve_operation(operation_id)
+    if operation is None:
+        return None
+    aggregated = list(
+        ApiOperation.objects.filter(
+            channel_address=operation.channel_address,
+        ).select_related("api", "api__owner"),
+    )
+    return channel_participants(aggregated)
 
 
 DeleteGuard = Callable[[CatalogEntity], None]

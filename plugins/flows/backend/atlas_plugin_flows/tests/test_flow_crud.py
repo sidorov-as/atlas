@@ -419,6 +419,52 @@ def test_flow_creation_rejects_invalid_label_theme(owner_client, system):
     assert not Flow.objects.filter(name="bad-label-theme-flow").exists()
 
 
+def test_flow_created_with_color_and_icon(owner_client, system):
+    response = owner_client.post(
+        "/api/flows/",
+        {
+            "system": "system:user-management",
+            "name": "styled-step-flow",
+            "steps": [_step("start", color="danger", icon="CircleXmarkFill")],
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["steps"][0]["color"] == "danger"
+    assert body["steps"][0]["icon"] == "CircleXmarkFill"
+
+
+def test_flow_creation_rejects_invalid_color(owner_client, system):
+    """`color` went entirely unchecked before `StepIn` existed — unlike
+    `label_theme`, nothing in `models.py`'s `_validate_step_shape()` ever
+    validated it, despite sharing the same fixed vocabulary."""
+    response = owner_client.post(
+        "/api/flows/",
+        {
+            "system": "system:user-management",
+            "name": "bad-color-flow",
+            "steps": [_step("start", color="chartreuse")],
+        },
+    )
+    assert response.status_code == 400
+    assert not Flow.objects.filter(name="bad-color-flow").exists()
+
+
+def test_flow_creation_rejects_unknown_icon_name(owner_client, system):
+    """Likewise: an `icon` naming no real `@gravity-ui/icons` component
+    used to save successfully and silently render with no icon."""
+    response = owner_client.post(
+        "/api/flows/",
+        {
+            "system": "system:user-management",
+            "name": "bad-icon-flow",
+            "steps": [_step("start", icon="NotARealIcon")],
+        },
+    )
+    assert response.status_code == 400
+    assert not Flow.objects.filter(name="bad-icon-flow").exists()
+
+
 def test_flow_creation_rejects_entity_ref_and_external_label_together(
     owner_client, system
 ):

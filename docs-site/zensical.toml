@@ -55,6 +55,7 @@ nav = [
       { "Ingestion" = "features/ingestion.md" },
       { "Flows" = "features/flows.md" },
       { "Git connector" = "features/git-connector.md" },
+      { "MCP" = "features/mcp.md" },
   ] },
   { "Concepts & Architecture" = [
       { "Overview" = "concepts/index.md" },

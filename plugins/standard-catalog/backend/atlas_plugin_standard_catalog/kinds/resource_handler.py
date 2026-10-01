@@ -28,6 +28,7 @@ from atlas_plugin_standard_catalog.models import (
 class ResourceKindHandler:
     kind_id = KIND_RESOURCE
     spec_schema: type[BaseModel] = ResourceSpecIn
+    patch_schema: type[BaseModel] = ResourceSpecPatch
     # Resources appear *inside* diagrams (as ComponentDb/ComponentQueue elements)
     # but aren't themselves diagram subjects.
     # Declares `schema.host.v1` unconditionally — every Resource,

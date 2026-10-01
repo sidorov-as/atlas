@@ -1,0 +1,56 @@
+name: MCP transport
+
+# No path filters, deliberately, matching backend-tests.yml/ruff.yml's own
+# reasoning: this is meant to become a required status check, and a
+# required check skipped by a path filter blocks merges on PRs that never
+# trigger it.
+
+on:
+  pull_request: {}
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: mcp/ pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up mcp/ environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13.13"
+          working-directory: mcp
+
+      # From `mcp/` itself: from the repo root, pytest would pick up the root
+      # `pytest.ini` (Django settings, `core/backend/conftest.py`) instead of
+      # stopping at `mcp/pyproject.toml`.
+      - name: Run mcp/ pytest suite
+        working-directory: mcp
+        run: uv run pytest
+
+  docker-build:
+    name: mcp/ docker build (no publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # A build-only check: this repository does not publish or version
+      # this image (design.md's Non-Goals) — no `docker push`, no registry
+      # login, no tag beyond this job's own local verification.
+      - name: Build the mcp/ image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: mcp
+          push: false
