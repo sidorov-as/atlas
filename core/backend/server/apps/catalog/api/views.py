@@ -19,28 +19,30 @@ parsing, response shaping, and the
 
 from http import HTTPStatus
 
-from atlas_plugin_api import entity_deprecated
-from django.db.models import Q
+from atlas_plugin_api import (
+    ArchitectureRelationshipNotFoundError,
+    ArchitectureRelationshipReadOnlyError,
+    ArchitectureRelationshipSourceKindError,
+    entity_deprecated,
+)
 from dmr import Body, Path, Query, modify
 from dmr.errors import ErrorType, format_error
 from dmr.response import APIError
 
-from server.apps.catalog import refs
 from server.apps.catalog.authorization import is_account_read_only
 from server.apps.catalog.models import (
-    INGESTIBLE_KINDS,
     ArchitectureRelationship,
-    CatalogEntity,
     CatalogHomeSettings,
     Tag,
-    ensure_tags_exist,
+)
+from server.apps.catalog.services.architecture_relationship_service import (
+    architecture_relationship_service,
 )
 
 from .auth import SessionAuth
 from .helpers import FORBIDDEN_RESPONSE, AtlasController
 from .permissions import (
     CatalogHomeSettingsWritePermission,
-    EntityWritePermission,
     TagWritePermission,
 )
 from .schemas import (
@@ -98,57 +100,33 @@ def _architecture_relationship_out(
     )
 
 
-def _get_architecture_relationship(pk: int) -> ArchitectureRelationship:
-    try:
-        return ArchitectureRelationship.objects.select_related(
-            "source", "target"
-        ).get(pk=pk)
-    except ArchitectureRelationship.DoesNotExist:
-        raise APIError(
+def _relationship_error(exc: Exception) -> APIError:
+    """Map the service's contract exceptions to the REST error shapes the
+    controllers have always returned."""
+    if isinstance(exc, ArchitectureRelationshipNotFoundError):
+        return APIError(
             format_error(
                 "Architecture relationship not found",
                 error_type=ErrorType.not_found,
             ),
             status_code=HTTPStatus.NOT_FOUND,
-        ) from None
-
-
-def _manual_relationship_source(ref: str) -> CatalogEntity:
-    source = refs.resolve_ref(ref)
-    if source.kind not in INGESTIBLE_KINDS:
-        raise APIError(
-            format_error(
-                "Architecture relationship sources must be System, "
-                "Component, Resource, or API entities",
-                error_type=ErrorType.value_error,
-            ),
-            status_code=HTTPStatus.BAD_REQUEST,
         )
-    return source
-
-
-def _check_relationship_write(
-    request, relationship: ArchitectureRelationship
-) -> CatalogEntity:
-    if relationship.origin == ArchitectureRelationship.Origin.YAML:
-        raise APIError(
-            format_error(
-                "YAML-origin architecture relationships are read-only",
-                error_type=ErrorType.security,
-            ),
+    if isinstance(exc, ArchitectureRelationshipReadOnlyError):
+        return APIError(
+            format_error(str(exc), error_type=ErrorType.security),
             status_code=HTTPStatus.FORBIDDEN,
         )
-    source = relationship.source
-    if source.kind not in INGESTIBLE_KINDS:
-        raise APIError(
-            format_error(
-                "Architecture relationship source not found",
-                error_type=ErrorType.not_found,
-            ),
-            status_code=HTTPStatus.NOT_FOUND,
-        )
-    EntityWritePermission.check_write(request.user, source)
-    return source
+    return APIError(
+        format_error(str(exc), error_type=ErrorType.value_error),
+        status_code=HTTPStatus.BAD_REQUEST,
+    )
+
+
+_RELATIONSHIP_ERRORS = (
+    ArchitectureRelationshipNotFoundError,
+    ArchitectureRelationshipReadOnlyError,
+    ArchitectureRelationshipSourceKindError,
+)
 
 
 class ArchitectureRelationshipListController(AtlasController):
@@ -159,13 +137,8 @@ class ArchitectureRelationshipListController(AtlasController):
     def get(
         self, parsed_query: Query[ArchitectureRelationshipQuery]
     ) -> list[ArchitectureRelationshipOut]:
-        source = refs.resolve_ref(parsed_query.source)
-        relationships = (
-            ArchitectureRelationship.objects.filter(
-                Q(source=source) | Q(target=source),
-            )
-            .select_related("source", "target")
-            .order_by("id")
+        relationships = architecture_relationship_service.list_for_entity(
+            entity_ref=parsed_query.source
         )
         return [
             _architecture_relationship_out(relationship)
@@ -176,19 +149,18 @@ class ArchitectureRelationshipListController(AtlasController):
     def post(
         self, parsed_body: Body[ArchitectureRelationshipIn]
     ) -> ArchitectureRelationshipOut:
-        source = _manual_relationship_source(parsed_body.source)
-        EntityWritePermission.check_write(self.request.user, source)
-        target = refs.resolve_ref(parsed_body.target)
-        relationship = ArchitectureRelationship.objects.create(
-            source=source,
-            target=target,
-            label=parsed_body.label,
-            technology=parsed_body.technology,
-            interaction_kind=parsed_body.interaction_kind,
-            tags=parsed_body.tags,
-            origin=ArchitectureRelationship.Origin.MANUAL,
-        )
-        ensure_tags_exist(parsed_body.tags)
+        try:
+            relationship = architecture_relationship_service.create(
+                source_ref=parsed_body.source,
+                target_ref=parsed_body.target,
+                label=parsed_body.label,
+                technology=parsed_body.technology,
+                interaction_kind=parsed_body.interaction_kind,
+                tags=parsed_body.tags,
+                actor=self.request.user,
+            )
+        except _RELATIONSHIP_ERRORS as exc:
+            raise _relationship_error(exc) from None
         return _architecture_relationship_out(relationship)
 
 
@@ -198,9 +170,11 @@ class ArchitectureRelationshipDetailController(AtlasController):
     def get(
         self, parsed_path: Path[ArchitectureRelationshipPath]
     ) -> ArchitectureRelationshipOut:
-        return _architecture_relationship_out(
-            _get_architecture_relationship(parsed_path.id)
-        )
+        try:
+            relationship = architecture_relationship_service.get(parsed_path.id)
+        except _RELATIONSHIP_ERRORS as exc:
+            raise _relationship_error(exc) from None
+        return _architecture_relationship_out(relationship)
 
     @modify(extra_responses=[FORBIDDEN_RESPONSE])
     def patch(
@@ -208,26 +182,30 @@ class ArchitectureRelationshipDetailController(AtlasController):
         parsed_path: Path[ArchitectureRelationshipPath],
         parsed_body: Body[ArchitectureRelationshipPatch],
     ) -> ArchitectureRelationshipOut:
-        relationship = _get_architecture_relationship(parsed_path.id)
-        _check_relationship_write(self.request, relationship)
-        fields = parsed_body.model_fields_set
-        if "target" in fields:
-            relationship.target = refs.resolve_ref(parsed_body.target)
-        for field in ("label", "technology", "interaction_kind", "tags"):
-            if field in fields:
-                setattr(relationship, field, getattr(parsed_body, field))
-        if "tags" in fields:
-            ensure_tags_exist(parsed_body.tags)
-        relationship.save()
+        fields = {
+            field: getattr(parsed_body, field)
+            for field in parsed_body.model_fields_set
+        }
+        try:
+            relationship = architecture_relationship_service.update(
+                relationship_id=parsed_path.id,
+                fields=fields,
+                actor=self.request.user,
+            )
+        except _RELATIONSHIP_ERRORS as exc:
+            raise _relationship_error(exc) from None
         return _architecture_relationship_out(relationship)
 
     @modify(
         status_code=HTTPStatus.NO_CONTENT, extra_responses=[FORBIDDEN_RESPONSE]
     )
     def delete(self, parsed_path: Path[ArchitectureRelationshipPath]) -> None:
-        relationship = _get_architecture_relationship(parsed_path.id)
-        _check_relationship_write(self.request, relationship)
-        relationship.delete()
+        try:
+            architecture_relationship_service.delete(
+                relationship_id=parsed_path.id, actor=self.request.user
+            )
+        except _RELATIONSHIP_ERRORS as exc:
+            raise _relationship_error(exc) from None
 
 
 # --- Tag (admin-managed color config) ----------------------------------------

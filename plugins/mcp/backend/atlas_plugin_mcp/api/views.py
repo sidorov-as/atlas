@@ -12,7 +12,7 @@ only reads `CatalogEntity` directly (a plain filtered list, the same shape
 filtering, pagination), matching every existing kind-specific list
 controller's own convention (`atlas_plugin_standard_catalog.api.views`).
 
-Writes are restricted to `_WRITABLE_KINDS` — exactly the kinds the REST/SPA
+Writes are restricted to `WRITABLE_KINDS` — exactly the kinds the REST/SPA
 API itself lets anyone create or update (System/Component/Resource/API).
 Group and Actor stay registered Entity Kinds (so `EntityService` itself has
 no opinion here), readable through `search_catalog`/`get_entity` like any
@@ -55,6 +55,7 @@ from atlas_plugin_api import (
     PageOut,
     PaginatedOut,
     PATBearerAuth,
+    dry_run,
     filter_by_owner,
     filter_by_search,
     filter_by_status,
@@ -76,17 +77,21 @@ from dmr.response import APIError
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
 
+from .dry_run_support import dry_run_out, dump
 from .schemas import (
     CatalogEntityOut,
     CatalogEntitySummaryOut,
     CreateEntityIn,
+    DryRunOut,
+    DryRunQuery,
     SearchCatalogQuery,
     UpdateEntityIn,
 )
+from .strict_keys import check_spec_keys
 
 # Exactly the kinds the existing REST/SPA API itself lets anyone create or
 # update — see module docstring.
-_WRITABLE_KINDS = frozenset({KIND_SYSTEM, KIND_COMPONENT, KIND_RESOURCE, KIND_API})
+WRITABLE_KINDS = frozenset({KIND_SYSTEM, KIND_COMPONENT, KIND_RESOURCE, KIND_API})
 
 _SCOPE_CATALOG_WRITE = "catalog:write"
 
@@ -117,13 +122,13 @@ def _invalid_spec(exc: PydanticValidationError) -> APIError:
 
 def _resolve_writable_handler(kind_id: str) -> EntityKindHandler:
     """Resolve `kind_id`'s registered handler, rejecting both an unknown
-    kind and a known-but-not-writable-through-MCP one (`_WRITABLE_KINDS`)
+    kind and a known-but-not-writable-through-MCP one (`WRITABLE_KINDS`)
     with the same clear 400 either way — a client can't distinguish
     "no such kind" from "that kind exists but MCP won't write it" by status
     code alone, which is deliberate: neither is information this API needs
     to leak more precisely than that.
     """
-    if kind_id not in _WRITABLE_KINDS:
+    if kind_id not in WRITABLE_KINDS:
         raise _unwritable_kind(kind_id)
     handler = registry.resolve(kind_id)
     if handler is None:
@@ -132,6 +137,7 @@ def _resolve_writable_handler(kind_id: str) -> EntityKindHandler:
 
 
 def _validate_spec(schema: type[BaseModel], raw: dict) -> BaseModel:
+    check_spec_keys(schema, raw)
     try:
         return schema.model_validate(raw)
     except PydanticValidationError as exc:
@@ -173,7 +179,9 @@ def _written_entity_out(entity, handler: EntityKindHandler) -> CatalogEntityOut:
     """
     return _entity_out(
         EntityRead(
-            entity=entity, spec=handler.serialize_details(entity), unavailable=False
+            entity=entity,
+            spec=handler.serialize_details(entity),
+            unavailable=False,
         )
     )
 
@@ -232,23 +240,37 @@ class CreateEntityController(AtlasController):
         summary="Create a catalog entity",
         description=(
             "Create a System, Component, Resource, or API in the catalog. "
-            "`spec` is validated against the target kind's own schema. "
+            "`spec` is validated against the target kind's own schema "
+            "(see `describe_kinds`). With `dryRun` true nothing is saved "
+            "and the response previews the result. "
             "Requires the `catalog:write` PAT scope."
         ),
         extra_responses=[FORBIDDEN_RESPONSE],
     )
-    def post(self, parsed_body: Body[CreateEntityIn]) -> CatalogEntityOut:
+    def post(
+        self,
+        parsed_body: Body[CreateEntityIn],
+        parsed_query: Query[DryRunQuery],
+    ) -> CatalogEntityOut | DryRunOut:
         require_scope(self, _SCOPE_CATALOG_WRITE)
         handler = _resolve_writable_handler(parsed_body.kind)
         spec = _validate_spec(handler.spec_schema, parsed_body.spec)
-        entity = get_entity_service().create(
-            kind_id=parsed_body.kind,
-            owner_ref=spec_owner_ref(spec),
-            metadata=parsed_body.metadata,
-            spec=spec,
-            actor=self.request.user,
-        )
-        return _written_entity_out(entity, handler)
+
+        def write() -> CatalogEntityOut:
+            entity = get_entity_service().create(
+                kind_id=parsed_body.kind,
+                owner_ref=spec_owner_ref(spec),
+                metadata=parsed_body.metadata,
+                spec=spec,
+                actor=self.request.user,
+            )
+            return _written_entity_out(entity, handler)
+
+        if not parsed_query.dry_run:
+            return write()
+        with dry_run() as context:
+            after = dump(write())
+        return dry_run_out(before=None, after=after, context=context)
 
 
 class EntityDetailController(AtlasController):
@@ -280,7 +302,9 @@ class EntityDetailController(AtlasController):
         summary="Update a catalog entity",
         description=(
             "Partially update a catalog entity by id — an omitted field is "
-            "left untouched. Requires the `catalog:write` PAT scope."
+            "left untouched. With `dryRun` true nothing is saved and the "
+            "response lists each field's current and proposed value. "
+            "Requires the `catalog:write` PAT scope."
         ),
         extra_responses=[FORBIDDEN_RESPONSE],
     )
@@ -288,7 +312,8 @@ class EntityDetailController(AtlasController):
         self,
         parsed_path: Path[EntityPath],
         parsed_body: Body[UpdateEntityIn],
-    ) -> CatalogEntityOut:
+        parsed_query: Query[DryRunQuery],
+    ) -> CatalogEntityOut | DryRunOut:
         require_scope(self, _SCOPE_CATALOG_WRITE)
         try:
             existing = get_entity_service().get(parsed_path.id)
@@ -300,14 +325,23 @@ class EntityDetailController(AtlasController):
             if parsed_body.spec is not None
             else None
         )
-        entity = get_entity_service().update(
-            entity_id=parsed_path.id,
-            owner_ref=spec_owner_ref(spec),
-            metadata=parsed_body.metadata,
-            spec=spec,
-            actor=self.request.user,
-        )
-        return _written_entity_out(entity, handler)
+
+        def write() -> CatalogEntityOut:
+            entity = get_entity_service().update(
+                entity_id=parsed_path.id,
+                owner_ref=spec_owner_ref(spec),
+                metadata=parsed_body.metadata,
+                spec=spec,
+                actor=self.request.user,
+            )
+            return _written_entity_out(entity, handler)
+
+        if not parsed_query.dry_run:
+            return write()
+        before = dump(_entity_out(existing))
+        with dry_run() as context:
+            after = dump(write())
+        return dry_run_out(before=before, after=after, context=context)
 
 
 class EntityRemoveController(AtlasController):

@@ -48,6 +48,8 @@ lifecycle surface used by the other feature areas.
    repository source integration used by Ingestion.
 8. [MCP](mcp.md): a curated, PAT-authenticated HTTP API for MCP tool-calling
    clients such as Claude Desktop.
+9. [Catalog authoring skills](mcp-skills.md): install skills that let an
+   assistant fill the catalog from code and build flows through MCP.
 
 ## Section boundary
 

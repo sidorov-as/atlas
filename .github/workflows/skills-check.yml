@@ -1,0 +1,44 @@
+name: Skills structure
+
+# Path-filtered on purpose: the check only reads `skills/` (and itself), so it
+# has nothing to say about PRs that touch neither.
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "scripts/check_skills.py"
+      - ".github/workflows/skills-check.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "skills/**"
+      - "scripts/check_skills.py"
+      - ".github/workflows/skills-check.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skills-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: skills frontmatter and references
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # The script needs only PyYAML, which composer/ already depends on.
+      - name: Set up composer environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13.13"
+          working-directory: composer
+
+      - name: Check skills
+        working-directory: composer
+        run: uv run python ../scripts/check_skills.py ../skills

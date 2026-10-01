@@ -41,7 +41,8 @@ def test_mcp_openapi_document_omits_flow_paths_when_flows_is_not_installed(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "atlas_plugin_mcp.api.urls.django_apps.is_installed", lambda _name: False
+        "atlas_plugin_mcp.api.urls.django_apps.is_installed",
+        lambda _name: False,
     )
 
     paths = _paths(build_openapi_schema())
@@ -65,22 +66,44 @@ def test_mcp_openapi_document_uses_short_explicit_operation_ids():
 
     expected = {
         ("/api/plugins/atlas.mcp/catalog/search/", "get"): "search_catalog",
+        ("/api/plugins/atlas.mcp/kinds/", "get"): "describe_kinds",
         ("/api/plugins/atlas.mcp/catalog/", "post"): "create_entity",
         ("/api/plugins/atlas.mcp/catalog/{id}/", "get"): "get_entity",
         ("/api/plugins/atlas.mcp/catalog/{id}/", "patch"): "update_entity",
-        ("/api/plugins/atlas.mcp/catalog/{id}/remove/", "post"): "remove_entity",
+        (
+            "/api/plugins/atlas.mcp/catalog/{id}/remove/",
+            "post",
+        ): "remove_entity",
         ("/api/plugins/atlas.mcp/catalog/{id}/purge/", "post"): "purge_entity",
+        ("/api/plugins/atlas.mcp/relationships/", "get"): "list_relationships",
+        (
+            "/api/plugins/atlas.mcp/relationships/",
+            "post",
+        ): "create_relationship",
+        ("/api/plugins/atlas.mcp/relationships/{id}/", "patch"): (
+            "update_relationship"
+        ),
+        ("/api/plugins/atlas.mcp/relationships/{id}/", "delete"): (
+            "delete_relationship"
+        ),
         ("/api/plugins/atlas.mcp/flows/", "get"): "list_flows",
         ("/api/plugins/atlas.mcp/flows/", "post"): "create_flow",
+        ("/api/plugins/atlas.mcp/flows/validate/", "post"): "validate_flow",
         ("/api/plugins/atlas.mcp/flows/{id}/", "get"): "get_flow",
         ("/api/plugins/atlas.mcp/flows/{id}/", "patch"): "update_flow",
         ("/api/plugins/atlas.mcp/flows/{id}/", "delete"): "delete_flow",
-        ("/api/plugins/atlas.mcp/endpoints/search/", "get"): "search_api_endpoints",
+        (
+            "/api/plugins/atlas.mcp/endpoints/search/",
+            "get",
+        ): "search_api_endpoints",
         ("/api/plugins/atlas.mcp/endpoints/{id}/", "get"): "get_api_endpoint",
         ("/api/plugins/atlas.mcp/endpoints/{id}/consumers/", "get"): (
             "get_endpoint_consumers"
         ),
-        ("/api/plugins/atlas.mcp/operations/search/", "get"): "search_api_operations",
+        (
+            "/api/plugins/atlas.mcp/operations/search/",
+            "get",
+        ): "search_api_operations",
         ("/api/plugins/atlas.mcp/operations/{id}/", "get"): "get_api_operation",
         ("/api/plugins/atlas.mcp/operations/{id}/consumers/", "get"): (
             "get_operation_consumers"

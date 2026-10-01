@@ -24,7 +24,12 @@ import logging
 from urllib.parse import urlsplit
 
 import yaml
-from atlas_plugin_api import SafeHttpError, safe_request
+from atlas_plugin_api import (
+    SafeHttpError,
+    add_dry_run_warning,
+    is_dry_run,
+    safe_request,
+)
 from django.conf import settings
 from django.utils import timezone
 
@@ -139,7 +144,13 @@ def apply_api_spec_source(
     instance.spec_source = spec_source
     if spec_source == ApiDetails.SPEC_SOURCE_URL:
         instance.spec_url = spec_url
-        resolve_api_spec_url(instance)
+        if is_dry_run():
+            add_dry_run_warning(
+                f"The spec at {spec_url} would be fetched on a real write; "
+                "a dry-run does not make that request"
+            )
+        else:
+            resolve_api_spec_url(instance)
     elif spec_source == ApiDetails.SPEC_SOURCE_INLINE:
         instance.spec_url = ""
         instance.spec_content = spec_content

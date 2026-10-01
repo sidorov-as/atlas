@@ -56,6 +56,7 @@ nav = [
       { "Flows" = "features/flows.md" },
       { "Git connector" = "features/git-connector.md" },
       { "MCP" = "features/mcp.md" },
+      { "Catalog authoring skills" = "features/mcp-skills.md" },
   ] },
   { "Concepts & Architecture" = [
       { "Overview" = "concepts/index.md" },

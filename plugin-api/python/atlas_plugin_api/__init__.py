@@ -19,7 +19,13 @@ from .architecture_relationships import (
     ARCHITECTURE_RELATIONSHIP_LABEL,
     ARCHITECTURE_RELATIONSHIP_ORIGIN_MANUAL,
     ARCHITECTURE_RELATIONSHIP_ORIGIN_YAML,
+    ArchitectureRelationshipNotFoundError,
+    ArchitectureRelationshipReadOnlyError,
+    ArchitectureRelationshipService,
+    ArchitectureRelationshipSourceKindError,
+    bind_architecture_relationship_service,
     get_architecture_relationship_model,
+    get_architecture_relationship_service,
 )
 from .audit import AUDIT_RECORD_LABEL, entity_history, get_audit_record_model
 from .auth import PATBearerAuth, SessionAuth, require_scope
@@ -100,6 +106,12 @@ from .config import (
     resolve_secrets,
 )
 from .descriptor import PLUGIN_ENTRY_POINT_GROUP, PluginDescriptor
+from .dry_run import (
+    DryRunContext,
+    add_dry_run_warning,
+    dry_run,
+    is_dry_run,
+)
 from .entity_helpers import (
     API_VERSION,
     FORBIDDEN_RESPONSE,
@@ -270,6 +282,10 @@ __all__ = [
     "ActorReference",
     "AdoptIn",
     "ArchitectureRelationshipDeclarationIn",
+    "ArchitectureRelationshipNotFoundError",
+    "ArchitectureRelationshipReadOnlyError",
+    "ArchitectureRelationshipService",
+    "ArchitectureRelationshipSourceKindError",
     "AssuredAttribute",
     "AttributeProvenance",
     "AuthenticationFailure",
@@ -296,6 +312,7 @@ __all__ = [
     "CredentialFlowContext",
     "CredentialInput",
     "CredentialProviderContractHooks",
+    "DryRunContext",
     "DuplicateAuthenticationProviderError",
     "DuplicateKindError",
     "DuplicatePermissionError",
@@ -357,10 +374,12 @@ __all__ = [
     "UnsafeUrlError",
     "ValidateDeleteError",
     "VerifiedIdentity",
+    "add_dry_run_warning",
     "adopt",
     "assert_safe_failure",
     "assert_valid_identity",
     "bind_actor_provisioning_service",
+    "bind_architecture_relationship_service",
     "bind_entity_helpers",
     "bind_membership_service",
     "bind_pat_validator",
@@ -370,6 +389,7 @@ __all__ = [
     "blocked_by_reason",
     "classify_permission_effect",
     "delete_blocked",
+    "dry_run",
     "ensure_tags_exist",
     "entity_capabilities",
     "entity_deprecated",
@@ -385,6 +405,7 @@ __all__ = [
     "filter_by_team",
     "get_actor_provisioning_service",
     "get_architecture_relationship_model",
+    "get_architecture_relationship_service",
     "get_audit_record_model",
     "get_authentication_provider_lookup",
     "get_catalog_entity_model",
@@ -398,6 +419,7 @@ __all__ = [
     "get_tag_model",
     "history_out",
     "ingested_from",
+    "is_dry_run",
     "metadata_out",
     "name_validator",
     "not_found",

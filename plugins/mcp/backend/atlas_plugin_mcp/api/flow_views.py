@@ -35,18 +35,30 @@ from atlas_plugin_api import (
     PageOut,
     PaginatedOut,
     PATBearerAuth,
+    dry_run,
     require_scope,
 )
 from atlas_plugin_api.controllers import AtlasController
 from atlas_plugin_flows.contracts import FlowIn, FlowNotFoundError, FlowPatch
 from atlas_plugin_flows.extension_points import get_flow_service
 from django.core.paginator import Paginator
-from dmr import Body, Path, Query, modify
-from dmr.errors import ErrorType, format_error
+from dmr import Body, Path, Query, ResponseSpec, modify
+from dmr.errors import ErrorModel, ErrorType, format_error
 from dmr.response import APIError
 
-from .schemas import FlowListQuery, FlowOut, FlowPath, FlowSummaryOut
+from .dry_run_support import dry_run_out, dump
+from .schemas import (
+    DryRunOut,
+    DryRunQuery,
+    FlowListQuery,
+    FlowOut,
+    FlowPath,
+    FlowSummaryOut,
+    ValidateFlowIn,
+    ValidateFlowOut,
+)
 
+_SCOPE_FLOWS_READ = "flows:read"
 _SCOPE_FLOWS_WRITE = "flows:write"
 
 
@@ -122,14 +134,26 @@ class FlowListController(AtlasController):
             "components, resources, and terminal outcomes) attached to a "
             "System. A step's `icon` is a `@gravity-ui/icons` component "
             "name — use `search_flow_icons` to find a valid one before "
-            "setting it. Requires the `flows:write` PAT scope."
+            "setting it. With `dryRun` true nothing is saved and the response "
+            "previews the result. Requires the `flows:write` PAT scope."
         ),
         extra_responses=[FORBIDDEN_RESPONSE],
     )
-    def post(self, parsed_body: Body[FlowIn]) -> FlowOut:
+    def post(
+        self, parsed_body: Body[FlowIn], parsed_query: Query[DryRunQuery]
+    ) -> FlowOut | DryRunOut:
         require_scope(self, _SCOPE_FLOWS_WRITE)
-        instance = get_flow_service().create(body=parsed_body, actor=self.request.user)
-        return _flow_out(instance)
+
+        def write() -> FlowOut:
+            return _flow_out(
+                get_flow_service().create(body=parsed_body, actor=self.request.user)
+            )
+
+        if not parsed_query.dry_run:
+            return write()
+        with dry_run() as context:
+            after = dump(write())
+        return dry_run_out(before=None, after=after, context=context)
 
 
 class FlowDetailController(AtlasController):
@@ -158,7 +182,9 @@ class FlowDetailController(AtlasController):
         summary="Update a flow",
         description=(
             "Partially update a Flow by id — an omitted field is left "
-            "untouched. Requires the `flows:write` PAT scope."
+            "untouched. With `dryRun` true nothing is saved and the "
+            "response lists each field's current and proposed value. "
+            "Requires the `flows:write` PAT scope."
         ),
         extra_responses=[FORBIDDEN_RESPONSE],
     )
@@ -166,15 +192,28 @@ class FlowDetailController(AtlasController):
         self,
         parsed_path: Path[FlowPath],
         parsed_body: Body[FlowPatch],
-    ) -> FlowOut:
+        parsed_query: Query[DryRunQuery],
+    ) -> FlowOut | DryRunOut:
         require_scope(self, _SCOPE_FLOWS_WRITE)
-        try:
-            instance = get_flow_service().update(
-                flow_id=parsed_path.id, body=parsed_body, actor=self.request.user
+
+        def write() -> FlowOut:
+            return _flow_out(
+                get_flow_service().update(
+                    flow_id=parsed_path.id,
+                    body=parsed_body,
+                    actor=self.request.user,
+                )
             )
+
+        try:
+            if not parsed_query.dry_run:
+                return write()
+            before = dump(_flow_out(get_flow_service().get(parsed_path.id)))
+            with dry_run() as context:
+                after = dump(write())
         except FlowNotFoundError:
             raise _not_found() from None
-        return _flow_out(instance)
+        return dry_run_out(before=before, after=after, context=context)
 
     @modify(
         operation_id="delete_flow",
@@ -189,3 +228,42 @@ class FlowDetailController(AtlasController):
             get_flow_service().delete(flow_id=parsed_path.id, actor=self.request.user)
         except FlowNotFoundError:
             raise _not_found() from None
+
+
+class ValidateFlowController(AtlasController):
+    """The `validate_flow` MCP tool: read-only, so `flows:read` is enough."""
+
+    auth = (PATBearerAuth(),)
+
+    @modify(
+        operation_id="validate_flow",
+        summary="Validate a flow without saving",
+        description=(
+            "Check a flow body (the `create_flow` fields, plus `flowId` to "
+            "validate a replacement of an existing flow) against every rule "
+            "a save applies: step references, duplicate step ids, "
+            "transitions to missing steps, cycles, one reference field per "
+            "step, and size limits. Returns every violation found, not only "
+            "the first, and saves nothing. Requires the `flows:read` PAT "
+            "scope."
+        ),
+        status_code=HTTPStatus.OK,
+        extra_responses=[
+            FORBIDDEN_RESPONSE,
+            ResponseSpec(
+                ErrorModel,
+                status_code=HTTPStatus.NOT_FOUND,
+                description="`flowId` does not name an existing flow",
+            ),
+        ],
+    )
+    def post(self, parsed_body: Body[ValidateFlowIn]) -> ValidateFlowOut:
+        require_scope(self, _SCOPE_FLOWS_READ)
+        body = parsed_body.model_dump(exclude={"flow_id"})
+        try:
+            violations = get_flow_service().validate(
+                body=body, flow_id=parsed_body.flow_id
+            )
+        except FlowNotFoundError:
+            raise _not_found() from None
+        return ValidateFlowOut(valid=not violations, violations=violations)

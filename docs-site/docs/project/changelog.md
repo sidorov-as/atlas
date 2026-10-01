@@ -39,6 +39,14 @@ forward, rollback, source, and grant boundaries.
 These changes landed before the first tagged release. Review them if you ran
 Atlas from an earlier checkout.
 
+- **MCP writes reject unknown fields.** `create_entity` and `update_entity`
+  now fail with a 400 when `spec` or `metadata` contains a key the kind does
+  not accept, instead of ignoring it and reporting success. This includes
+  `spec.relationships`, which was accepted and silently dropped; use
+  `create_relationship` instead. A client or script that sent extra or
+  misspelled keys must remove or correct them; `describe_kinds` lists the
+  accepted fields. Ingestion and the REST API are unchanged. See [Strict
+  validation](../features/mcp.md#strict-validation).
 - **API specification URLs are fetched safely.** An API's `specUrl` now
   resolves only over HTTPS and only to publicly routable addresses; embedded
   credentials, fragments, redirects to private addresses, and responses over
