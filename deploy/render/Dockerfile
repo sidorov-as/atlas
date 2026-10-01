@@ -74,6 +74,10 @@ COPY plugins/c4/backend /code/plugins/c4/backend
 COPY plugins/database-schema/backend /code/plugins/database-schema/backend
 COPY plugins/ingestion/backend /code/plugins/ingestion/backend
 COPY plugins/flows/backend /code/plugins/flows/backend
+# Not selected in this demo distribution (see deploy/render/manifest.yaml), but
+# core/backend/pyproject.toml/uv.lock list it as a path dependency, so
+# `uv sync --frozen` needs its source present.
+COPY plugins/mcp/backend /code/plugins/mcp/backend
 RUN uv sync --frozen --no-dev
 
 COPY core/backend .
