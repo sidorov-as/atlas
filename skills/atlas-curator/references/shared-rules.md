@@ -13,6 +13,7 @@ session. Do not assume; the tool list depends on the server version and installe
 |------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | Required for any entity work | `search_catalog`, `get_entity`, `create_entity`, `update_entity`                                                                           |
 | Preferred for entity work    | `describe_kinds` (field and enum truth), `create_relationship`, `list_relationships`, `dryRun` support on write tools (accurate summaries) |
+| Endpoint and operation links | `link_endpoint_consumers`, `unlink_endpoint_consumers`, `link_operation_participants`, `unlink_operation_participants`, `get_endpoint_consumers`, `get_operation_consumers` |
 | Flow work                    | `list_flows`, `get_flow`, `create_flow`, `update_flow`, `search_flow_icons`, `validate_flow`                                               |
 | Flow steps bound to APIs     | `search_api_endpoints`, `search_api_operations`                                                                                            |
 
@@ -28,7 +29,7 @@ Then act on what is found:
 - **`atlas-scout` or `atlas-flow` cannot find `atlas-curator`.** Stop and tell the user to
   install the full set of skills; do not continue without it.
 
-Token scopes: entity writes need `catalog:write`; flow writes need `flows:write`. A write
+Token scopes: entity writes need `catalog:write`; flow writes need `flows:write`; endpoint and operation links need `apis:write`. A write
 rejected for a missing scope or permission is a connection problem. Report which scope is
 needed and do not retry the same request.
 
@@ -60,3 +61,7 @@ Catalog items with no counterpart in the code or conversation are reported as
 The one deletion a skill may perform is `delete_relationship` for a manual relationship,
 only when the user explicitly asks for that specific relationship to be deleted and has
 confirmed a dry-run summary of the deletion.
+
+Usage links are the second deletion a skill may perform: `unlink_endpoint_consumers` or
+`unlink_operation_participants`, only when the user explicitly asked to remove specific links and has confirmed a
+dry-run of the removal. Never remove a link reported as managed by ingestion.

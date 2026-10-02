@@ -51,7 +51,6 @@ from atlas_plugin_api import (
     spec_owner_ref,
 )
 from atlas_plugin_api.controllers import AtlasController
-from atlas_plugin_standard_catalog.extension_points import add_consumed_api
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
@@ -60,6 +59,13 @@ from dmr.errors import ErrorModel, ErrorType, format_error
 from dmr.response import APIError
 
 from ..consumers import channel_participants, operation_provider_service
+from ..extension_points import (
+    NotLinkedError,
+    link_endpoint,
+    link_operation,
+    unlink_endpoint,
+    unlink_operation,
+)
 from ..models import (
     ApiEndpoint,
     ApiOperation,
@@ -67,13 +73,9 @@ from ..models import (
     ServiceOperationUsage,
 )
 from ..permissions import (
-    check_endpoint_dependency_create_permission,
-    check_endpoint_dependency_delete_permission,
     check_endpoint_dependency_read_permission,
     check_endpoint_purge_permission,
     check_endpoint_read_permission,
-    check_operation_dependency_create_permission,
-    check_operation_dependency_delete_permission,
     check_operation_dependency_read_permission,
     check_operation_purge_permission,
     check_operation_read_permission,
@@ -647,6 +649,12 @@ CONFLICT_RESPONSE = ResponseSpec(
     description="This Service is already linked to this Endpoint",
 )
 
+UNLINK_CONFLICT_RESPONSE = ResponseSpec(
+    ErrorModel,
+    status_code=HTTPStatus.CONFLICT,
+    description="This link is managed by ingestion and cannot be removed here",
+)
+
 
 def _conflict(message: str) -> APIError:
     return APIError(
@@ -676,6 +684,17 @@ def _get_service(service_id) -> CatalogEntity:
         raise APIError(
             format_error("Service not found", error_type=ErrorType.not_found),
             status_code=HTTPStatus.NOT_FOUND,
+        ) from None
+
+
+def _get_linked_service(service_id, target: str, suffix: str = "") -> CatalogEntity:
+    """`_get_service()` for an unlink: a Service that doesn't resolve can't hold a link, so it
+    gets the same "not linked" 404 as one that exists but isn't linked."""
+    try:
+        return _get_service(service_id)
+    except APIError:
+        raise NotLinkedError(
+            f"Service is not linked to this {target}{suffix}"
         ) from None
 
 
@@ -755,24 +774,9 @@ class EndpointServicesController(AtlasController):
     ) -> EndpointServiceLinkOut:
         endpoint = _get_endpoint_by_id(parsed_path.endpoint_id)
         service = _get_service(parsed_body.service_id)
-        check_endpoint_dependency_create_permission(self.request.user, service)
-        if endpoint.status == ApiEndpoint.STATUS_REMOVED:
-            raise _conflict(
-                "This Endpoint has been removed and cannot receive new links"
-            )
-        already_linked = ServiceEndpointUsage.objects.filter(
-            endpoint=endpoint,
-            service=service,
-        ).exists()
-        if already_linked:
-            raise _conflict("This Service is already linked to this Endpoint")
-        with transaction.atomic():
-            usage = ServiceEndpointUsage.objects.create(
-                endpoint=endpoint,
-                service=service,
-                created_by=self.request.user,
-            )
-            api_relation_created = add_consumed_api(service, endpoint.api)
+        usage, api_relation_created = link_endpoint(
+            self.request.user, service, endpoint, source=ServiceEndpointUsage.SOURCE_UI
+        )
         return EndpointServiceLinkOut(
             id=usage.id,
             service=_service_summary_out(service),
@@ -786,30 +790,12 @@ class EndpointServiceController(AtlasController):
 
     @modify(
         status_code=HTTPStatus.NO_CONTENT,
-        extra_responses=[FORBIDDEN_RESPONSE],
+        extra_responses=[FORBIDDEN_RESPONSE, UNLINK_CONFLICT_RESPONSE],
     )
     def delete(self, parsed_path: Path[EndpointServicePath]) -> None:
         endpoint = _get_endpoint_by_id(parsed_path.endpoint_id)
-        try:
-            usage = ServiceEndpointUsage.objects.select_related(
-                "service", "service__owner"
-            ).get(
-                endpoint=endpoint,
-                service_id=parsed_path.service_id,
-            )
-        except ServiceEndpointUsage.DoesNotExist:
-            raise APIError(
-                format_error(
-                    "Service is not linked to this Endpoint",
-                    error_type=ErrorType.not_found,
-                ),
-                status_code=HTTPStatus.NOT_FOUND,
-            ) from None
-        check_endpoint_dependency_delete_permission(self.request.user, usage.service)
-        # `consumesAPI` is untouched (unlinking does not remove
-        # consumesAPI) — the Service may still consume other Endpoints of
-        # the same API, or have a hand-authored `consumesAPI`.
-        usage.delete()
+        service = _get_linked_service(parsed_path.service_id, "Endpoint")
+        unlink_endpoint(self.request.user, service, endpoint)
 
 
 class EndpointConsumersController(AtlasController):
@@ -925,27 +911,12 @@ class OperationServicesController(AtlasController):
     ) -> OperationServiceLinkOut:
         operation = _get_operation_by_id(parsed_path.operation_id)
         service = _get_service(parsed_body.service_id)
-        check_operation_dependency_create_permission(self.request.user, service)
-        provider = operation_provider_service(operation.api)
-        if provider is not None and provider.id == service.id:
-            raise _conflict(
-                "This Service is the Operation's own document owner — its role is "
-                "already implied by the Operation's direction and cannot be linked",
-            )
-        already_linked = ServiceOperationUsage.objects.filter(
-            operation=operation,
-            service=service,
-            role=parsed_body.role,
-        ).exists()
-        if already_linked:
-            raise _conflict(
-                "This Service is already linked to this Operation with this role",
-            )
-        usage = ServiceOperationUsage.objects.create(
-            operation=operation,
-            service=service,
-            role=parsed_body.role,
-            created_by=self.request.user,
+        usage = link_operation(
+            self.request.user,
+            service,
+            operation,
+            parsed_body.role,
+            source=ServiceOperationUsage.SOURCE_UI,
         )
         return OperationServiceLinkOut(
             id=usage.id,
@@ -960,7 +931,7 @@ class OperationServiceController(AtlasController):
 
     @modify(
         status_code=HTTPStatus.NO_CONTENT,
-        extra_responses=[FORBIDDEN_RESPONSE],
+        extra_responses=[FORBIDDEN_RESPONSE, UNLINK_CONFLICT_RESPONSE],
     )
     def delete(
         self,
@@ -968,27 +939,10 @@ class OperationServiceController(AtlasController):
         parsed_query: Query[OperationServiceDeleteQuery],
     ) -> None:
         operation = _get_operation_by_id(parsed_path.operation_id)
-        try:
-            usage = ServiceOperationUsage.objects.select_related(
-                "service", "service__owner"
-            ).get(
-                operation=operation,
-                service_id=parsed_path.service_id,
-                role=parsed_query.role,
-            )
-        except ServiceOperationUsage.DoesNotExist:
-            raise APIError(
-                format_error(
-                    "Service is not linked to this Operation with this role",
-                    error_type=ErrorType.not_found,
-                ),
-                status_code=HTTPStatus.NOT_FOUND,
-            ) from None
-        check_operation_dependency_delete_permission(self.request.user, usage.service)
-        # Only the targeted `(operation, service, role)` row is removed
-        # a Service holding both roles keeps its
-        # other role's row intact.
-        usage.delete()
+        service = _get_linked_service(
+            parsed_path.service_id, "Operation", " with this role"
+        )
+        unlink_operation(self.request.user, service, operation, parsed_query.role)
 
 
 class OperationConsumersController(AtlasController):

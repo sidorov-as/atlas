@@ -44,31 +44,35 @@ are not offered.
 
 ## Tool set
 
-| Tool                          | What it does                                                                                        | Scope required  |
-|-------------------------------|-----------------------------------------------------------------------------------------------------|-----------------|
-| `search_catalog`              | Search entities by free text, kind, owner, tags, or status                                          | none            |
-| `get_entity`                  | Read one entity's full detail                                                                       | none            |
-| `describe_kinds`              | Show the `spec` fields, enum values, and required fields of each writable kind                      | `catalog:read`  |
-| `create_entity`               | Create a System, Component, Resource, or API                                                        | `catalog:write` |
-| `update_entity`               | Partially update an entity                                                                          | `catalog:write` |
-| `remove_entity`               | Soft-remove an entity                                                                               | `catalog:write` |
-| `purge_entity`                | Permanently delete a removed entity                                                                 | `catalog:write` |
-| `list_relationships`          | List the Architecture Relationships an entity is the source or target of, with origin               | `catalog:read`  |
-| `create_relationship`         | Create a manual Architecture Relationship                                                           | `catalog:write` |
-| `update_relationship`         | Partially update a manual Architecture Relationship                                                 | `catalog:write` |
-| `delete_relationship`         | Delete a manual Architecture Relationship                                                           | `catalog:write` |
-| `list_flows`\*                | Search Flows across Systems                                                                         | none            |
-| `get_flow`\*                  | Read one Flow's steps and documentation                                                             | none            |
-| `create_flow`\*               | Create a Flow                                                                                       | `flows:write`   |
-| `update_flow`\*               | Partially update a Flow                                                                             | `flows:write`   |
-| `delete_flow`\*               | Delete a Flow                                                                                       | `flows:write`   |
-| `validate_flow`\*             | Check a Flow body against every save rule and list all violations, without saving                   | `flows:read`    |
-| `search_api_endpoints`\*\*    | Search HTTP endpoints across all APIs, or within one                                                | none            |
-| `get_api_endpoint`\*\*        | Read one endpoint: parameters, body, responses, security                                            | none            |
-| `get_endpoint_consumers`\*\*  | List the Services linked to an endpoint as consumers                                                | none            |
-| `search_api_operations`\*\*   | Search async (AsyncAPI) operations across all APIs, or within one                                   | none            |
-| `get_api_operation`\*\*       | Read one operation: channel, direction, messages                                                    | none            |
-| `get_operation_consumers`\*\* | List the Services publishing or subscribing on an operation's channel, with their role              | none            |
+| Tool                                | What it does                                                                           | Scope required  |
+|-------------------------------------|----------------------------------------------------------------------------------------|-----------------|
+| `search_catalog`                    | Search entities by free text, kind, owner, tags, or status                             | none            |
+| `get_entity`                        | Read one entity's full detail                                                          | none            |
+| `describe_kinds`                    | Show the `spec` fields, enum values, and required fields of each writable kind         | `catalog:read`  |
+| `create_entity`                     | Create a System, Component, Resource, or API                                           | `catalog:write` |
+| `update_entity`                     | Partially update an entity                                                             | `catalog:write` |
+| `remove_entity`                     | Soft-remove an entity                                                                  | `catalog:write` |
+| `purge_entity`                      | Permanently delete a removed entity                                                    | `catalog:write` |
+| `list_relationships`                | List the Architecture Relationships an entity is the source or target of, with origin  | `catalog:read`  |
+| `create_relationship`               | Create a manual Architecture Relationship                                              | `catalog:write` |
+| `update_relationship`               | Partially update a manual Architecture Relationship                                    | `catalog:write` |
+| `delete_relationship`               | Delete a manual Architecture Relationship                                              | `catalog:write` |
+| `list_flows`\*                      | Search Flows across Systems                                                            | none            |
+| `get_flow`\*                        | Read one Flow's steps and documentation                                                | none            |
+| `create_flow`\*                     | Create a Flow                                                                          | `flows:write`   |
+| `update_flow`\*                     | Partially update a Flow                                                                | `flows:write`   |
+| `delete_flow`\*                     | Delete a Flow                                                                          | `flows:write`   |
+| `validate_flow`\*                   | Check a Flow body against every save rule and list all violations, without saving      | `flows:read`    |
+| `search_api_endpoints`\*\*          | Search HTTP endpoints across all APIs, or within one                                   | none            |
+| `get_api_endpoint`\*\*              | Read one endpoint: parameters, body, responses, security                               | none            |
+| `get_endpoint_consumers`\*\*        | List the Services linked to an endpoint as consumers                                   | none            |
+| `search_api_operations`\*\*         | Search async (AsyncAPI) operations across all APIs, or within one                      | none            |
+| `get_api_operation`\*\*             | Read one operation: channel, direction, messages                                       | none            |
+| `get_operation_consumers`\*\*       | List the Services publishing or subscribing on an operation's channel, with their role | none            |
+| `link_endpoint_consumers`\*\*       | Link a Service to the endpoints it consumes, in a batch                                | `apis:write`    |
+| `unlink_endpoint_consumers`\*\*     | Remove a Service's links to endpoints, in a batch                                      | `apis:write`    |
+| `link_operation_participants`\*\*   | Link a Service to operations it publishes or subscribes on, in a batch                 | `apis:write`    |
+| `unlink_operation_participants`\*\* | Remove a Service's publisher or subscriber role on operations, in a batch              | `apis:write`    |
 
 \* Present only when `atlas.flows` is also selected.
 
@@ -81,6 +85,40 @@ are read-only through MCP, as they are in the REST API. Deleting takes two
 steps, as in the web UI: `remove_entity`, then `purge_entity`. Writes are
 audited like web UI changes, with the token's owner as the actor. A tool only
 returns or changes what its token's owner could in the web UI.
+
+### Linking Services to endpoints and operations
+
+The four `apis:write` tools create and remove the same Service links the web
+UI shows in the **Linked Services** tabs of an endpoint or operation. Each call
+takes one Service (a Component) and up to 200 items, so a whole repository's
+call sites go in one call per Service.
+
+An item names its target in one of two ways, never both:
+
+- by id: `endpointId`, or `operationId` with a `role` (`publisher` or
+  `subscriber`);
+- by natural key: `api` (an API ref), `method`, and `path` for an endpoint, or
+  `api`, `channelAddress`, and `direction` plus `role` for an operation.
+
+A call succeeds item by item. The response lists a `status` per item in
+request order, with a count per status: `created` or `removed`, `unchanged`
+(the link already existed, or was already absent), `not_found`, `ambiguous`
+(an operation key matching several operations; the candidate ids are
+returned), `conflict`, and `invalid`. A bad item does not stop the others, and
+repeating a call is safe. A removed endpoint cannot be linked (`conflict`),
+but a link to it can still be removed. Linking an operation to the Service
+that owns its API document is also a `conflict`.
+
+`dryRun` previews the statuses and counts without saving anything.
+
+Linking an endpoint also adds its API to the Service's `consumesAPI`, reported
+per item as `apiRelationCreated`. Unlinking never removes `consumesAPI`, and
+operation links do not touch the Service's relations.
+
+Links created through MCP have origin `manual` and source `mcp`; links made in
+the web UI have source `ui`. Both fields are visible in Django admin only, not
+in the web UI or the REST API. A link with origin `yaml` is managed by
+ingestion and the unlink tools refuse to remove it.
 
 ### Strict validation
 
@@ -98,7 +136,8 @@ tools refuse to change or delete them.
 
 `create_entity`, `update_entity`, `create_flow`, `update_flow`,
 `create_relationship`, `update_relationship`, and `delete_relationship`
-accept a `dryRun` flag. With `dryRun` true the write runs through the real
+accept a `dryRun` flag. (The usage link tools take it too, with the
+per-item response described above.) With `dryRun` true the write runs through the real
 validation, permission, and reference checks, then is rolled back: nothing is
 saved and no audit record is written. The response has `dryRun: true`, the
 resulting `result` (with `id` null for a create), a `changes` list of fields
@@ -127,7 +166,7 @@ From a shell, the equivalent is:
 
 ```shell
 uv run python manage.py issue_pat <username> \
-  --scope catalog:read --scope catalog:write \
+  --scope catalog:read --scope catalog:write --scope apis:write \
   --expires-in-days 90
 ```
 
@@ -148,12 +187,13 @@ A token's scopes can only narrow its owner's own permissions: an operation
 is permitted only when both the token's scopes and the owner's permissions
 allow it. The available scopes are:
 
-| Scope           | Grants                                                                                         |
-|-----------------|------------------------------------------------------------------------------------------------|
-| `catalog:read`  | `describe_kinds`, `list_relationships`. Other read tools are open to any valid token.         |
-| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`, and the relationship writes |
-| `flows:read`    | `validate_flow`. Other read tools are open to any valid token.                                 |
-| `flows:write`   | `create_flow`, `update_flow`, `delete_flow`                                                    |
+| Scope           | Grants                                                                                                                 |
+|-----------------|------------------------------------------------------------------------------------------------------------------------|
+| `catalog:read`  | `describe_kinds`, `list_relationships`. Other read tools are open to any valid token.                                  |
+| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`, and the relationship writes                         |
+| `flows:read`    | `validate_flow`. Other read tools are open to any valid token.                                                         |
+| `flows:write`   | `create_flow`, `update_flow`, `delete_flow`                                                                            |
+| `apis:write`    | `link_endpoint_consumers`, `unlink_endpoint_consumers`, `link_operation_participants`, `unlink_operation_participants` |
 
 A token with no scopes can read but not write, which makes it a safe default
 for an assistant that only answers questions. A read-scoped token attempting

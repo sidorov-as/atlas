@@ -187,6 +187,34 @@ def test_build_server_instructions_mention_api_tools_only_when_apis_are_present(
     assert "get_endpoint_consumers" not in without_apis["instructions"]
 
 
+def test_build_server_instructions_mention_usage_tools_only_when_present(
+    monkeypatch, config
+):
+    _patch_schema_fetch(
+        monkeypatch,
+        {
+            "paths": {
+                "/api/plugins/atlas.mcp/endpoints/{id}/consumers/": {},
+                "/api/plugins/atlas.mcp/endpoints/consumers/link/": {},
+            }
+        },
+    )
+    with_usage = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    _patch_schema_fetch(
+        monkeypatch,
+        {"paths": {"/api/plugins/atlas.mcp/endpoints/{id}/consumers/": {}}},
+    )
+    read_only = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    for expected in ("link_endpoint_consumers", "apis:write", "dryRun", "200"):
+        assert expected in with_usage["instructions"]
+    assert "link_endpoint_consumers" not in read_only["instructions"]
+    assert "get_endpoint_consumers" in read_only["instructions"]
+
+
 def test_build_server_registers_search_flow_icons_only_when_flows_are_present(
     monkeypatch, config
 ):

@@ -281,6 +281,94 @@ class OperationConsumersOut(CamelModel):
     participants: list[OperationConsumerOut]
 
 
+# --- Usage link tools (`atlas.apis`) --------------------------------------
+#
+# MCP-owned write shapes. An item names its target by id or by natural key;
+# which of the two it gave is checked per item by the batch (a bad item is
+# reported `invalid` without failing the call), so every addressing field is a
+# plain optional string here rather than a validated type. `role` is required:
+# a missing or unknown role rejects the whole request.
+
+UsageLinkStatus = Literal[
+    "created", "removed", "unchanged", "not_found", "ambiguous", "conflict", "invalid"
+]
+
+
+class EndpointUsageItemIn(CamelModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint_id: str | None = Field(
+        default=None,
+        description="The Endpoint's id. Give this, or `api` + `method` + `path`, not both.",
+    )
+    api: str | None = Field(
+        default=None, description="API ref (`api:name`) of the natural key."
+    )
+    method: str | None = Field(default=None, description="HTTP method, e.g. `GET`.")
+    path: str | None = Field(
+        default=None, description="Path exactly as in the spec, e.g. `/bookings/{id}`."
+    )
+
+
+class OperationUsageItemIn(CamelModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operation_id: str | None = Field(
+        default=None,
+        description="The Operation's id. Give this, or `api` + `channelAddress` + "
+        "`direction`, not both.",
+    )
+    api: str | None = Field(
+        default=None, description="API ref (`api:name`) of the natural key."
+    )
+    channel_address: str | None = None
+    direction: Literal["send", "receive"] | None = Field(
+        default=None, description="The Operation's own direction in its document."
+    )
+    role: Literal["publisher", "subscriber"] = Field(
+        description="What the Service does on the channel."
+    )
+
+
+class LinkEndpointConsumersIn(CamelModel):
+    model_config = ConfigDict(extra="forbid")
+
+    service: str = Field(description="Component ref (`component:name`).")
+    items: list[EndpointUsageItemIn]
+
+
+class LinkOperationParticipantsIn(CamelModel):
+    model_config = ConfigDict(extra="forbid")
+
+    service: str = Field(description="Component ref (`component:name`).")
+    items: list[OperationUsageItemIn]
+
+
+class UsageItemOut(CamelModel):
+    status: UsageLinkStatus
+    message: str | None = Field(description="Why, for any status but success.")
+    endpoint_id: UUID | None = None
+    operation_id: UUID | None = None
+    candidates: list[UUID] = Field(
+        default_factory=list,
+        description="For `ambiguous`: the matching operation ids; retry with one.",
+    )
+    api_relation_created: bool | None = Field(
+        default=None,
+        description="Endpoint links only: whether this item added the API to "
+        "the Service's `consumesAPI`.",
+    )
+
+
+class UsageLinksOut(CamelModel):
+    items: list[UsageItemOut] = Field(
+        description="One result per item, in request order."
+    )
+    counts: dict[str, int] = Field(description="Number of items per status.")
+    dry_run: bool = Field(description="True when nothing was saved: a preview.")
+    warnings: list[str]
+
+
 class DescribeKindsQuery(CamelModel):
     kind: str | None = None
 

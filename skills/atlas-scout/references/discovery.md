@@ -73,6 +73,21 @@ Evidence for `A -> B`:
 
 Prefer fewer relationships with evidence over many guesses. Mark each with its file and line.
 
+## Endpoint and operation links
+
+For each Component, look for call sites that hit a documented API:
+
+- **HTTP client calls**: generated clients, `fetch`/`axios`/`requests`/`httpx` calls, SDK wrappers whose method and
+  path are visible. Note the HTTP method and path template.
+- **Messaging**: producers and consumers that name a topic, queue, or channel. `publish`/`send` is role `publisher`;
+  `subscribe`/consumer is role `subscriber`.
+
+Then match each call site against the catalog with `search_api_endpoints` (method and path) or
+`search_api_operations` (channel and direction) within the API the Component consumes. Use the catalog's own values for
+the plan's link row, and check `get_endpoint_consumers`/`get_operation_consumers` to mark existing links `unchanged`.
+Show the call site as `path:line` for the reviewer only. A call site with no matching endpoint or operation is listed
+as not determined; do not guess a near match. If the search tools are not available, skip link rows and say so.
+
 ## Evidence format
 
 `path/to/file.ext:LINE` (a single representative line). For a component, cite the entry point or Dockerfile; for a

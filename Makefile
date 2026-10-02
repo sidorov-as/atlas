@@ -71,7 +71,7 @@ endif
 issue-pat: core/backend/.env ## Issue a fully-scoped Atlas Personal Access Token: make issue-pat <username>
 	@test -n "$(ISSUE_PAT_USERNAME)" || { echo "Usage: make issue-pat <username>" >&2; exit 1; }
 	$(COMPOSE_DEV) exec backend python manage.py issue_pat $(ISSUE_PAT_USERNAME) \
-		--scope catalog:read --scope catalog:write \
+		--scope catalog:read --scope catalog:write --scope apis:write \
 		--scope flows:read --scope flows:write
 
 lock: ## Re-resolve every lock.yaml (hashes change with any edit under plugins/); use DIST=<dir> for one
