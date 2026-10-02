@@ -117,6 +117,12 @@ def _api_urls() -> list:
         OperationDetailController,
         OperationSearchController,
     )
+    from .usage_views import (
+        LinkEndpointConsumersController,
+        LinkOperationParticipantsController,
+        UnlinkEndpointConsumersController,
+        UnlinkOperationParticipantsController,
+    )
 
     return [
         path(
@@ -148,6 +154,26 @@ def _api_urls() -> list:
             "operations/<uuid:id>/consumers/",
             OperationConsumersController.as_view(),
             name="mcp-get-operation-consumers",
+        ),
+        path(
+            "endpoints/consumers/link/",
+            LinkEndpointConsumersController.as_view(),
+            name="mcp-link-endpoint-consumers",
+        ),
+        path(
+            "endpoints/consumers/unlink/",
+            UnlinkEndpointConsumersController.as_view(),
+            name="mcp-unlink-endpoint-consumers",
+        ),
+        path(
+            "operations/participants/link/",
+            LinkOperationParticipantsController.as_view(),
+            name="mcp-link-operation-participants",
+        ),
+        path(
+            "operations/participants/unlink/",
+            UnlinkOperationParticipantsController.as_view(),
+            name="mcp-unlink-operation-participants",
         ),
     ]
 

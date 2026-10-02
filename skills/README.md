@@ -9,7 +9,7 @@ when needed.
 |-------------------------------------------|-----------------------------------------------------------------------------------------------------------------|--------------------------------------------|
 | [`atlas-scout`](atlas-scout/SKILL.md)     | Survey a codebase, propose a catalog model, interview you on structural decisions, and produce an approved plan | Nothing; hands the plan to `atlas-curator` |
 | [`atlas-flow`](atlas-flow/SKILL.md)       | Describe a process in conversation and save it as a flow bound to catalog entities and endpoints                | Flows                                      |
-| [`atlas-curator`](atlas-curator/SKILL.md) | Create or update Systems, Components, Resources, APIs, and relationships                                        | Entities and relationships                 |
+| [`atlas-curator`](atlas-curator/SKILL.md) | Create or update Systems, Components, Resources, APIs, and relationships                                        | Entities, relationships, and endpoint/operation links |
 
 ## How they relate
 
@@ -26,7 +26,8 @@ curator's files and stop if it is missing.
 
 - The [Atlas MCP server](../mcp/README.md) connected to your assistant.
 - A Personal Access Token with `catalog:read` and `catalog:write` for entity work, plus
-  `flows:read` and `flows:write` for flows.
+  `flows:read` and `flows:write` for flows, and `apis:write` to link Services to API endpoints and
+  operations.
 - The `mcp-authoring-tools` tools (`describe_kinds`, relationship tools, `dryRun`) are
   preferred. Against an older server the skills say what they cannot do and continue at
   reduced capability only if you agree.

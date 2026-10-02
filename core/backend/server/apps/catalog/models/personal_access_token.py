@@ -54,11 +54,13 @@ class PersonalAccessToken(models.Model):
     SCOPE_CATALOG_WRITE = "catalog:write"
     SCOPE_FLOWS_READ = "flows:read"
     SCOPE_FLOWS_WRITE = "flows:write"
+    SCOPE_APIS_WRITE = "apis:write"
     SCOPE_CHOICES = [
         (SCOPE_CATALOG_READ, "Catalog: read"),
         (SCOPE_CATALOG_WRITE, "Catalog: write"),
         (SCOPE_FLOWS_READ, "Flows: read"),
         (SCOPE_FLOWS_WRITE, "Flows: write"),
+        (SCOPE_APIS_WRITE, "APIs: write"),
     ]
 
     owner = models.ForeignKey(

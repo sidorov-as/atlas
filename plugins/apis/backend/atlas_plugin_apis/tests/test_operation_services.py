@@ -402,3 +402,59 @@ def test_consumers_reflects_a_removed_operations_status(member_client, operation
     response = member_client.get(f"/api/operations/{operation.id}/consumers/")
 
     assert response.json()["operation"]["status"] == "removed"
+
+
+# --- Origin / source ---------------------------------------------------
+
+
+def test_rest_link_records_manual_origin_and_ui_source(
+    owner_client, operation, service
+):
+    _link(owner_client, operation, service)
+
+    usage = ServiceOperationUsage.objects.get(operation=operation, service=service)
+    assert (usage.origin, usage.source) == ("manual", "ui")
+
+
+def test_client_cannot_choose_origin_or_source(owner_client, operation, service):
+    owner_client.post(
+        f"/api/operations/{operation.id}/services/",
+        {
+            "serviceId": str(service.id),
+            "role": "subscriber",
+            "origin": "yaml",
+            "source": "mcp",
+        },
+    )
+
+    usage = ServiceOperationUsage.objects.get(operation=operation, service=service)
+    assert (usage.origin, usage.source) == ("manual", "ui")
+
+
+def test_unlinking_a_yaml_origin_link_is_a_conflict(owner_client, operation, service):
+    usage = _seed_link(operation, service, role="publisher")
+    usage.origin = ServiceOperationUsage.ORIGIN_YAML
+    usage.save()
+
+    response = owner_client.delete(
+        f"/api/operations/{operation.id}/services/{service.id}/?role=publisher",
+    )
+
+    assert response.status_code == 409
+    assert "ingestion" in response.json()["detail"][0]["msg"]
+    assert ServiceOperationUsage.objects.filter(pk=usage.pk).exists()
+
+
+def test_origin_is_per_role(owner_client, operation, service):
+    yaml_link = _seed_link(operation, service, role="publisher")
+    yaml_link.origin = ServiceOperationUsage.ORIGIN_YAML
+    yaml_link.save()
+    _link(owner_client, operation, service, role="subscriber")
+
+    response = owner_client.delete(
+        f"/api/operations/{operation.id}/services/{service.id}/?role=subscriber",
+    )
+
+    assert response.status_code == 204
+    assert ServiceOperationUsage.objects.filter(pk=yaml_link.pk).exists()
+    assert not ServiceOperationUsage.objects.filter(role="subscriber").exists()

@@ -32,8 +32,18 @@ Relationships
 - [new]       component:web -> component:billing-service  "Makes API calls to"  REST/HTTPS  synchronous
                 evidence: web/src/config.ts:8
 
+Links
+- [new]       component:web -> api:billing-api  GET /invoices/{id}
+                call site: web/src/api/invoices.ts:14
+- [new]       component:ledger-worker -> api:ledger-events  channel ledger.posted  receive  role: subscriber
+                call site: services/ledger/consumer.py:22
+- [unchanged] component:web -> api:billing-api  POST /invoices
+
 Needs a decision
 - component:notifier: service or worker? evidence is mixed (notifier/app.py:3, notifier/tasks.py:10)
+
+Could not determine
+- component:web calls POST /refunds (web/src/api/refunds.ts:9): no matching endpoint in the catalog
 
 Investigate (in the catalog, not found in the code; left untouched)
 - component:legacy-export
@@ -43,6 +53,10 @@ Rules:
 
 - One line per entity or relationship with its status (`new`, `update`, `unchanged`, `investigate`), its key
   fields, and at least one `path:line` of evidence. `update` says what differs.
+- A link row is `(service -> endpoint/operation, role)`: the API with method and path, or the API with channel and
+  direction and a role (`publisher` or `subscriber`). Take the target from `search_api_endpoints` or
+  `search_api_operations`, not from inference. The code location is reviewer-only text and is not recorded in the
+  catalog. A call site with no match goes under "Could not determine", never as a link row.
 - Uncertain items go under "Needs a decision" and are not handed over until the user decides.
 - `investigate` items are listed only to be looked at; they are never proposed for removal.
 - Titles and descriptions are drafted but may be abbreviated in the plan; offer to show them in full.

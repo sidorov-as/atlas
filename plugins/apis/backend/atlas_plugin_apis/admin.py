@@ -88,10 +88,18 @@ class ApiEndpointAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceEndpointUsage)
 class ServiceEndpointUsageAdmin(admin.ModelAdmin):
-    list_display = ("endpoint", "service", "created_by", "created_at")
+    list_display = (
+        "endpoint",
+        "service",
+        "origin",
+        "source",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("origin", "source")
     search_fields = ("endpoint__path", "service__name")
     autocomplete_fields = ("endpoint", "service", "created_by")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("origin", "source", "created_at")
 
 
 @admin.register(ApiOperation)
@@ -149,8 +157,16 @@ class ApiOperationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceOperationUsage)
 class ServiceOperationUsageAdmin(admin.ModelAdmin):
-    list_display = ("operation", "service", "role", "created_by", "created_at")
-    list_filter = ("role",)
+    list_display = (
+        "operation",
+        "service",
+        "role",
+        "origin",
+        "source",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("role", "origin", "source")
     search_fields = ("operation__channel_address", "service__name")
     autocomplete_fields = ("operation", "service", "created_by")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("origin", "source", "created_at")

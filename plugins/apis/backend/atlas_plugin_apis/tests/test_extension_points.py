@@ -13,14 +13,22 @@ from server.apps.catalog.tests.factories import (
 
 from atlas_plugin_apis import permissions
 from atlas_plugin_apis.extension_points import (
+    AlreadyLinkedError,
+    NotLinkedError,
+    find_endpoint,
+    find_operations,
     get_endpoint,
     get_endpoint_consumers,
     get_operation,
     get_operation_consumers,
+    link_endpoint,
+    link_operation,
     resolve_endpoint,
     resolve_operation,
     search_endpoints,
     search_operations,
+    unlink_endpoint,
+    unlink_operation,
 )
 from atlas_plugin_apis.models import (
     ApiEndpoint,
@@ -306,3 +314,105 @@ def test_get_operation_resolves_and_rejects_without_read_permission(
     with pytest.raises(APIError) as exc:
         get_operation(actor, operation.id)
     assert exc.value.status_code == HTTPStatus.FORBIDDEN
+
+
+# --- find_endpoint / find_operations -----------------------------------
+
+
+def test_find_endpoint_matches_method_and_path_including_removed(api):
+    removed = _endpoint(api, status=ApiEndpoint.STATUS_REMOVED)
+
+    assert find_endpoint(api, "get", "/v1/invoices") == removed
+    assert find_endpoint(api, "POST", "/v1/invoices") is None
+
+
+def test_find_endpoint_is_scoped_to_its_api(api, other_api):
+    _endpoint(api)
+
+    assert find_endpoint(other_api, "GET", "/v1/invoices") is None
+
+
+def test_find_operations_returns_every_active_match_and_skips_removed(api):
+    first = ApiOperation.objects.create(
+        api=api, channel_address="a", direction="send", operation_key="one"
+    )
+    second = ApiOperation.objects.create(
+        api=api, channel_address="a", direction="send", operation_key="two"
+    )
+    ApiOperation.objects.create(
+        api=api,
+        channel_address="a",
+        direction="send",
+        operation_key="gone",
+        status=ApiOperation.STATUS_REMOVED,
+    )
+    ApiOperation.objects.create(
+        api=api, channel_address="a", direction="receive", operation_key="rx"
+    )
+
+    assert find_operations(api, "a", "send") == [first, second]
+    assert find_operations(api, "missing", "send") == []
+
+
+# --- link / unlink -----------------------------------------------------
+
+
+def test_link_endpoint_records_source_and_reports_the_consumes_api_side_effect(
+    superuser_account, group, system, api
+):
+    service = create_component(name="svc", owner=group, system=system)
+    endpoint = _endpoint(api)
+
+    usage, created = link_endpoint(superuser_account, service, endpoint, source="mcp")
+
+    assert (usage.origin, usage.source, usage.created_by) == (
+        "manual",
+        "mcp",
+        superuser_account,
+    )
+    assert created is True
+    other = _endpoint(api, path="/v1/other")
+    _, created_again = link_endpoint(superuser_account, service, other, source="mcp")
+    assert created_again is False
+
+
+def test_link_endpoint_twice_raises_already_linked(
+    superuser_account, group, system, api
+):
+    service = create_component(name="svc", owner=group, system=system)
+    endpoint = _endpoint(api)
+    link_endpoint(superuser_account, service, endpoint, source="mcp")
+
+    with pytest.raises(AlreadyLinkedError):
+        link_endpoint(superuser_account, service, endpoint, source="mcp")
+
+
+def test_unlink_endpoint_without_a_link_raises_not_linked(
+    superuser_account, group, system, api
+):
+    service = create_component(name="svc", owner=group, system=system)
+
+    with pytest.raises(NotLinkedError):
+        unlink_endpoint(superuser_account, service, _endpoint(api))
+
+
+def test_link_operation_records_source_and_unlink_removes_one_role(
+    superuser_account, group, system, api
+):
+    service = create_component(name="svc", owner=group, system=system)
+    operation = ApiOperation.objects.create(
+        api=api, channel_address="a", direction="send", operation_key="one"
+    )
+
+    usage = link_operation(
+        superuser_account, service, operation, "publisher", source="mcp"
+    )
+    link_operation(superuser_account, service, operation, "subscriber", source="mcp")
+    unlink_operation(superuser_account, service, operation, "publisher")
+
+    assert (usage.origin, usage.source) == ("manual", "mcp")
+    assert list(
+        ServiceOperationUsage.objects.filter(service=service).values_list(
+            "role", flat=True
+        )
+    ) == ["subscriber"]

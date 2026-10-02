@@ -302,3 +302,27 @@ def test_consumers_reflects_a_removed_endpoint_status(member_client, endpoint):
     response = member_client.get(f"/api/endpoints/{endpoint.id}/consumers/")
 
     assert response.json()["endpoint"]["status"] == "removed"
+
+
+# --- Origin / source ---------------------------------------------------
+
+
+def test_rest_link_records_manual_origin_and_ui_source(owner_client, endpoint, service):
+    _link(owner_client, endpoint, service)
+
+    usage = ServiceEndpointUsage.objects.get(endpoint=endpoint, service=service)
+    assert (usage.origin, usage.source) == ("manual", "ui")
+
+
+def test_unlinking_a_yaml_origin_link_is_a_conflict(owner_client, endpoint, service):
+    usage = _seed_link(endpoint, service)
+    usage.origin = ServiceEndpointUsage.ORIGIN_YAML
+    usage.save()
+
+    response = owner_client.delete(
+        f"/api/endpoints/{endpoint.id}/services/{service.id}/"
+    )
+
+    assert response.status_code == 409
+    assert "ingestion" in response.json()["detail"][0]["msg"]
+    assert ServiceEndpointUsage.objects.filter(pk=usage.pk).exists()

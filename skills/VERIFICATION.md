@@ -16,7 +16,7 @@ output is kept.
 - A local Atlas with the demo catalog (`make dev-up`, then `make seed-demo`), the `atlas.mcp`, `atlas.flows`, and
   `atlas.apis` plugins selected, and the MCP transport connected to your assistant (see
   [mcp/README.md](../mcp/README.md)).
-- A token with `catalog:read`, `catalog:write`, `flows:read`, and `flows:write` (`make issue-pat`).
+- A token with `catalog:read`, `catalog:write`, `flows:read`, `flows:write`, and `apis:write` (`make issue-pat`).
 - The three skills installed together in the assistant.
 - Any small repository for `atlas-scout` (a few services and a database is enough).
 
@@ -43,6 +43,9 @@ Tick each one per skill it applies to. A failure is a bug in the skill text; fix
 | 13 | **Binding.** A step for an existing component references it; a call to a documented endpoint references the endpoint; an unknown party becomes an external step and is listed in the summary before saving, with an offer to document it afterward.                                               |                     |                 |      x       |
 | 14 | **Editing keeps steps.** Add a step to an existing flow; the saved list contains every previous step plus the new one. Re-binding an external step changes only that step.                                                                                                                        |                     |                 |      x       |
 | 15 | **Icons are real.** Any icon set on a step came from `search_flow_icons`.                                                                                                                                                                                                                         |                     |                 |      x       |
+| 16 | **Links are batched, addressed, and read.** Plan a Service that calls two endpoints and publishes to one channel. The curator sends one call per Service per tool, names targets by natural key from the search results, reads every per-item status, and reports `not_found`, `ambiguous`, and `conflict` items without retrying them with a guess. A second run reports every link `unchanged`. |                     |        x        |              |
+| 17 | **Links come last and are not removed unasked.** Links are written only after the API spec is attached and its endpoints are confirmed. Omit an existing link from a plan: it is left in place. Ask to remove one: the curator runs `dryRun`, shows it, and waits for confirmation; a link with origin `yaml` is not removed. |                     |        x        |              |
+| 18 | **Scout plans links from call sites.** A client call that matches a cataloged endpoint appears as a link row with its `path:line` as text; an unmatched call appears under "Could not determine", not as a row. |          x          |                 |              |
 
 ## Reduced-capability pass
 
@@ -56,6 +59,7 @@ built without `atlas.flows`, or with an older `atlas.mcp`, or temporarily connec
 | No `describe_kinds`                               | The curator says its bundled reference may be out of date and continues                        |
 | No `dryRun` support                               | The summary is built by the skill, and the skill says so                                       |
 | No flow tools                                     | `atlas-flow` says flows are not available on this Atlas and does nothing further               |
+| No usage link tools                               | The curator says links cannot be recorded and asks whether to continue with entities and relationships only |
 | Token without `catalog:write` or `flows:write`    | The skill reports which scope is needed and does not retry                                     |
 | `atlas-curator` removed from the skills directory | `atlas-scout` and `atlas-flow` stop and tell you to install the full set                       |
 

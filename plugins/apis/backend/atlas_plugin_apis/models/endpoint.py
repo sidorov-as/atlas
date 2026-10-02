@@ -100,6 +100,19 @@ class ServiceEndpointUsage(models.Model):
     `ApiEndpointAdmin`), so this FK is never actually exercised by that flow.
     """
 
+    ORIGIN_MANUAL = "manual"
+    ORIGIN_YAML = "yaml"
+    ORIGIN_CHOICES: ClassVar[list] = [
+        (ORIGIN_MANUAL, "Manual"),
+        (ORIGIN_YAML, "YAML"),
+    ]
+    SOURCE_UI = "ui"
+    SOURCE_MCP = "mcp"
+    SOURCE_CHOICES: ClassVar[list] = [
+        (SOURCE_UI, "UI"),
+        (SOURCE_MCP, "MCP"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     endpoint = models.ForeignKey(
         ApiEndpoint, on_delete=models.CASCADE, related_name="service_usages"
@@ -115,6 +128,10 @@ class ServiceEndpointUsage(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    origin = models.CharField(
+        max_length=16, choices=ORIGIN_CHOICES, default=ORIGIN_MANUAL
+    )
+    source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default=SOURCE_UI)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

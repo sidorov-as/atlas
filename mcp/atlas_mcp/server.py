@@ -83,6 +83,23 @@ from a component's API-wide `consumesApi` relation instead: that only says a
 Service uses the API as a whole, and Atlas does track usage at the finer
 endpoint/operation level."""
 
+_API_USAGE_INSTRUCTIONS = """\
+
+Linking services to endpoints/operations (link_endpoint_consumers,
+unlink_endpoint_consumers, link_operation_participants,
+unlink_operation_participants; need the `apis:write` scope) takes one Service
+(a component) and a list of items per call, up to 200. Send one call per
+Service, not one per link. Name each target by id when you already hold it from
+a search, or by natural key when you only know it from code: `api`, `method`,
+`path` for an endpoint; `api`, `channelAddress`, `direction` for an operation,
+which also needs a `role`. Give exactly one form per item. The call succeeds
+partially: read the per-item `status`, report `not_found`, `ambiguous` and
+`conflict` items to the user instead of guessing a replacement, and rerun
+safely, since repeats come back `unchanged`. Linking an endpoint can also add
+the API to the Service's `consumesAPI`; unlinking never removes it. Before
+removing links, repeat the call with `dryRun` true and show the user what would
+go."""
+
 
 def _auth_headers(pat: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {pat}"}
@@ -118,6 +135,14 @@ def _has_api_tools(openapi_spec: dict) -> bool:
     return any("/consumers/" in path for path in openapi_spec.get("paths", {}))
 
 
+def _has_api_usage_tools(openapi_spec: dict) -> bool:
+    """The link/unlink routes, present only with `atlas.apis` too."""
+    return any(
+        path.endswith(("/consumers/link/", "/participants/link/"))
+        for path in openapi_spec.get("paths", {})
+    )
+
+
 def build_server(config: Config) -> FastMCP:
     openapi_spec = _fetch_openapi_spec(config)
     has_flow_tools = _has_flow_tools(openapi_spec)
@@ -127,6 +152,8 @@ def build_server(config: Config) -> FastMCP:
         instructions += _FLOW_INSTRUCTIONS
     if _has_api_tools(openapi_spec):
         instructions += _API_INSTRUCTIONS
+    if _has_api_usage_tools(openapi_spec):
+        instructions += _API_USAGE_INSTRUCTIONS
 
     # This client — not the one-off request `_fetch_openapi_spec` made
     # above — is what every generated tool actually calls through; it

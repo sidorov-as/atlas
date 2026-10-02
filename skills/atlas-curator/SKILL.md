@@ -11,8 +11,9 @@ The only skill that writes catalog entities.
 
 The user wants entities in the Atlas catalog created or updated: "add this service", "document these
 databases", "register this API", or another skill (`atlas-scout`, `atlas-flow`) hands over an approved plan.
-This skill writes Systems, Components, Resources, APIs, and the relationships between them. It does not
-create Groups or Users (see [Unsupported requests](#unsupported-requests)) and never removes anything.
+This skill writes Systems, Components, Resources, APIs, the relationships between them, and the links from Services
+to API endpoints and operations. It does not
+create Groups or Users (see [Unsupported requests](#unsupported-requests)) and never removes an entity. It removes a usage link only on explicit request after a dry-run.
 
 ## Workflow
 
@@ -61,6 +62,8 @@ attached, relationships that cannot be created, and anything skipped.
 3. Components
 4. References between entities (`dependsOn`, `providesApis`, `consumesApis`, and any `system` not yet set)
 5. Architecture Relationships (see [references/relationships.md](references/relationships.md))
+6. Endpoint and Operation links, after the API specification is attached and its endpoints or operations are
+   confirmed (see [references/usage-links.md](references/usage-links.md))
 
 Components reference systems, APIs, and resources, so those must exist first. For APIs with a spec follow
 [references/api-specs.md](references/api-specs.md).
@@ -80,13 +83,17 @@ search-before-create. A permission error is reported with the required scope and
 - **Group, User, or any other kind the server does not write**: explain that groups and users are managed in Atlas
   itself and create nothing.
 - **Remove, delete, purge, restore an entity**: follow the no-removal rule in the shared rules.
-- **Endpoints and operations**: never written directly; they appear when an API spec is attached.
+- **Endpoints and operations themselves**: never written directly; they appear when an API spec is attached. The
+  links from Services to them are written with the usage link tools
+  ([references/usage-links.md](references/usage-links.md)). If those tools are missing, say the links cannot be
+  recorded and ask whether to continue without them.
 
 ## References
 
 - [references/entities.md](references/entities.md): fields, enums, and examples per kind (fallback)
 - [references/api-specs.md](references/api-specs.md): attaching and verifying API specs
 - [references/relationships.md](references/relationships.md): authoring relationships
+- [references/usage-links.md](references/usage-links.md): linking Services to endpoints and operations
 - [references/conventions.md](references/conventions.md): names, titles, descriptions, tags, owners
 - [references/shared-rules.md](references/shared-rules.md): rules shared by all Atlas skills
 

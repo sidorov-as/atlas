@@ -120,6 +120,19 @@ class ServiceOperationUsage(models.Model):
     `ApiOperationAdmin`), so this FK is never actually exercised by that flow.
     """
 
+    ORIGIN_MANUAL = "manual"
+    ORIGIN_YAML = "yaml"
+    ORIGIN_CHOICES: ClassVar[list] = [
+        (ORIGIN_MANUAL, "Manual"),
+        (ORIGIN_YAML, "YAML"),
+    ]
+    SOURCE_UI = "ui"
+    SOURCE_MCP = "mcp"
+    SOURCE_CHOICES: ClassVar[list] = [
+        (SOURCE_UI, "UI"),
+        (SOURCE_MCP, "MCP"),
+    ]
+
     ROLE_PUBLISHER = "publisher"
     ROLE_SUBSCRIBER = "subscriber"
     ROLE_CHOICES: ClassVar[list] = [
@@ -143,6 +156,10 @@ class ServiceOperationUsage(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    origin = models.CharField(
+        max_length=16, choices=ORIGIN_CHOICES, default=ORIGIN_MANUAL
+    )
+    source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default=SOURCE_UI)
 
     class Meta:
         ordering: ClassVar[list] = ["-created_at"]

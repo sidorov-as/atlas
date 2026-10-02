@@ -108,6 +108,18 @@ def test_mcp_openapi_document_uses_short_explicit_operation_ids():
         ("/api/plugins/atlas.mcp/operations/{id}/consumers/", "get"): (
             "get_operation_consumers"
         ),
+        ("/api/plugins/atlas.mcp/endpoints/consumers/link/", "post"): (
+            "link_endpoint_consumers"
+        ),
+        ("/api/plugins/atlas.mcp/endpoints/consumers/unlink/", "post"): (
+            "unlink_endpoint_consumers"
+        ),
+        ("/api/plugins/atlas.mcp/operations/participants/link/", "post"): (
+            "link_operation_participants"
+        ),
+        ("/api/plugins/atlas.mcp/operations/participants/unlink/", "post"): (
+            "unlink_operation_participants"
+        ),
     }
 
     actual = {}
@@ -127,6 +139,10 @@ _API_OPERATION_IDS = {
     "search_api_operations",
     "get_api_operation",
     "get_operation_consumers",
+    "link_endpoint_consumers",
+    "unlink_endpoint_consumers",
+    "link_operation_participants",
+    "unlink_operation_participants",
 }
 
 

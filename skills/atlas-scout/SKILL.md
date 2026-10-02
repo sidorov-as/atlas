@@ -39,7 +39,8 @@ until the scope is confirmed.
 
 Read the code and build the candidate model using [references/discovery.md](references/discovery.md): systems,
 Components (with type), Resources (with type), APIs (with spec files when present), and relationships (calls
-between components, data access, messaging). Treat a library, a deployable service, a web frontend, and a
+between components, data access, messaging), plus links from Services to the catalog's API endpoints and
+operations that their code calls (see the links section of discovery.md). Treat a library, a deployable service, a web frontend, and a
 background worker as distinct. Map data stores and message brokers to Resources. Record file and line evidence
 for each candidate. Do not write anything yet and do not ask questions yet, other than the scope.
 
@@ -67,7 +68,7 @@ system.
 ### 5. Plan
 
 Present the plan in the conversation in the format of [references/plan-format.md](references/plan-format.md): every
-entity and relationship with its status and evidence, the open uncertainties, and the `investigate` list. If the
+entity, relationship, and endpoint/operation link with its status and evidence, the open uncertainties, and the `investigate` list. If the
 user wants changes, revise and show it again; write nothing. Write a plan file only if the user asks for one.
 
 ### 6. Handoff
