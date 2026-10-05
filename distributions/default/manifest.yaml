@@ -100,3 +100,18 @@ plugins:
     backend:
       package: atlas-plugin-mcp
       source: workspace
+
+  - id: atlas.search-postgres
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-search-postgres
+      source: workspace
+
+  - id: atlas.search
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-search
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-search"
+      source: workspace

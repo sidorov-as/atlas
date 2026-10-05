@@ -35,6 +35,7 @@ from atlas_plugin_api import (
     adopt,
     blocked_by,
     blocked_by_reason,
+    claim_relations,
     entity_capabilities,
     entity_permissions,
     filter_by_field,
@@ -116,7 +117,7 @@ def _get_system(pk) -> CatalogEntity:
     try:
         return catalog_entity_model.objects.select_related(
             "owner",
-            "ingested_from",
+            *claim_relations(),
             "system_details",
         ).get(pk=pk, kind=KIND_SYSTEM)
     except catalog_entity_model.DoesNotExist:
@@ -132,7 +133,7 @@ class SystemListController(AtlasController):
             .objects.filter(kind=KIND_SYSTEM)
             .select_related(
                 "owner",
-                "ingested_from",
+                *claim_relations(),
                 "system_details",
             )
         )
@@ -308,7 +309,7 @@ def _get_component(pk) -> CatalogEntity:
         return (
             catalog_entity_model.objects.select_related(
                 "owner",
-                "ingested_from",
+                *claim_relations(),
                 "component_details",
                 "component_details__system",
             )
@@ -332,7 +333,7 @@ class ComponentListController(AtlasController):
             .objects.filter(kind=KIND_COMPONENT)
             .select_related(
                 "owner",
-                "ingested_from",
+                *claim_relations(),
                 "component_details",
                 "component_details__system",
             )
@@ -490,7 +491,7 @@ def _get_resource(pk) -> CatalogEntity:
     try:
         return catalog_entity_model.objects.select_related(
             "owner",
-            "ingested_from",
+            *claim_relations(),
             "resource_details",
             "resource_details__system",
         ).get(pk=pk, kind=KIND_RESOURCE)
@@ -507,7 +508,7 @@ class ResourceListController(AtlasController):
             .objects.filter(kind=KIND_RESOURCE)
             .select_related(
                 "owner",
-                "ingested_from",
+                *claim_relations(),
                 "resource_details",
                 "resource_details__system",
             )

@@ -18,9 +18,10 @@ DISTRIBUTIONS := distributions/default \
 	examples/authentication/oauth2-gitea \
 	examples/authentication/custom-credentials \
 	examples/ingestion \
+	examples/search-meilisearch \
 	deploy/render
 
-.PHONY: help docs format format-check ci dev-up dev-down migrate seed-demo issue-pat lock lock-validate examples-up examples-down examples-list
+.PHONY: help docs format format-check ci dev-up dev-down migrate seed-demo issue-pat lock lock-validate examples-up examples-down examples-smoke examples-list
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -94,3 +95,6 @@ examples-up: ## Start an example: make examples-up EXAMPLE=authentication/local
 
 examples-down: ## Stop an example: make examples-down EXAMPLE=authentication/local
 	$(MAKE) -C examples down EXAMPLE=$(EXAMPLE)
+
+examples-smoke: ## Smoke-test a running example: make examples-smoke EXAMPLE=search-meilisearch
+	$(MAKE) -C examples smoke EXAMPLE=$(EXAMPLE)

@@ -31,14 +31,21 @@ def register_runtime() -> None:
     (`server.apps.plugins.runtime.load_runtime_entry_points`), after
     `django.setup()` — never at import time.
     """
-    from atlas_plugin_api import register_permission, register_purge_scanner
+    from atlas_plugin_api import (
+        register_permission,
+        register_purge_scanner,
+        register_search_source,
+    )
 
     from atlas_plugin_flows.models import scan_flow_purge_references
     from atlas_plugin_flows.permissions import (
         FLOW_EDIT_PERMISSION,
         FLOW_READ_PERMISSION,
     )
+    from atlas_plugin_flows.search_source import flow_search_source
 
     register_permission(FLOW_READ_PERMISSION, owner=PLUGIN.id)
     register_permission(FLOW_EDIT_PERMISSION, owner=PLUGIN.id)
     register_purge_scanner(PLUGIN.id, scan_flow_purge_references)
+    # Harmless without the search plugin: nothing reads the registry then.
+    register_search_source(flow_search_source, owner=PLUGIN.id)

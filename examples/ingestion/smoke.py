@@ -105,7 +105,7 @@ Entity = get_catalog_entity_model()
 entity = Entity.objects.filter(kind=KIND_SYSTEM, name={name!r}).first()
 print(json.dumps(None if entity is None else {{
     'description': entity.description,
-    'isYamlManaged': entity.ingested_from_id is not None,
+    'isYamlManaged': hasattr(entity, "ingestion_claim"),
 }}))
 """
     return json.loads(django_shell(env_file, code))

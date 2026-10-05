@@ -6,9 +6,18 @@ import { ArrowRightFromLine } from '@gravity-ui/icons'
 import { useSession } from '../lib/SessionContext'
 import { atlasConfig } from '../atlas.config'
 import { SKIP_AUTO_START_KEY } from '../pages/LoginPage'
-import type { ResolvedNavItem } from '@atlas/plugin-api'
+import { ContributionBoundary } from './ContributionBoundary'
+import type { GlobalSearchContribution, ResolvedNavItem } from '@atlas/plugin-api'
 
-export function AppShell({ children, navItems }: { children: ReactNode; navItems: readonly ResolvedNavItem[] }) {
+export function AppShell({
+  children,
+  navItems,
+  globalSearch,
+}: {
+  children: ReactNode
+  navItems: readonly ResolvedNavItem[]
+  globalSearch?: GlobalSearchContribution
+}) {
   const { session, logout } = useSession()
   const navigate = useNavigate()
   const location = useLocation()
@@ -43,7 +52,18 @@ export function AppShell({ children, navItems }: { children: ReactNode; navItems
         onClick: () => navigate('/'),
       }}
       menuItems={menuItems}
-      renderContent={() => <main style={{ padding: 24, paddingLeft: 60, paddingTop: 60 }}>{children}</main>}
+      renderContent={() => (
+        <main style={{ padding: 24, paddingLeft: 60, paddingTop: 60 }}>
+          {globalSearch && (
+            <div className="app-shell-search" style={{ marginBottom: 16 }}>
+              <ContributionBoundary label="Search">
+                <globalSearch.component />
+              </ContributionBoundary>
+            </div>
+          )}
+          {children}
+        </main>
+      )}
       renderFooter={({ compact: isCompact }) => {
         const username = session?.user?.username ?? ''
         return (

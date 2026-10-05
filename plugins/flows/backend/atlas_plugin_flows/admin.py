@@ -8,3 +8,4 @@ class FlowAdmin(admin.ModelAdmin):
     list_display = ("name", "system")
     list_filter = ("system",)
     search_fields = ("name", "description")
+    readonly_fields = ("created_at", "updated_at")

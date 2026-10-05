@@ -10,6 +10,10 @@ against `atlas.ingestion.connectors.v1`/`atlas.ingestion.parsers.v1`
 (ADR 0014) — a registry it owns itself. A plugin with nothing to register
 at runtime (`server.apps.catalog` today) simply omits the hook.
 
+After every `register_runtime()` has run, each active plugin's optional
+`finalize_runtime()` hook (`atlas_plugin_api.runtime_hooks`) is called, for a
+plugin that has to check registrations made by other plugins.
+
 A plugin in `disabled_ids` skips `register_runtime()` entirely (its
 Django app still installed `INSTALLED_APPS`-side, per
 `resolver.resolve_installed_apps`, so its migrations still apply — only
@@ -28,7 +32,7 @@ after `django.setup()` has completed.
 from collections.abc import Iterable
 from importlib import import_module
 
-from atlas_plugin_api import PluginDescriptor
+from atlas_plugin_api import RUNTIME_FINALIZATION_HOOK, PluginDescriptor
 
 
 def load_runtime_entry_points(
@@ -38,6 +42,7 @@ def load_runtime_entry_points(
 ) -> None:
     descriptors = tuple(descriptors)
     job_store = _job_store_if_needed(descriptors)
+    finalizers = []
 
     for descriptor in descriptors:
         if descriptor.id in disabled_ids:
@@ -48,7 +53,15 @@ def load_runtime_entry_points(
         register_runtime = getattr(module, "register_runtime", None)
         if register_runtime is not None:
             register_runtime()
+        finalize_runtime = getattr(module, RUNTIME_FINALIZATION_HOOK, None)
+        if finalize_runtime is not None:
+            finalizers.append(finalize_runtime)
         _sync_jobs(job_store, descriptor.job_ids, pause=False)
+
+    # Only now has every active plugin registered what it contributes, so a
+    # plugin may validate registrations owned by other plugins.
+    for finalize_runtime in finalizers:
+        finalize_runtime()
 
 
 def _job_store_if_needed(descriptors: Iterable[PluginDescriptor]):
@@ -60,12 +73,9 @@ def _job_store_if_needed(descriptors: Iterable[PluginDescriptor]):
     database rows; `DjangoJobStore.lookup_job`/`update_job` are plain DB
     reads/writes that don't need that).
 
-    Built only if some descriptor actually declares `job_ids`:
-    `django_apscheduler` is only guaranteed importable when a plugin that
-    uses it (`atlas.ingestion`) is selected, since it reaches
-    `INSTALLED_APPS` only via that plugin's own `django_apps` (plugin.py's
-    docstring) — a distribution without it must not need this import to
-    succeed.
+    Built only if some descriptor actually declares `job_ids`, so a
+    distribution with no job-contributing plugin never touches the job
+    store (`django_apscheduler` itself is a core app, always installed).
     """
     if not any(descriptor.job_ids for descriptor in descriptors):
         return None
@@ -84,7 +94,7 @@ def _sync_jobs(
     the scheduler process has ever run `register_jobs`) or a
     `django_apscheduler` table that doesn't exist yet (this phase also runs
     during `manage.py migrate` itself, before its own migrations apply)
-    both silently no-op rather than failing startup — see scheduler.py's
+    both silently no-op rather than failing startup — see `scheduler.py`'s
     docstring: a pause/resume made from any process "takes effect the next
     time the process actually running this scheduler ... wakes up".
     """

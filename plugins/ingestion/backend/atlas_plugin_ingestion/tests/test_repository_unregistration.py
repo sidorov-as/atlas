@@ -2,7 +2,7 @@
 `active`/`removed` status, and is only cleared by Remove-then-Purge).
 
 `RegisteredRepositoryAdmin` has no custom delete logic — the block comes from
-`CatalogEntity.ingested_from` being `on_delete=PROTECT`, and the "succeeds"
+`EntityClaim.repository` being `on_delete=PROTECT`, and the "succeeds"
 half is `ConflictRecord.repository` being `on_delete=SET_NULL` instead. These
 tests exercise that at the ORM level, which is what actually enforces it
 regardless of the interface (Django admin) sitting in front of it.

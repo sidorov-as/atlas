@@ -1,6 +1,6 @@
 """A single manual/test ingestion pass.
 
-Periodic scheduling lives in `runapscheduler` now —
+Periodic scheduling lives in core's `runapscheduler` now —
 this command only runs one pass and exits, for local development or a
 one-off manual trigger.
 """

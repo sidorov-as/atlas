@@ -26,13 +26,14 @@ from typing import Any
 from uuid import UUID
 
 from atlas_plugin_api.entity_service import (
+    DuplicateEntityError,
     EntityNotFoundError,
     EntityRead,
     EntityUnavailableError,
     UnknownEntityKindError,
 )
 from atlas_plugin_api.purge import PurgeReference, run_purge_scan
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from pydantic import BaseModel
 
 from server.apps.catalog import refs
@@ -58,6 +59,19 @@ __all__ = [
     "UnknownEntityKindError",
     "entity_service",
 ]
+
+
+_UNIQUE_NAME_CONSTRAINT = "catalog_entity_unique_kind_namespace_name"
+
+
+def _is_duplicate_name(exc: IntegrityError) -> bool:
+    """Whether `exc` is the per-kind unique-name constraint, not some other
+    integrity failure that must keep surfacing as a server error."""
+    diag = getattr(exc.__cause__, "diag", None)
+    constraint = getattr(diag, "constraint_name", None)
+    return constraint == _UNIQUE_NAME_CONSTRAINT or (
+        constraint is None and _UNIQUE_NAME_CONSTRAINT in str(exc)
+    )
 
 
 def _audit_actor(actor: Any):
@@ -198,21 +212,19 @@ class EntityService:
         spec: BaseModel,
         actor: Any,
         source: str = CatalogEntity.SOURCE_MANUAL,
-        ingested_from: Any = None,
     ) -> CatalogEntity:
         """`owner_ref` is `None` for kinds with no owner concept (Group,
         Actor themselves);
         `EntityWritePermission.check_create` then requires a superuser
         rather than skipping authorization entirely.
 
-        `source`/`ingested_from`: an ingestion writer passes
-        `source=CatalogEntity.SOURCE_YAML`
-        and the claiming `RegisteredRepository` (typed loosely, not imported
-        here, since core does not depend on a plugin's models — ADR 0011)
+        `source`: an ingestion writer passes `source=CatalogEntity.SOURCE_YAML`
         rather than patching `source_kind` onto the entity after this call
-        returns, which would be a second, unaudited write. A `source='yaml'`
-        call is treated as pre-authorized by ingestion's own arbitration step,
-        which already gated whether this call happens at all
+        returns, which would be a second, unaudited write. Which repository
+        claims the entity is ingestion's own record (`EntityClaim`), written
+        by ingestion; core's entity row carries no reference to it. A
+        `source='yaml'` call is treated as pre-authorized by ingestion's own
+        arbitration step, which already gated whether this call happens at all
         (a rejected claim never reaches the
         Entity Service), so it skips `EntityWritePermission` rather than
         requiring a superuser actor ingestion has no natural way to supply.
@@ -226,23 +238,27 @@ class EntityService:
         if source != CatalogEntity.SOURCE_YAML:
             EntityWritePermission.check_create(actor, owner)
 
-        with transaction.atomic():
-            entity = CatalogEntity(
-                kind=kind_id,
-                owner=owner,
-                source_kind=source,
-                ingested_from=ingested_from,
-            )
-            self._apply_metadata(entity, metadata)
-            entity.save()
-            handler.create_details(entity, spec)
-            EntityAuditRecord.objects.create(
-                entity_id=entity.id,
-                kind=entity.kind,
-                action=EntityAuditRecord.ACTION_CREATE,
-                actor=_audit_actor(actor),
-                diff={"metadata": _dump(metadata), "spec": _dump(spec)},
-            )
+        try:
+            with transaction.atomic():
+                entity = CatalogEntity(
+                    kind=kind_id,
+                    owner=owner,
+                    source_kind=source,
+                )
+                self._apply_metadata(entity, metadata)
+                entity.save()
+                handler.create_details(entity, spec)
+                EntityAuditRecord.objects.create(
+                    entity_id=entity.id,
+                    kind=entity.kind,
+                    action=EntityAuditRecord.ACTION_CREATE,
+                    actor=_audit_actor(actor),
+                    diff={"metadata": _dump(metadata), "spec": _dump(spec)},
+                )
+        except IntegrityError as exc:
+            if _is_duplicate_name(exc):
+                raise DuplicateEntityError(kind_id, metadata.name) from exc
+            raise
         return entity
 
     def update(
@@ -254,9 +270,8 @@ class EntityService:
         spec: BaseModel | None = None,
         actor: Any,
         source: str = CatalogEntity.SOURCE_MANUAL,
-        ingested_from: Any = None,
     ) -> CatalogEntity:
-        """`source`/`ingested_from`: see `create`'s docstring. A `source='yaml'`
+        """`source`: see `create`'s docstring. A `source='yaml'`
         call skips `EntityWritePermission.check_write` — including its
         unconditional "YAML-managed entities reject every write" rule (ADR
         0001), which exists to block *manual* edits to an ingested entity, not
@@ -266,27 +281,31 @@ class EntityService:
             EntityWritePermission.check_write(actor, entity)
         handler = self._resolve_handler_for_write(entity)
 
-        with transaction.atomic():
-            self._apply_metadata_patch(entity, metadata)
-            if owner_ref is not None:
-                entity.owner = refs.resolve_ref(
-                    owner_ref, expected_kind=KIND_GROUP
+        try:
+            with transaction.atomic():
+                self._apply_metadata_patch(entity, metadata)
+                if owner_ref is not None:
+                    entity.owner = refs.resolve_ref(
+                        owner_ref, expected_kind=KIND_GROUP
+                    )
+                entity.source_kind = source
+                entity.save()
+                if spec is not None:
+                    handler.update_details(entity, spec)
+                EntityAuditRecord.objects.create(
+                    entity_id=entity.id,
+                    kind=entity.kind,
+                    action=EntityAuditRecord.ACTION_UPDATE,
+                    actor=_audit_actor(actor),
+                    diff={
+                        "metadata": _dump(metadata, fields_only=True),
+                        "spec": _dump(spec, fields_only=True),
+                    },
                 )
-            entity.source_kind = source
-            entity.ingested_from = ingested_from
-            entity.save()
-            if spec is not None:
-                handler.update_details(entity, spec)
-            EntityAuditRecord.objects.create(
-                entity_id=entity.id,
-                kind=entity.kind,
-                action=EntityAuditRecord.ACTION_UPDATE,
-                actor=_audit_actor(actor),
-                diff={
-                    "metadata": _dump(metadata, fields_only=True),
-                    "spec": _dump(spec, fields_only=True),
-                },
-            )
+        except IntegrityError as exc:
+            if _is_duplicate_name(exc):
+                raise DuplicateEntityError(entity.kind, entity.name) from exc
+            raise
         return entity
 
     def remove(

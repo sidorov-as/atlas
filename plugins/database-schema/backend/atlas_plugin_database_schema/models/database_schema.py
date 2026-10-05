@@ -45,6 +45,10 @@ class DatabaseSchema(models.Model):
     parse_status = models.CharField(
         max_length=16, choices=PARSE_STATUS_CHOICES, default=PARSE_STATUS_OK
     )
+    # Audit timestamps. Bulk updates (`QuerySet.update`) bypass `auto_now`, so these are not a
+    # reliable sync cursor — search indexing does not depend on them.
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return self.entity.name

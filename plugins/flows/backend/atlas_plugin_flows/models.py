@@ -499,6 +499,10 @@ class Flow(models.Model):
         choices=LAYOUT_ENGINE_CHOICES,
         default=LAYOUT_ENGINE_DAGRE,
     )
+    # Audit timestamps. Bulk updates (`QuerySet.update`) bypass `auto_now`, so these are not a
+    # reliable sync cursor — search indexing does not depend on them.
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         # Kept on the pre-existing `catalog` app_label (the same

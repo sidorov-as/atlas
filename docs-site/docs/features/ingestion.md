@@ -16,8 +16,10 @@ conflicts, and reconciliation.
 
 ## Enablement and configuration
 
-Select Ingestion with Standard Catalog. Its runtime includes `django_apscheduler`
-and the discovery and specification-refresh jobs. The built-in connector is
+Select Ingestion with Standard Catalog. Its discovery and specification-refresh
+jobs run on Atlas's shared scheduler (`manage.py runapscheduler`, the `ingestor`
+service), which any plugin can contribute jobs to; Ingestion is not required for
+the scheduler or for Atlas to run. The built-in connector is
 provider-agnostic; declare a source (connection and credential details for a
 git host) in `atlas.ingestion` plugin config, then register a repository
 against it by `source_id` and `path`. Store credentials as secret references

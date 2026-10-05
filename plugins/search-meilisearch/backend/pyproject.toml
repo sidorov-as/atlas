@@ -1,0 +1,19 @@
+[project]
+name = "atlas-plugin-search-meilisearch"
+description = "Atlas search engine adapter that keeps the index in a Meilisearch instance"
+version = "0.1.0"
+requires-python = "==3.13.13"
+dependencies = [
+    "atlas-plugin-api-python",
+    "requests>=2.34,<3.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.uv.sources]
+atlas-plugin-api-python = { path = "../../../plugin-api/python", editable = true }

@@ -39,6 +39,14 @@ forward, rollback, source, and grant boundaries.
 These changes landed before the first tagged release. Review them if you ran
 Atlas from an earlier checkout.
 
+- **Migration history was regenerated.** The `catalog`, `ingestion`, `apis`,
+  and `database-schema` migrations restart at `0001_initial`, and an entity's
+  repository claim is now stored by Ingestion instead of on the core entity
+  row. A database created from an earlier checkout cannot be migrated in place;
+  recreate it (or restore from a backup taken on the same build). In return, a
+  distribution that does not select Ingestion now migrates and starts, and the
+  scheduler (`runapscheduler`) is part of Core and runs jobs for any selected
+  plugin. See [Data safety](../operating-atlas/data-safety.md).
 - **MCP writes reject unknown fields.** `create_entity` and `update_entity`
   now fail with a 400 when `spec` or `metadata` contains a key the kind does
   not accept, instead of ignoring it and reporting success. This includes

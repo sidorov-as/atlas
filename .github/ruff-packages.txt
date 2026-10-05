@@ -10,3 +10,6 @@ plugins/flows/backend
 plugins/ingestion/backend
 plugins/mcp/backend
 plugins/standard-catalog/backend
+plugins/search/backend
+plugins/search-postgres/backend
+plugins/search-meilisearch/backend

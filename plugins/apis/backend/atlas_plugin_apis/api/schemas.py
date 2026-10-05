@@ -16,7 +16,7 @@ from atlas_plugin_api import (
     optional_ref_validator,
     ref_validator,
 )
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # --- API ----------------------------------------------------------------
 
@@ -151,6 +151,9 @@ class EndpointSecurityOut(CamelModel):
     scheme: str | None = None
 
 
+_SCHEMA_TYPES = ("object", "array", "string", "integer", "number", "boolean")
+
+
 class EndpointSchemaOut(CamelModel):
     """A JSON-Schema-like type descriptor for a parameter/body/response value
     — a provisional shape owned entirely by this plugin (mirrors
@@ -172,6 +175,25 @@ class EndpointSchemaOut(CamelModel):
     properties: dict[str, "EndpointSchemaOut"] = Field(default_factory=dict)
     required: list[str] = Field(default_factory=list)
     items: "EndpointSchemaOut | None" = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_type(cls, data: Any) -> Any:
+        """Specs (and rows stored before this was added) may carry OpenAPI
+        3.1 shapes the viewer doesn't model — `type: "null"`, `type: [..,
+        "null"]`, or a type we don't know. Fold `null` into `nullable` and
+        drop anything else unrecognised rather than failing the whole
+        endpoint list."""
+        if not isinstance(data, dict) or "type" not in data:
+            return data
+        raw = data["type"]
+        types = raw if isinstance(raw, list) else [raw]
+        nullable = "null" in types
+        known = [t for t in types if t in _SCHEMA_TYPES]
+        data = {**data, "type": known[0] if len(known) == 1 else None}
+        if nullable:
+            data["nullable"] = True
+        return data
 
 
 class EndpointParameterOut(CamelModel):

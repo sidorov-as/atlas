@@ -30,6 +30,7 @@ from .lock import (
 )
 from .manifest import Manifest, PluginArtifact
 from .npm_lock import ResolvedFrontendPackage, parse_npm_lock
+from .services import resolve_required_services
 from .uv_lock import ResolvedPythonPackage, parse_uv_lock
 
 
@@ -222,15 +223,13 @@ def resolve_manifest(
             config=entry.config,
         )
 
-    needs_plugin_descriptors = any(
-        provider.id != "atlas.auth.local" for provider in manifest.auth.providers
-    )
-    if descriptors is None and needs_plugin_descriptors:
+    if descriptors is None:
         descriptors = _load_resolved_descriptors(plugins)
 
     return Lock(
         distribution=f"{manifest.distribution.id}@{manifest.distribution.version}",
         core=manifest.core.version,
         plugins=plugins,
-        auth=_resolve_auth(manifest, descriptors or {}),
+        auth=_resolve_auth(manifest, descriptors),
+        services=resolve_required_services(manifest, descriptors),
     )

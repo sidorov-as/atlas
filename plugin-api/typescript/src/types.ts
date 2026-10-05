@@ -64,12 +64,23 @@ export interface HomeWidgetContribution {
   readonly component: ComponentType
 }
 
+/**
+ * Global search control rendered by the application shell. Single-occupant: at most one
+ * plugin may supply it; the shell renders nothing in its place when absent.
+ */
+export interface GlobalSearchContribution {
+  readonly type: 'globalSearch'
+  readonly id: string
+  readonly component: ComponentType
+}
+
 export type Contribution =
   | RouteContribution
   | NavItemContribution
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | EntityDetailTabContribution<any>
   | HomeWidgetContribution
+  | GlobalSearchContribution
 
 export interface FrontendPlugin {
   readonly id: string

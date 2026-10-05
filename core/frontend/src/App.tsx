@@ -46,7 +46,7 @@ function App() {
               {publicRoutes.map((routeContribution) => (
                 <Route key={routeContribution.id} path={routeContribution.path} element={<RouteBoundary route={routeContribution} />} />
               ))}
-              <Route element={<Protected navItems={composedContributions.navItems} />}>
+              <Route element={<Protected navItems={composedContributions.navItems} globalSearch={composedContributions.globalSearch} />}>
                 {otherProtectedRoutes.map((routeContribution) => (
                   <Route key={routeContribution.id} path={routeContribution.path} element={<RouteBoundary route={routeContribution} />} />
                 ))}

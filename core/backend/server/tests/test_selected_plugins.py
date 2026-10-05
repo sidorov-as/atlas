@@ -13,4 +13,6 @@ def test_selected_plugins_lists_the_in_tree_apps():
         "atlas_plugin_ingestion.plugin",
         "atlas_plugin_flows.plugin",
         "atlas_plugin_mcp.plugin",
+        "atlas_plugin_search_postgres.plugin",
+        "atlas_plugin_search.plugin",
     )

@@ -62,7 +62,14 @@ def test_spec_owner_ref_returns_the_set_owner():
 
 def test_ingested_from_returns_none_when_not_ingested():
     class _Entity:
-        ingested_from_id = None
+        ingestion_claim = None
+
+    assert ingested_from(_Entity()) is None
+
+
+def test_ingested_from_returns_none_without_the_ingestion_relation():
+    class _Entity:
+        pass
 
     assert ingested_from(_Entity()) is None
 
@@ -72,9 +79,11 @@ def test_ingested_from_returns_the_repository_source_id_and_path():
         def __str__(self):
             return "test-source/org/repo"
 
+    class _Claim:
+        repository = _Repo()
+
     class _Entity:
-        ingested_from_id = 1
-        ingested_from = _Repo()
+        ingestion_claim = _Claim()
 
     assert ingested_from(_Entity()) == "test-source/org/repo"
 

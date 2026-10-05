@@ -61,7 +61,7 @@ Only then does **claim arbitration** decide whether the write is even allowed:
 
 | Existing entity at this ref | Outcome |
 | --- | --- |
-| None | Claimed: created with `source_kind=yaml`, `ingested_from` set to this repository. |
+| None | Claimed: created with `source_kind=yaml`, claimed by this repository (the claim is recorded by Ingestion and exposed as `ingestedFrom`). |
 | `source_kind=manual` | Rejected. A `ConflictRecord` (`reason=manual_entity`) is recorded; the manual entity's fields are untouched. |
 | `source_kind=yaml`, claimed by *this* repository | Overwritten in full via an `EntityIntent`. Fields the manifest does not mention are reset. |
 | `source_kind=yaml`, claimed by a *different* repository | Rejected. A `ConflictRecord` (`reason=other_repository`) is recorded; the existing entity is untouched. |

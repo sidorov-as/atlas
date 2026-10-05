@@ -6,6 +6,7 @@ that Group/User creation via the API is rejected.
 """
 
 import pytest
+from atlas_plugin_ingestion.claims import claim_entity
 
 from server.apps.catalog.models import (
     KIND_COMPONENT,
@@ -157,14 +158,46 @@ def test_yaml_managed_system_cannot_be_patched_by_owner_member(
         name="managed-system",
         owner=group,
         source_kind="yaml",
-        ingested_from=repo,
     )
+    claim_entity(managed, repo)
 
     patch_response = owner_client.patch(
         f"/api/systems/{managed.id}/", {"metadata": {"title": "Edited"}}
     )
     assert patch_response.status_code == 403
     assert CatalogEntity.objects.filter(pk=managed.id).exists()
+
+
+def test_entity_created_by_ingestion_rejects_manual_writes(owner_client, group):
+    """End to end: the entity is written by ingestion itself (not a test
+    factory), then the owner's manual PATCH is rejected and the
+    entity reports the claiming repository."""
+    from atlas_plugin_ingestion.models import RegisteredRepository
+    from atlas_plugin_ingestion.pipeline import _ingest_manifest
+
+    repo = RegisteredRepository.objects.create(
+        source_id="test-source", path="org/repo"
+    )
+    manifest = (
+        b"apiVersion: atlas/v1alpha1\nkind: System\n"
+        b"metadata:\n  name: ingested-system\n"
+        b"spec:\n  owner: group:platform\n"
+    )
+    _ingest_manifest(repo, "catalog-info.yaml", manifest)
+    managed = CatalogEntity.objects.get(
+        kind=KIND_SYSTEM, name="ingested-system"
+    )
+
+    detail = owner_client.get(f"/api/systems/{managed.id}/")
+    assert detail.status_code == 200
+    assert detail.json()["ingestedFrom"] == "test-source/org/repo"
+
+    patch_response = owner_client.patch(
+        f"/api/systems/{managed.id}/", {"metadata": {"title": "Edited"}}
+    )
+    assert patch_response.status_code == 403
+    managed.refresh_from_db()
+    assert managed.title == ""
 
 
 def test_superuser_can_edit_manual_entity_regardless_of_membership(

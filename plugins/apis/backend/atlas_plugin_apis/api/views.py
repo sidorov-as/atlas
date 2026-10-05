@@ -30,6 +30,7 @@ from atlas_plugin_api import (
     adopt,
     blocked_by,
     blocked_by_reason,
+    claim_relations,
     delete_blocked,
     entity_capabilities,
     entity_permissions,
@@ -164,7 +165,7 @@ def _get_api(pk) -> CatalogEntity:
     try:
         return catalog_entity_model.objects.select_related(
             "owner",
-            "ingested_from",
+            *claim_relations(),
             "api_details",
             "api_details__system",
         ).get(pk=pk, kind=KIND_API)
@@ -184,7 +185,7 @@ class ApiListController(AtlasController):
             .objects.filter(kind=KIND_API)
             .select_related(
                 "owner",
-                "ingested_from",
+                *claim_relations(),
                 "api_details",
                 "api_details__system",
             )

@@ -806,7 +806,6 @@ def validate_integration_workflow() -> None:
         "test_incomplete_exact_snapshot_rolls_back_and_failure_event_survives",
         "test_concurrent_first_login_creates_one_identity_and_actor",
         "test_legacy_oidc_grant_can_transfer_without_residual_manual_access",
-        "test_membership_grant_migration.py",
     ):
         _check(
             required in command,

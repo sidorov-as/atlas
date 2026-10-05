@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-EXAMPLES := authentication/local authentication/oidc-keycloak authentication/oauth2-gitea authentication/custom-credentials ingestion
+EXAMPLES := authentication/local authentication/oidc-keycloak authentication/oauth2-gitea authentication/custom-credentials ingestion search-meilisearch
 
 .PHONY: help list up down ps smoke
 

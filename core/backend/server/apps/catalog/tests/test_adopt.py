@@ -1,6 +1,7 @@
 """Adopt endpoint tests."""
 
 import pytest
+from atlas_plugin_ingestion.claims import claim_entity, claiming_repository_id
 from atlas_plugin_ingestion.models import RegisteredRepository
 from atlas_plugin_ingestion.upsert import upsert_entity
 from atlas_plugin_ingestion.validation import validate_manifest_document
@@ -28,7 +29,7 @@ def test_owner_adopts_a_manual_entity(owner_client, group, repo):
     assert response.status_code == 200
     system.refresh_from_db()
     assert system.source_kind == CatalogEntity.SOURCE_YAML
-    assert system.ingested_from_id == repo.id
+    assert claiming_repository_id(system) == repo.id
 
 
 def test_adopt_does_not_touch_other_fields(owner_client, group, repo):
@@ -63,8 +64,8 @@ def test_adopting_an_already_yaml_managed_entity_is_rejected(
         name="user-management",
         owner=group,
         source_kind="yaml",
-        ingested_from=repo,
     )
+    claim_entity(system, repo)
 
     other_repo = RegisteredRepository.objects.create(
         source_id="test-source", path="org/other-repo"
@@ -75,7 +76,7 @@ def test_adopting_an_already_yaml_managed_entity_is_rejected(
 
     assert response.status_code == 403
     system.refresh_from_db()
-    assert system.ingested_from_id == repo.id
+    assert claiming_repository_id(system) == repo.id
 
 
 def test_adopted_entity_is_overwritten_on_next_ingestion(

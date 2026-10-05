@@ -27,6 +27,7 @@ from atlas_plugin_api import (
     get_catalog_entity_model,
     get_entity_service,
 )
+from atlas_plugin_ingestion.claims import claiming_repository_id
 from atlas_plugin_ingestion.models import ConflictRecord, RegisteredRepository
 from atlas_plugin_ingestion.pipeline import _ingest_manifest
 from atlas_plugin_ingestion.upsert import ClaimRejected, upsert_entity
@@ -146,9 +147,8 @@ def test_scenario_3_a_different_repo_claiming_the_removed_name_is_rejected(
 
     claimed.refresh_from_db()
     assert claimed.status == STATUS_REMOVED
-    assert (
-        claimed.ingested_from_id == repo.id
-    )  # the original claim is untouched
+    # the original claim is untouched
+    assert claiming_repository_id(claimed) == repo.id
     conflict = ConflictRecord.objects.get(
         kind="system", name="checkout", repository=other_repo
     )

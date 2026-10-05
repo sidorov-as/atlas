@@ -12,6 +12,7 @@ from atlas_composer.composition import (
     IncompatibleCoreRangeError,
     InvalidAuthenticationSelectionError,
     InvalidPluginConfigError,
+    InvalidSearchEngineSelectionError,
     MissingDependencyError,
     check_authentication_selection,
     check_backend_frontend_versions_match,
@@ -20,6 +21,7 @@ from atlas_composer.composition import (
     check_no_dependency_cycle,
     check_no_duplicate_plugin_ids,
     check_plugin_config,
+    check_search_engine_selection,
     validate_composition,
 )
 from atlas_composer.lock import (
@@ -434,3 +436,65 @@ def test_auth_selection_rejects_unselected_default():
         match="default provider.*not selected",
     ):
         check_authentication_selection(manifest, _empty_lock(), {})
+
+
+def _search_manifest(*extra: dict, engine: str | None = None, search_extra=None):
+    config = {"engine": engine} if engine is not None else None
+    search = _plugin_entry("atlas.search", config=config)
+    search.update(search_extra or {})
+    return _manifest(search, *extra)
+
+
+def test_search_engine_check_passes_without_search_or_engine_setting():
+    check_search_engine_selection(_manifest(_plugin_entry("atlas.search-postgres")))
+    check_search_engine_selection(_search_manifest())
+    check_search_engine_selection(
+        _search_manifest(_plugin_entry("atlas.search-postgres"))
+    )
+
+
+def test_search_engine_check_passes_for_a_selected_engine_plugin():
+    check_search_engine_selection(
+        _search_manifest(
+            _plugin_entry("atlas.search-postgres"),
+            _plugin_entry("atlas.search-meili"),
+            engine="atlas.search-meili",
+        )
+    )
+
+
+def test_search_engine_check_rejects_an_engine_missing_from_the_manifest():
+    with pytest.raises(InvalidSearchEngineSelectionError, match="not in the manifest"):
+        check_search_engine_selection(
+            _search_manifest(
+                _plugin_entry("atlas.search-postgres"), engine="atlas.search-meili"
+            )
+        )
+
+
+def test_search_engine_check_rejects_a_disabled_engine_plugin():
+    disabled = _plugin_entry("atlas.search-postgres")
+    disabled["disabled"] = True
+    with pytest.raises(InvalidSearchEngineSelectionError, match="disabled") as excinfo:
+        check_search_engine_selection(
+            _search_manifest(disabled, engine="atlas.search-postgres")
+        )
+    assert excinfo.value.engine_plugin_id == "atlas.search-postgres"
+
+
+def test_search_engine_check_rejects_an_engine_without_backend():
+    frontend_only = {
+        "id": "atlas.search-postgres",
+        "version": "0.1.0",
+        "frontend": {"package": "atlas-search-postgres", "source": "workspace"},
+    }
+    with pytest.raises(InvalidSearchEngineSelectionError, match="no backend"):
+        check_search_engine_selection(
+            _search_manifest(frontend_only, engine="atlas.search-postgres")
+        )
+
+
+def test_search_engine_check_ignores_a_disabled_search_plugin():
+    check_search_engine_selection(
+        _search_manifest(engine="atlas.search-meili", search_extra={"disabled": True})
+    )

@@ -104,3 +104,18 @@ plugins:
     frontend:
       package: "@atlas/plugin-flows"
       source: workspace
+
+  - id: atlas.search-postgres
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-search-postgres
+      source: workspace
+
+  - id: atlas.search
+    version: 0.1.0
+    backend:
+      package: atlas-plugin-search
+      source: workspace
+    frontend:
+      package: "@atlas/plugin-search"
+      source: workspace

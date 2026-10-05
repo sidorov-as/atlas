@@ -12,6 +12,8 @@ operator):
   `SELECTED_PLUGINS` module.
 - `atlas-compose generate frontend <lock> -o <path>` — lock ->
   `installedFrontendPlugins` composition module.
+- `atlas-compose generate compose <lock> -o <path>` — lock -> compose
+  override that runs the services selected plugins require.
 """
 
 import argparse
@@ -19,7 +21,11 @@ from pathlib import Path
 
 from .composition import authentication_configuration_diff, validate_composition
 from .descriptors import load_backend_descriptors
-from .generate import dump_composition_module, dump_selected_plugins_module
+from .generate import (
+    dump_compose_services,
+    dump_composition_module,
+    dump_selected_plugins_module,
+)
 from .lock import dump_lock, load_lock
 from .manifest import load_manifest
 from .resolver import resolve_manifest
@@ -87,6 +93,18 @@ def main(argv: list[str] | None = None) -> None:
         required=True,
     )
 
+    generate_compose_parser = generate_subparsers.add_parser(
+        "compose",
+        help="Generate the compose override running required services.",
+    )
+    generate_compose_parser.add_argument("lock", type=Path)
+    generate_compose_parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        required=True,
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "resolve":
@@ -113,6 +131,8 @@ def main(argv: list[str] | None = None) -> None:
         lock = load_lock(args.lock)
         if args.target == "backend":
             dump_selected_plugins_module(lock, args.output)
+        elif args.target == "compose":
+            dump_compose_services(lock, args.output)
         else:
             dump_composition_module(lock, args.output)
 

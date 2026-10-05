@@ -1,13 +1,5 @@
-"""API spec-source migration and CRUD tests.
+"""API spec-source CRUD tests."""
 
-The migration's `RunPython` functions are tested directly against fake
-apps/model stand-ins rather than a real `MigrationExecutor` run: the
-transformation itself (`definition` -> `spec_source`/`spec_content`) is a few
-lines of pure logic, and this codebase has no existing historical-migration
-test harness to build on.
-"""
-
-import importlib
 from unittest.mock import patch
 
 import pytest
@@ -19,10 +11,6 @@ from atlas_plugin_apis.models import ApiDetails, ApiEndpoint, ApiOperation
 from server.apps.catalog.models import KIND_API, CatalogEntity
 
 pytestmark = pytest.mark.django_db
-
-migration_module = importlib.import_module(
-    "server.apps.catalog.migrations.0009_api_spec_source"
-)
 
 SPEC_FETCH_PATCH_TARGET = "atlas_plugin_apis.spec_fetch.safe_request"
 
@@ -62,70 +50,6 @@ channels:
       operationId: onBookingConfirmed
       summary: Receive booking-confirmation events
 """
-
-
-class _FakeApiRecord:
-    def __init__(self, **fields):
-        self.spec_source = ""
-        self.spec_content = ""
-        self.definition = ""
-        self.__dict__.update(fields)
-        self.saved_fields = None
-
-    def save(self, update_fields):
-        self.saved_fields = set(update_fields)
-
-
-class _FakeApps:
-    def __init__(self, records):
-        self._records = records
-
-    def get_model(self, app_label, model_name):
-        assert (app_label, model_name) == ("catalog", "API")
-        records = self._records
-        return type(
-            "API",
-            (),
-            {
-                "objects": type(
-                    "Manager", (), {"all": staticmethod(lambda: records)}
-                )
-            },
-        )
-
-
-def test_migration_sets_inline_source_when_definition_is_non_empty():
-    record = _FakeApiRecord(definition="openapi: 3.0.0")
-
-    migration_module.migrate_definition_to_spec_content(
-        _FakeApps([record]), None
-    )
-
-    assert record.spec_source == "inline"
-    assert record.spec_content == "openapi: 3.0.0"
-    assert record.saved_fields == {"spec_source", "spec_content"}
-
-
-def test_migration_sets_none_source_when_definition_is_empty():
-    record = _FakeApiRecord(definition="")
-
-    migration_module.migrate_definition_to_spec_content(
-        _FakeApps([record]), None
-    )
-
-    assert record.spec_source == "none"
-    assert record.spec_content == ""
-
-
-def test_migration_reverse_copies_spec_content_back_to_definition():
-    record = _FakeApiRecord(spec_content="asyncapi: 3.0.0")
-
-    migration_module.reverse_spec_content_to_definition(
-        _FakeApps([record]), None
-    )
-
-    assert record.definition == "asyncapi: 3.0.0"
-    assert record.saved_fields == {"definition"}
 
 
 def test_create_api_with_none_spec_source_leaves_content_empty(

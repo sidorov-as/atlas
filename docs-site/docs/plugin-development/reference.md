@@ -48,7 +48,7 @@ class PluginDescriptor:
 the `atlas.plugins` entry-point convention), e.g. `"atlas_plugin_yourplugin.plugin:PLUGIN"`.
 `compatibility` describes the Core range the plugin supports; `requires_plugins`
 declares selected plugin dependencies; `django_apps` owns models and migrations;
-`job_ids` declares scheduler ids paused when the plugin is disabled. See
+`job_ids` declares the scheduler job ids the plugin registers from its `register_jobs(scheduler)` hook; they are paused when the plugin is disabled. See
 [compatibility and lifecycle](compatibility-and-lifecycle.md).
 
 ### Authentication providers (`atlas.auth.providers.v1`)
@@ -306,6 +306,7 @@ guide explains how to consume the keyed projection safely.
 ### Data lifecycle and scheduled jobs
 
 The descriptor's `django_apps` is the ownership boundary for a plugin's models,
-migrations, and explicit purge scope. `job_ids` tells runtime startup which
+migrations, and explicit purge scope. `job_ids` declares the jobs the plugin
+contributes to Core's scheduler through `register_jobs(scheduler)`, and which
 `django-apscheduler` jobs to pause or resume with plugin lifecycle. Read
 [Models, migrations, and jobs](models-migrations-and-jobs.md) before adding either.

@@ -5,6 +5,8 @@
 # container with the demo catalog baked into the image (deploy/render/).
 # Render's free filesystem is ephemeral, so every restart resets the demo;
 # .github/workflows/render-demo-reset.yml restarts it nightly.
+# No scheduler runs here (no `runapscheduler`); the scheduler app's tables are
+# still created by `migrate` at image build time.
 
 services:
   - type: web

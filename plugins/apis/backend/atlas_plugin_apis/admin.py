@@ -70,9 +70,13 @@ class ApiEndpointAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected endpoints as removed")
     def mark_as_removed(self, request, queryset):
-        updated = queryset.exclude(status=ApiEndpoint.STATUS_REMOVED).update(
-            status=ApiEndpoint.STATUS_REMOVED
-        )
+        # Saved one by one, not `QuerySet.update`: a bulk update sends no `post_save`, so
+        # search indexing would never hear about the removal.
+        updated = 0
+        for endpoint in queryset.exclude(status=ApiEndpoint.STATUS_REMOVED):
+            endpoint.status = ApiEndpoint.STATUS_REMOVED
+            endpoint.save(update_fields=["status", "updated_at"])
+            updated += 1
         self.message_user(
             request, f"{updated} endpoint(s) marked as removed.", messages.SUCCESS
         )

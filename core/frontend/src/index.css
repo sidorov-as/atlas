@@ -11,6 +11,23 @@ body,
   max-width: min(1440px, 100%);
 }
 
+/* Entity list tables use a fixed layout so column widths come from the table width, not from
+   cell content: long titles/descriptions get ellipsized instead of stretching a row or pushing
+   the table sideways when the preview rail opens. */
+.entity-list-table .g-table__table {
+  table-layout: fixed;
+}
+
+/* Tags stay on one line inside table cells (the rail/detail views still wrap them). */
+.g-table__cell .tag-labels {
+  flex-wrap: nowrap !important;
+  overflow: hidden;
+}
+
+.g-table__cell .tag-labels > * {
+  flex-shrink: 0;
+}
+
 /* Applies a tag's preset palette colors (set via a `.tag-preset-*` class from
    tag-palette.css) as the Label's background and text, overriding the
    `theme="clear"` default. */

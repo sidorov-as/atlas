@@ -6,7 +6,10 @@ from atlas_plugin_api import PluginDescriptor
 
 from server.apps.plugins.resolver import load_selected_descriptors
 from server.apps.plugins.runtime import load_runtime_entry_points
-from server.apps.plugins.tests.fixtures import plugin_with_hook
+from server.apps.plugins.tests.fixtures import (
+    plugin_with_finalize,
+    plugin_with_hook,
+)
 
 
 def _noop_job() -> None:
@@ -23,6 +26,48 @@ def test_load_runtime_entry_points_calls_register_runtime_when_present():
     load_runtime_entry_points(descriptors)
 
     assert plugin_with_hook.runtime_calls == ["fixture.with-hook"]
+
+
+def test_finalize_runtime_runs_after_every_register_runtime():
+    plugin_with_finalize.calls.clear()
+    plugin_with_hook.runtime_calls.clear()
+    descriptors = load_selected_descriptors(
+        (
+            "server.apps.plugins.tests.fixtures.plugin_with_finalize",
+            "server.apps.plugins.tests.fixtures.plugin_with_hook",
+        )
+    )
+
+    load_runtime_entry_points(descriptors)
+
+    assert plugin_with_finalize.calls == ["register", "finalize"]
+    assert plugin_with_finalize.finalized_after_all_registered is True
+
+
+def test_finalize_runtime_is_skipped_for_disabled_plugin():
+    plugin_with_finalize.calls.clear()
+    descriptors = load_selected_descriptors(
+        ("server.apps.plugins.tests.fixtures.plugin_with_finalize",)
+    )
+
+    load_runtime_entry_points(
+        descriptors, disabled_ids=frozenset({"fixture.with-finalize"})
+    )
+
+    assert plugin_with_finalize.calls == []
+
+
+def test_finalize_runtime_failure_stops_loading():
+    plugin_with_finalize.calls.clear()
+    descriptors = load_selected_descriptors(
+        ("server.apps.plugins.tests.fixtures.plugin_with_finalize",)
+    )
+    plugin_with_finalize.fail = True
+    try:
+        with pytest.raises(RuntimeError, match="finalize failed"):
+            load_runtime_entry_points(descriptors)
+    finally:
+        plugin_with_finalize.fail = False
 
 
 def test_load_runtime_entry_points_skips_a_plugin_without_the_hook():

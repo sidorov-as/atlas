@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, Icon, Label, Select, SegmentedRadioGroup, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
+import { Alert, Icon, Label, Pagination, Select, SegmentedRadioGroup, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
 import { TriangleExclamation } from '@gravity-ui/icons'
 import { EntityTable } from 'frontend/components/EntityTable'
 import { useAsync } from 'frontend/lib/useAsync'
@@ -46,6 +46,8 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
   const [search, setSearch] = useState('')
   const [direction, setDirection] = useState<OperationDirection | null>(null)
   const [status, setStatus] = useState<OperationStatus>('active')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(15)
 
   const filters = useMemo(
     () => ({ search: search || undefined, direction: direction ?? undefined, status }),
@@ -57,7 +59,14 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
     [apiId, JSON.stringify(filters)],
   )
 
-  const groups = useMemo(() => groupByChannel(operations ?? []), [operations])
+  // The list endpoint isn't paginated, so slice client-side before grouping — a channel that straddles a page boundary appears on both pages.
+  const total = operations?.length ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / pageSize))
+  const currentPage = Math.min(page, lastPage)
+  const groups = useMemo(
+    () => groupByChannel((operations ?? []).slice((currentPage - 1) * pageSize, currentPage * pageSize)),
+    [operations, currentPage, pageSize],
+  )
   const groupKey = groups.map((group) => group.channelAddress).join('')
 
   // Publisher/subscriber counts per channel (spec's "Channel group shows a
@@ -94,21 +103,21 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
         <TextInput
           placeholder="Search channel, summary, operation ID…"
           value={search}
-          onUpdate={setSearch}
+          onUpdate={(value) => { setSearch(value); setPage(1) }}
           hasClear
           style={{ maxWidth: 280, flex: '1 1 220px' }}
         />
         <Select
           placeholder="Direction"
           value={direction ? [direction] : []}
-          onUpdate={(value) => setDirection((value[0] as OperationDirection) ?? null)}
+          onUpdate={(value) => { setDirection((value[0] as OperationDirection) ?? null); setPage(1) }}
           options={DIRECTION_OPTIONS}
           hasClear
           width={140}
         />
         <SegmentedRadioGroup
           value={status}
-          onUpdate={(value) => setStatus(value as OperationStatus)}
+          onUpdate={(value) => { setStatus(value as OperationStatus); setPage(1) }}
           options={STATUS_OPTIONS}
         />
       </div>
@@ -165,6 +174,21 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
               </section>
             )
           })}
+        </div>
+      )}
+      {total > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Pagination
+            page={currentPage}
+            pageSize={pageSize}
+            total={total}
+            pageSizeOptions={[15, 30, 50, 100]}
+            showInput
+            onUpdate={(nextPage, nextPageSize) => {
+              setPage(nextPageSize === pageSize ? nextPage : 1)
+              setPageSize(nextPageSize)
+            }}
+          />
         </div>
       )}
     </div>

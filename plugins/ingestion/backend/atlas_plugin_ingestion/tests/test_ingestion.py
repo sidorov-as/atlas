@@ -20,6 +20,7 @@ from atlas_plugin_api import (
 )
 from server.apps.catalog.tests.factories import create_system
 
+from atlas_plugin_ingestion.claims import claiming_repository_id
 from atlas_plugin_ingestion.models import RegisteredRepository
 from atlas_plugin_ingestion.pipeline import _ingest_manifest
 
@@ -53,7 +54,7 @@ def test_first_ingest_creates_entity(repo, group):
         system.documentation
         == "## User accounts\n\nManages account lifecycle and authentication.\n"
     )
-    assert system.ingested_from_id == repo.id
+    assert claiming_repository_id(system) == repo.id
 
 
 def test_reingest_updates_the_same_entity_in_place(repo, group):
@@ -285,7 +286,7 @@ def test_actor_declared_via_manifest_is_ingested(repo):
     actor = get_catalog_entity_model().objects.get(kind=KIND_ACTOR, name="jdoe")
     assert actor.actor_details.display_name == "Jane Doe"
     assert actor.actor_details.email == "jdoe@example.com"
-    assert actor.ingested_from_id == repo.id
+    assert claiming_repository_id(actor) == repo.id
     assert actor.source_kind == SOURCE_YAML
 
 
@@ -376,7 +377,7 @@ def test_manual_entity_sharing_unclaimed_ref_is_untouched(repo, group):
 
     manual.refresh_from_db()
     assert manual.status == STATUS_ACTIVE
-    assert manual.ingested_from_id is None
+    assert claiming_repository_id(manual) is None
 
 
 def test_other_repositorys_claim_is_unaffected_by_this_repos_reconciliation(
@@ -389,7 +390,7 @@ def test_other_repositorys_claim_is_unaffected_by_this_repos_reconciliation(
     claimed_by_other = get_catalog_entity_model().objects.get(
         kind=KIND_SYSTEM, name="user-management"
     )
-    assert claimed_by_other.ingested_from_id == other_repo.id
+    assert claiming_repository_id(claimed_by_other) == other_repo.id
 
     unrelated_manifest = SYSTEM_MANIFEST.replace(
         b"user-management", b"unrelated-system"

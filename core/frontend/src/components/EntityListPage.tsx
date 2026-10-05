@@ -35,6 +35,9 @@ interface EntityListPageProps<T extends { id: string; metadata: Metadata; ingest
 }
 
 /** Filterable/searchable list page shared by Systems/Components/Resources/APIs (catalog-web-ui spec). */
+/** Percent widths for the common columns; with `table-layout: fixed`, columns without one split the remainder. */
+const DEFAULT_COLUMN_WIDTHS: Record<string, string> = { name: '24%', description: '32%', owner: '16%', tags: '24%' }
+
 export function EntityListPage<T extends { id: string; metadata: Metadata; ingestedFrom: string | null; status?: EntityStatus }>({
   title,
   description,
@@ -161,9 +164,13 @@ export function EntityListPage<T extends { id: string; metadata: Metadata; inges
           ) : (
             <>
               <EntityActionsTable
+                className="entity-list-table"
                 data={data?.page.objectList ?? []}
                 columns={[
-                  ...columns.map((column) => column.id === 'name' ? { ...column, meta: { ...column.meta, sort: true } } : column),
+                  ...columns.map((column) => {
+                    const sized = { ...column, width: column.width ?? DEFAULT_COLUMN_WIDTHS[column.id] }
+                    return column.id === 'name' ? { ...sized, meta: { ...column.meta, sort: true } } : sized
+                  }),
                   ...(showRemoved ? [statusColumn] : []),
                 ]}
                 getRowId={(item) => String(item.id)}

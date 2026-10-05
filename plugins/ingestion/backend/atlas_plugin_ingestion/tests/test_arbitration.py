@@ -18,6 +18,7 @@ from atlas_plugin_api import (
 from django.contrib.auth import get_user_model
 from server.apps.catalog.tests.factories import create_system
 
+from atlas_plugin_ingestion.claims import claiming_repository_id
 from atlas_plugin_ingestion.models import ConflictRecord, RegisteredRepository
 from atlas_plugin_ingestion.pipeline import _ingest_repository
 from atlas_plugin_ingestion.upsert import ClaimRejected, upsert_entity
@@ -65,7 +66,7 @@ def test_yaml_claims_an_unclaimed_ref(repo, group):
     instance = upsert_entity(_system_doc("user-management"), repo)
 
     assert instance.source_kind == SOURCE_YAML
-    assert instance.ingested_from_id == repo.id
+    assert claiming_repository_id(instance) == repo.id
 
 
 def test_yaml_collides_with_a_manual_entity(repo, group):
@@ -108,7 +109,7 @@ def test_different_repo_collides_with_an_existing_yaml_claim(repo, group):
         upsert_entity(_system_doc("user-management"), other_repo)
 
     claimed.refresh_from_db()
-    assert claimed.ingested_from_id == repo.id
+    assert claiming_repository_id(claimed) == repo.id
 
     conflict = ConflictRecord.objects.get(
         kind="system", name="user-management", repository=other_repo
@@ -143,7 +144,7 @@ def test_a_different_repo_cannot_claim_a_ref_held_by_a_removed_yaml_entity(repo,
 
     claimed.refresh_from_db()
     assert claimed.status == STATUS_REMOVED
-    assert claimed.ingested_from_id == repo.id
+    assert claiming_repository_id(claimed) == repo.id
 
     conflict = ConflictRecord.objects.get(
         kind="system", name="user-management", repository=other_repo
@@ -202,7 +203,7 @@ def test_claim_succeeds_once_the_removed_blocking_entity_is_purged(repo, group):
 
     instance = upsert_entity(_system_doc("user-management"), other_repo)
     assert instance.source_kind == SOURCE_YAML
-    assert instance.ingested_from_id == other_repo.id
+    assert claiming_repository_id(instance) == other_repo.id
     assert (
         instance.id != claimed.id
     )  # a genuinely new identity (D3), not a resurrection

@@ -35,7 +35,6 @@ class _StubEntityService:
         spec,
         actor,
         source="manual",
-        ingested_from=None,
     ):
         return None
 
@@ -48,7 +47,6 @@ class _StubEntityService:
         spec=None,
         actor,
         source="manual",
-        ingested_from=None,
     ):
         return None
 

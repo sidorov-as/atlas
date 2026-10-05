@@ -37,6 +37,21 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      # Real instance for the Meilisearch adapter's conformance and
+      # integration tests (plugins/search-meilisearch).
+      meilisearch:
+        image: getmeili/meilisearch:v1.12
+        env:
+          MEILI_MASTER_KEY: ci-meilisearch-key
+          MEILI_ENV: development
+          MEILI_NO_ANALYTICS: "true"
+        ports:
+          - 7700:7700
+        options: >-
+          --health-cmd "curl -fsS http://localhost:7700/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -56,4 +71,9 @@ jobs:
         # runs with cwd == rootdir (repo root), per that file's own header
         # comment. `--project core/backend` points uv at the environment just
         # synced without changing the working directory.
+        env:
+          ATLAS_TEST_MEILISEARCH_URL: http://localhost:7700
+          ATLAS_TEST_MEILISEARCH_KEY: ci-meilisearch-key
+          # CI must exercise the real instance, never silently skip it.
+          ATLAS_REQUIRE_MEILISEARCH: "1"
         run: uv run --project core/backend pytest

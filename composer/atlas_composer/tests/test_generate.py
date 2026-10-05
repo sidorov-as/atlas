@@ -158,23 +158,20 @@ def test_generate_selected_plugins_includes_a_disabled_plugin_s_module():
     assert "atlas_plugin_apis.plugin" in modules
 
 
-def test_generate_selected_plugins_includes_ingestion_when_manifest_omits_it():
-    # Core's own `CatalogEntity.ingested_from` FK hard-depends on
-    # `atlas.ingestion`'s model (generate.py's `CORE_REQUIRED_PLUGIN_ID`), so
-    # a manifest that omits it entirely must not make it absent from
-    # `SELECTED_PLUGINS` — Django would fail its own field/app checks.
+def test_generate_selected_plugins_omits_ingestion_when_manifest_omits_it():
+    # Core's schema no longer references `atlas.ingestion`, so a manifest
+    # that omits it leaves it out of `SELECTED_PLUGINS` like any other
+    # optional plugin.
     entries = tuple(e for e in REAL_DISTRIBUTION_ORDER if e[0] != "atlas.ingestion")
     modules = generate_selected_plugins(_lock(entries))
 
-    assert "atlas_plugin_ingestion.plugin" in modules
+    assert "atlas_plugin_ingestion.plugin" not in modules
 
 
-def test_generate_disabled_plugin_ids_includes_ingestion_when_manifest_omits_it():
+def test_generate_disabled_plugin_ids_is_empty_when_manifest_omits_ingestion():
     entries = tuple(e for e in REAL_DISTRIBUTION_ORDER if e[0] != "atlas.ingestion")
 
-    assert generate_disabled_plugin_ids(_lock(entries)) == frozenset(
-        {"atlas.ingestion"}
-    )
+    assert generate_disabled_plugin_ids(_lock(entries)) == frozenset()
 
 
 def test_generate_disabled_plugin_ids_returns_bare_ids_not_lock_keys():

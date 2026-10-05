@@ -4,6 +4,7 @@ import { apisPlugin } from '@atlas/plugin-apis'
 import { c4Plugin } from '@atlas/plugin-c4'
 import { databaseSchemaPlugin } from '@atlas/plugin-database-schema'
 import { flowsPlugin } from '@atlas/plugin-flows'
+import { searchPlugin } from '@atlas/plugin-search'
 import { composeFrontendPlugins } from '@atlas/plugin-api'
 import { corePlugin } from './core'
 
@@ -13,6 +14,7 @@ export const installedFrontendPlugins = [
   c4Plugin,
   databaseSchemaPlugin,
   flowsPlugin,
+  searchPlugin,
   corePlugin,
 ] as const
 
