@@ -2043,6 +2043,67 @@ COMPONENTS = [
         "provides_apis": ["twilio-sms-api"],
         "tags": [*EXTERNAL, "Twilio", "REST"],
     },
+    # The four Services below widen the cast of consumers so that
+    # `GET /listings/{id}` and the `booking.cancelled` channel are each used
+    # by several Services of several teams — enough to show the dependency
+    # graphs grouped by team or system (see `ENDPOINT_USAGES` and
+    # `OPERATION_USAGES`).
+    {
+        "name": "booking-mobile-app",
+        "title": "Booking Mobile App",
+        "type": "website",
+        "lifecycle": "production",
+        "system": "booking-reservations",
+        "owner": "booking-team",
+        "consumes_apis": ["listings-api"],
+        "description": (
+            "Guest app for browsing listings, booking, and cancelling stays "
+            "on a phone."
+        ),
+        "tags": ["React Native", "TypeScript"],
+    },
+    {
+        "name": "trust-safety-service",
+        "title": "Trust & Safety Service",
+        "type": "service",
+        "lifecycle": "production",
+        "system": "identity-trust",
+        "owner": "identity-team",
+        "consumes_apis": ["listings-api"],
+        "depends_on": ["users-db"],
+        "description": (
+            "Screens listings and bookings for fraud and policy violations."
+        ),
+        "tags": ["Python", "Django", "Machine Learning"],
+    },
+    {
+        "name": "push-worker",
+        "title": "Push Worker",
+        "type": "worker",
+        "lifecycle": "production",
+        "system": "notifications-messaging",
+        "owner": "notifications-team",
+        "consumes_apis": ["listings-api"],
+        "depends_on": ["notifications-queue"],
+        "description": (
+            "Delivers queued transactional push notifications to the mobile "
+            "app."
+        ),
+        "tags": ["Python", "Celery"],
+    },
+    {
+        "name": "channel-manager-sync",
+        "title": "Channel Manager Sync",
+        "type": "service",
+        "lifecycle": "experimental",
+        "system": "external-partners",
+        "owner": "partner-integrations-team",
+        "consumes_apis": ["listings-api"],
+        "description": (
+            "Mirrors listings and cancellations to partner booking channels."
+        ),
+        "tags": ["Python", "REST"],
+    },
 ]
 
 # Directed C4 interactions layered on top of the derived
@@ -2475,6 +2536,87 @@ ENDPOINT_USAGES = [
         "path": "/messages",
         "service": "sms-worker",
     },
+    # Listing details are needed all over the platform: with the three links
+    # above, `GET /listings/{id}` has 16 consumers from six teams, which shows
+    # the consumers graph grouped by team or system.
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "booking-web",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "booking-mobile-app",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "cancellation-worker",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "search-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "ranking-worker",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "payment-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "payout-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "review-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "trust-safety-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "notification-service",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "email-worker",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "push-worker",
+    },
+    {
+        "api": "listings-api",
+        "method": "GET",
+        "path": "/listings/{id}",
+        "service": "channel-manager-sync",
+    },
     # `payout-api` and `reviews-api` are left with no links, so the demo also
     # shows the empty-consumers-graph state.
 ]
@@ -2503,6 +2645,112 @@ OPERATION_USAGES = [
         "api": "notifications-api",
         "operation_key": "notification.delivery-status-send",
         "service": "payout-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    # `booking.cancelled` is published by `booking-service` (the document owner,
+    # implied) together with other Services of its team and of the listings
+    # and partner teams, and consumed by Services of five teams — publishers and
+    # subscribers both group by team. `listing-service` holds both roles.
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "cancellation-worker",
+        "role": ServiceOperationUsage.ROLE_PUBLISHER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "booking-mobile-app",
+        "role": ServiceOperationUsage.ROLE_PUBLISHER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "host-portal",
+        "role": ServiceOperationUsage.ROLE_PUBLISHER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "listing-service",
+        "role": ServiceOperationUsage.ROLE_PUBLISHER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "channel-manager-sync",
+        "role": ServiceOperationUsage.ROLE_PUBLISHER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "payment-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "payout-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "ledger-worker",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "notification-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "email-worker",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "sms-worker",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "push-worker",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "pricing-engine",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "listing-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "review-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "trust-safety-service",
+        "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
+    },
+    {
+        "api": "booking-events-api",
+        "operation_key": "booking.cancelled-send",
+        "service": "ranking-worker",
         "role": ServiceOperationUsage.ROLE_SUBSCRIBER,
     },
 ]

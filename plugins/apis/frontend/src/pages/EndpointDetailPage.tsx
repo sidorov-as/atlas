@@ -73,7 +73,7 @@ export function EndpointDetailPage() {
 
   if (!endpoint) return null
 
-  const linkedCount = consumers?.services.length ?? 0
+  const linkedCount = consumers?.count ?? 0
 
   return (
     <div>
@@ -143,7 +143,6 @@ export function EndpointDetailPage() {
             <EndpointLinkedServicesTab
               endpoint={endpoint}
               api={api ?? undefined}
-              linkedServices={consumers?.services ?? []}
               onServicesChanged={reloadConsumers}
             />
           </TabPanel>

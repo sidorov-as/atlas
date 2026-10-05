@@ -18,14 +18,12 @@ export function LinkServiceDialog({
   onClose,
   endpoint,
   api,
-  linkedServiceIds,
   onLinked,
 }: {
   open: boolean
   onClose: () => void
   endpoint: Endpoint
   api: ApiEntity | undefined
-  linkedServiceIds: Set<string>
   onLinked: (link: EndpointServiceLink) => void
 }) {
   const titleId = useId()
@@ -35,6 +33,13 @@ export function LinkServiceDialog({
 
   const { data: componentsPage } = useAsync(() => componentsApi.list({ pageSize: 100 }), [])
   const components = componentsPage?.page.objectList ?? []
+  // Exact server-side check, refetched each time the dialog opens, so it holds
+  // for Endpoints linked to more Services than any single page returns.
+  const { data: linkedIds } = useAsync(
+    () => (open ? endpointServicesApi.linkedServiceIds(endpoint.id) : Promise.resolve(null)),
+    [open, endpoint.id],
+  )
+  const linkedServiceIds = new Set(linkedIds ?? [])
   const selectedComponent = components.find((component) => component.id === selectedId)
 
   const apiRef = api ? `api:${api.metadata.name}` : null

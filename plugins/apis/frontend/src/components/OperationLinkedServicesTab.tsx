@@ -10,7 +10,7 @@
 // the one client-side signal that actually matches that rule.
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Alert, Button, Icon, Pagination, Select, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
+import { Alert, Button, Icon, Select, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
 import { ArrowDown, ArrowUp, Link as LinkIcon, LinkSlash } from '@gravity-ui/icons'
 import { ConfirmDialog } from 'frontend/components/ConfirmDialog'
 import { EntityTable } from 'frontend/components/EntityTable'
@@ -22,13 +22,13 @@ import { useAsync } from 'frontend/lib/useAsync'
 import { useConfirm } from 'frontend/lib/useConfirm'
 import { RoleBadge } from './RoleBadge'
 import { LinkOperationServiceDialog } from './LinkOperationServiceDialog'
+import { DEFAULT_PAGE_SIZE, ListPagination, PAGE_SIZE_OPTIONS } from './ListPagination'
 import { operationServicesApi } from '../lib/entities'
 import type { Operation, OperationRole, OperationService } from '../lib/types'
 
 type SortField = 'service' | 'team'
 type SortOrder = 'asc' | 'desc'
 
-const PAGE_SIZE = 20
 
 const ROLE_FILTER_OPTIONS = [
   { value: 'publisher', content: 'Publisher' },
@@ -37,12 +37,9 @@ const ROLE_FILTER_OPTIONS = [
 
 export function OperationLinkedServicesTab({
   operation,
-  linkedServiceRolePairs,
   onServicesChanged,
 }: {
   operation: Operation
-  /** Every currently-linked `(serviceId, role)` pair for this operation (unfiltered) — used to disable already-linked options in the Link dialog even when this tab's own (filtered/paginated) table doesn't include them. */
-  linkedServiceRolePairs: Set<string>
   /** Called after a successful link/unlink so the parent can refresh the graph, the Overview preview, and the tab counter — this tab refreshes its own table itself. */
   onServicesChanged: () => void
 }) {
@@ -60,6 +57,8 @@ export function OperationLinkedServicesTab({
   const sort: SortField = searchParams.get('sort') === 'team' ? 'team' : 'service'
   const order: SortOrder = searchParams.get('order') === 'desc' ? 'desc' : 'asc'
   const page = Number(searchParams.get('page') ?? '1') || 1
+  const requestedSize = Number(searchParams.get('page_size'))
+  const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize) ? requestedSize : DEFAULT_PAGE_SIZE
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
@@ -85,9 +84,9 @@ export function OperationLinkedServicesTab({
       sort,
       order,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
     }),
-    [operation.id, search, teamId, role, sort, order, page],
+    [operation.id, search, teamId, role, sort, order, page, pageSize],
   )
 
   const { data: teamsPage } = useAsync(() => groupsApi.list({ pageSize: 100 }), [])
@@ -205,9 +204,12 @@ export function OperationLinkedServicesTab({
               {
                 id: 'team',
                 name: 'Team',
-                template: (item: OperationService) => (
-                  <RelationTargetLink target={item.service.team} targetKind="group" targetId={item.service.teamId} />
-                ),
+                template: (item: OperationService) =>
+                  item.service.team && item.service.teamId ? (
+                    <RelationTargetLink target={item.service.team} targetKind="group" targetId={item.service.teamId} />
+                  ) : (
+                    '—'
+                  ),
               },
               ...(canLinkOrUnlink ? [{
                 id: 'actions',
@@ -227,15 +229,18 @@ export function OperationLinkedServicesTab({
             getRowId={(item: OperationService) => item.id}
             emptyMessage="No services are linked to this operation yet"
           />
-          {data && data.count > PAGE_SIZE && (
-            <div style={{ marginTop: 16 }}>
-              <Pagination
-                page={page}
-                pageSize={PAGE_SIZE}
-                total={data.count}
-                onUpdate={(nextPage) => updateParams({ page: String(nextPage) })}
-              />
-            </div>
+          {data && (
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={data.count}
+              onUpdate={(nextPage, nextPageSize) =>
+                updateParams({
+                  page: nextPage === 1 ? null : String(nextPage),
+                  page_size: nextPageSize === DEFAULT_PAGE_SIZE ? null : String(nextPageSize),
+                })
+              }
+            />
           )}
           {data && data.count > 0 && (
             <Text color="secondary" style={{ display: 'block', marginTop: 12 }}>
@@ -249,7 +254,6 @@ export function OperationLinkedServicesTab({
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         operation={operation}
-        linkedServiceRolePairs={linkedServiceRolePairs}
         onLinked={handleLinked}
       />
       <ConfirmDialog {...confirmDialogProps} />

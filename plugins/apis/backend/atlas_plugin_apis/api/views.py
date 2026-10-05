@@ -54,12 +54,19 @@ from atlas_plugin_api import (
 from atlas_plugin_api.controllers import AtlasController
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from dmr import Body, Path, Query, ResponseSpec, modify
 from dmr.errors import ErrorModel, ErrorType, format_error
 from dmr.response import APIError
 
-from ..consumers import channel_participants, operation_provider_service
+from ..consumers import (
+    MIN_GROUP_SIZE,
+    channel_participants,
+    group_name,
+    group_of,
+    operation_provider_service,
+    split_participants_by_group,
+)
 from ..extension_points import (
     NotLinkedError,
     link_endpoint,
@@ -95,6 +102,8 @@ from .schemas import (
     ApiPatch,
     ApiSpecOut,
     ApiSummaryOut,
+    ConsumerGroupOut,
+    ConsumersQuery,
     EndpointConsumersOut,
     EndpointConsumerSummaryOut,
     EndpointOut,
@@ -111,6 +120,7 @@ from .schemas import (
     ExternalDocsOut,
     OperationConsumerParticipantOut,
     OperationConsumersOut,
+    OperationConsumersQuery,
     OperationConsumerSummaryOut,
     OperationMessageOut,
     OperationOut,
@@ -677,7 +687,9 @@ def _get_endpoint_by_id(endpoint_id) -> ApiEndpoint:
 def _get_service(service_id) -> CatalogEntity:
     catalog_entity_model = get_catalog_entity_model()
     try:
-        return catalog_entity_model.objects.select_related("owner").get(
+        return catalog_entity_model.objects.select_related(
+            "owner", "component_details__system"
+        ).get(
             pk=service_id,
             kind=KIND_COMPONENT,
         )
@@ -701,14 +713,18 @@ def _get_linked_service(service_id, target: str, suffix: str = "") -> CatalogEnt
 
 def _service_summary_out(service: CatalogEntity) -> ServiceSummaryOut:
     team = service.owner
+    system = service.component_details.system
     return ServiceSummaryOut(
         id=service.id,
         ref=service.ref,
         name=service.name,
         title=service.title,
-        team=team.ref,
-        team_id=team.id,
-        team_name=team.title or team.name,
+        team=team.ref if team else None,
+        team_id=team.id if team else None,
+        team_name=(team.title or team.name) if team else None,
+        system=system.ref if system else None,
+        system_id=system.id if system else None,
+        system_name=(system.title or system.name) if system else None,
     )
 
 
@@ -738,7 +754,9 @@ class EndpointServicesController(AtlasController):
         endpoint = _get_endpoint_by_id(parsed_path.endpoint_id)
         queryset = ServiceEndpointUsage.objects.filter(
             endpoint=endpoint,
-        ).select_related("service", "service__owner")
+        ).select_related(
+            "service", "service__owner", "service__component_details__system"
+        )
         if parsed_query.search:
             queryset = queryset.filter(
                 Q(service__title__icontains=parsed_query.search)
@@ -799,25 +817,85 @@ class EndpointServiceController(AtlasController):
         unlink_endpoint(self.request.user, service, endpoint)
 
 
+_ENDPOINT_GROUP_FIELDS = {
+    "team": "service__owner_id",
+    "system": "service__component_details__system_id",
+}
+_ENDPOINT_GROUP_NAME_FIELDS = {
+    "team": ("service__owner__title", "service__owner__name"),
+    "system": (
+        "service__component_details__system__title",
+        "service__component_details__system__name",
+    ),
+}
+
+
+def _endpoint_groups(usages, group_by: str) -> list[ConsumerGroupOut]:
+    """The teams or systems holding at least `MIN_GROUP_SIZE` of the (already searched) `usages`,
+    ordered by name — counted in the database, so sizes do not depend on the page."""
+    id_field = _ENDPOINT_GROUP_FIELDS[group_by]
+    title_field, name_field = _ENDPOINT_GROUP_NAME_FIELDS[group_by]
+    rows = (
+        usages.filter(**{f"{id_field}__isnull": False})
+        .order_by()
+        .values(id_field, title_field, name_field)
+        .annotate(size=Count("id"))
+        .filter(size__gte=MIN_GROUP_SIZE)
+    )
+    groups = [
+        ConsumerGroupOut(
+            id=row[id_field],
+            name=row[title_field] or row[name_field],
+            count=row["size"],
+        )
+        for row in rows
+    ]
+    return sorted(groups, key=lambda group: (group.name, str(group.id)))
+
+
+def _endpoint_consumers_count(parsed_query, groups, paginator) -> int:
+    """`count` is the total matching `search`; with `group_by` and no `group_id` the listed
+    Services are only the ungrouped remainder, so the total adds the groups back."""
+    if groups is None or parsed_query.group_id:
+        return paginator.count
+    return paginator.count + sum(group.count for group in groups)
+
+
 class EndpointConsumersController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(
         self,
         parsed_path: Path[EndpointServicesPath],
+        parsed_query: Query[ConsumersQuery],
     ) -> EndpointConsumersOut:
         check_endpoint_dependency_read_permission(self.request.user)
         endpoint = _get_endpoint_by_id(parsed_path.endpoint_id)
-        usages = (
-            ServiceEndpointUsage.objects.filter(
-                endpoint=endpoint,
-            )
-            .select_related("service", "service__owner")
-            .order_by(
-                "service__title",
-                "service__name",
-            )
+        usages = ServiceEndpointUsage.objects.filter(
+            endpoint=endpoint,
+        ).select_related(
+            "service", "service__owner", "service__component_details__system"
         )
+        if parsed_query.search:
+            usages = usages.filter(
+                Q(service__title__icontains=parsed_query.search)
+                | Q(service__name__icontains=parsed_query.search),
+            )
+        groups = None
+        if parsed_query.group_by:
+            group_field = _ENDPOINT_GROUP_FIELDS[parsed_query.group_by]
+            if parsed_query.group_id:
+                usages = usages.filter(**{group_field: parsed_query.group_id})
+            else:
+                groups = _endpoint_groups(usages, parsed_query.group_by)
+                usages = usages.exclude(
+                    **{f"{group_field}__in": [group.id for group in groups]}
+                )
+        paginator = Paginator(
+            usages.order_by("service__title", "service__name", "id"),
+            parsed_query.page_size,
+        )
+        page = paginator.get_page(parsed_query.page)
         return EndpointConsumersOut(
             endpoint=EndpointConsumerSummaryOut(
                 id=endpoint.id,
@@ -825,7 +903,12 @@ class EndpointConsumersController(AtlasController):
                 path=endpoint.path,
                 status=endpoint.status,
             ),
-            services=[_service_summary_out(usage.service) for usage in usages],
+            services=[
+                _service_summary_out(usage.service) for usage in page.object_list
+            ],
+            count=_endpoint_consumers_count(parsed_query, groups, paginator),
+            groups=groups,
+            services_count=paginator.count if groups is not None else None,
         )
 
 
@@ -873,7 +956,9 @@ class OperationServicesController(AtlasController):
         operation = _get_operation_by_id(parsed_path.operation_id)
         queryset = ServiceOperationUsage.objects.filter(
             operation=operation,
-        ).select_related("service", "service__owner")
+        ).select_related(
+            "service", "service__owner", "service__component_details__system"
+        )
         if parsed_query.search:
             queryset = queryset.filter(
                 Q(service__title__icontains=parsed_query.search)
@@ -946,12 +1031,46 @@ class OperationServiceController(AtlasController):
         unlink_operation(self.request.user, service, operation, parsed_query.role)
 
 
+_ROLE_PUBLISHER = ServiceOperationUsage.ROLE_PUBLISHER
+
+
+def _ordered_participants(
+    participants: list[tuple[CatalogEntity, str]], search: str | None
+) -> list[tuple[CatalogEntity, str]]:
+    """Filters channel participants by `search` (service title or name, case-insensitive) and
+    orders them publishers first, then by title, name and id."""
+    if search:
+        needle = search.lower()
+        participants = [
+            (service, role)
+            for service, role in participants
+            if needle in service.title.lower() or needle in service.name.lower()
+        ]
+    return sorted(
+        participants,
+        key=lambda item: (
+            item[1] != _ROLE_PUBLISHER,
+            item[0].title,
+            item[0].name,
+            str(item[0].id),
+        ),
+    )
+
+
+def _group_entries(entries) -> list[ConsumerGroupOut]:
+    return [
+        ConsumerGroupOut(id=group.id, name=group_name(group), count=size)
+        for group, size in entries
+    ]
+
+
 class OperationConsumersController(AtlasController):
     auth = (SessionAuth(),)
 
     def get(
         self,
         parsed_path: Path[OperationServicesPath],
+        parsed_query: Query[OperationConsumersQuery],
     ) -> OperationConsumersOut:
         check_operation_dependency_read_permission(self.request.user)
         operation = _get_operation_by_id(parsed_path.operation_id)
@@ -960,6 +1079,34 @@ class OperationConsumersController(AtlasController):
                 channel_address=operation.channel_address,
             ).select_related("api", "api__owner"),
         )
+        participants = _ordered_participants(
+            channel_participants(aggregated), parsed_query.search
+        )
+        publisher_count = sum(
+            1 for _service, role in participants if role == _ROLE_PUBLISHER
+        )
+        total = len(participants)
+        remainder_count = None
+        publisher_groups = subscriber_groups = None
+        listed = participants
+        if parsed_query.group_by and parsed_query.group_id:
+            listed = [
+                (service, role)
+                for service, role in participants
+                if role == parsed_query.role
+                and (group := group_of(service, parsed_query.group_by))
+                and group.id == parsed_query.group_id
+            ]
+            total = len(listed)
+        elif parsed_query.group_by:
+            groups, listed = split_participants_by_group(
+                participants, parsed_query.group_by
+            )
+            publisher_groups = _group_entries(groups.get(_ROLE_PUBLISHER, []))
+            subscriber_groups = _group_entries(groups.get("subscriber", []))
+            remainder_count = len(listed)
+        start = (parsed_query.page - 1) * parsed_query.page_size
+        page = listed[start : start + parsed_query.page_size]
         return OperationConsumersOut(
             operation=OperationConsumerSummaryOut(
                 id=operation.id,
@@ -972,6 +1119,12 @@ class OperationConsumersController(AtlasController):
                 OperationConsumerParticipantOut(
                     service=_service_summary_out(service), role=role
                 )
-                for service, role in channel_participants(aggregated)
+                for service, role in page
             ],
+            count=total,
+            publisher_count=publisher_count,
+            subscriber_count=len(participants) - publisher_count,
+            publisher_groups=publisher_groups,
+            subscriber_groups=subscriber_groups,
+            participants_count=remainder_count,
         )

@@ -48,6 +48,40 @@ An Operation's linked-services graph names the exact services tied to that
 endpoint, distinct from the containing API's own catalog relations. For the
 catalog workflow, see [Use feature-specific views](../using-atlas/use-feature-views.md).
 
+The graph never draws every linked service. The inline graph shows up to six
+services plus a **+N more** node that opens the full-screen view. Full screen
+draws up to 50 services as a left-to-right tree, one column per level, joined by
+rounded step lines, and can be dragged around. An Endpoint's graph has the endpoint on the
+left; an Operation's has the channel in the middle, with publishers on the left
+and subscribers on the right. **Auto-layout** resets all node positions. The **Export** button in the
+header saves the graph as SVG or PNG, with choices for a transparent
+background and the grid, as in the Flow and ER diagrams; the image shows the
+graph as currently framed. The search box finds services
+beyond the 50 drawn, highlighting matches; a final **+N more** node leads to the
+Linked Services tab for the rest. The Endpoints, Operations, and both Linked
+Services tabs share one pagination control with 15, 30, 50, or 100 rows per page.
+
+### Group services by team or system
+
+The gear menu in the full-screen header has the grouping choice: **No
+grouping**, **Group by: Team**, or **Group by: System**. With a grouping on, each team or system that holds at least two
+linked services is one node showing its name, a color mark, and its exact
+number of services. A service without a team or system, and a team or system
+with only one service, stays an ordinary service node. An Operation groups
+publishers and subscribers separately, so a team can appear on both sides.
+
+- A graph with 10 or more linked services opens grouped by **Team** until you
+  choose otherwise; smaller graphs open ungrouped. Your choice, including
+  **No grouping**, is remembered in your browser and overrides this default.
+- Click a group to expand it in place and show its services; click it again to
+  collapse it. Expanded services count toward the 50-service limit, and a group
+  with more services than fit ends with its own **+N more** node that opens the
+  Linked Services tab for that team (for a system, searched by its name) and
+  closes the full-screen view.
+- Searching never expands a group. Each group shows "N of M matches" and groups
+  without a match are dimmed. Changing the search text or the grouping collapses
+  all groups.
+
 ## API, operations, and extension surface
 
 The running [generated HTTP API reference](../api-reference/index.md) documents

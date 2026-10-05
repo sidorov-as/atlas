@@ -22,14 +22,12 @@ export function OperationDetailPage() {
     () => operationsApi.get(apiId as string, operationId as string),
     [apiId, operationId],
   )
-  // This Operation's own `ServiceOperationUsage` links (up to 100, an
-  // unpaginated-ish fetch mirroring `EndpointDetailPage`'s single shared
-  // `consumers` fetch) — feeds the removed-operation banner's count, the
-  // "Linked services" tab counter, the Overview preview list, and the Link
-  // dialog's already-linked-pairs set. The tab itself does its own
-  // filtered/paginated fetch for its table.
+  // Only the total of this Operation's own `ServiceOperationUsage` links is
+  // needed here (removed-operation banner, "Linked services" tab counter); the
+  // tab does its own paginated fetch and the Link dialog checks exact
+  // already-linked pairs itself.
   const { data: linkedServicesPage, reload: reloadLinkedServices } = useAsync(
-    () => (operationId ? operationServicesApi.list(operationId, { pageSize: 100 }) : Promise.resolve(null)),
+    () => (operationId ? operationServicesApi.list(operationId, { pageSize: 1 }) : Promise.resolve(null)),
     [operationId],
   )
   // Channel-scoped aggregation feeding the compact
@@ -149,7 +147,6 @@ export function OperationDetailPage() {
           <TabPanel value="services">
             <OperationLinkedServicesTab
               operation={operation}
-              linkedServiceRolePairs={new Set((linkedServicesPage?.page.objectList ?? []).map((item) => `${item.service.id}:${item.role}`))}
               onServicesChanged={handleServicesChanged}
             />
           </TabPanel>

@@ -7,6 +7,7 @@
 // edges draw true node-center-to-node-center lines regardless of a node's
 // angle on the ring, without per-node direction bookkeeping.
 import { memo } from 'react'
+import { SideHandles } from './SideHandles'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Text, Tooltip } from '@gravity-ui/uikit'
 import { RoleBadge } from './RoleBadge'
@@ -50,6 +51,7 @@ function ServiceRoleNodeComponent({ data }: NodeProps<ServiceRoleFlowNode>) {
     >
       <Handle type="source" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
       <Handle type="target" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
+      <SideHandles />
       {/* Role is a label, not color alone (spec's "Publisher and subscriber nodes are visually distinguished by a label, not by color alone"). */}
       <div style={{ marginBottom: 4 }}>
         <RoleBadge role={data.role} />
@@ -92,6 +94,7 @@ function ChannelNodeComponent({ data }: NodeProps<ChannelFlowNode>) {
     >
       <Handle type="source" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
       <Handle type="target" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
+      <SideHandles />
       <Tooltip content={data.channelAddress} placement="top">
         <Text
           variant="body-2"

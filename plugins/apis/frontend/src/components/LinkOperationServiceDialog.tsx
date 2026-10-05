@@ -24,14 +24,11 @@ export function LinkOperationServiceDialog({
   open,
   onClose,
   operation,
-  linkedServiceRolePairs,
   onLinked,
 }: {
   open: boolean
   onClose: () => void
   operation: Operation
-  /** Every currently-linked `(serviceId, role)` pair for this operation, keyed as `${serviceId}:${role}` — used to disable already-linked options (that exact role) rather than the whole service. */
-  linkedServiceRolePairs: Set<string>
   onLinked: (link: OperationServiceLink) => void
 }) {
   const titleId = useId()
@@ -39,6 +36,14 @@ export function LinkOperationServiceDialog({
   const [role, setRole] = useState<OperationRole>('subscriber')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Exact server-side check, refetched each time the dialog opens, so it holds
+  // for Operations linked to more Services than any single page returns.
+  const { data: linkedPairs } = useAsync(
+    () => (open ? operationServicesApi.linkedServiceRolePairs(operation.id) : Promise.resolve(null)),
+    [open, operation.id],
+  )
+  const linkedServiceRolePairs = new Set(linkedPairs ?? [])
 
   const { data: componentsPage } = useAsync(() => componentsApi.list({ pageSize: 100 }), [])
   // The Operation's own document-owner Service is never linked through

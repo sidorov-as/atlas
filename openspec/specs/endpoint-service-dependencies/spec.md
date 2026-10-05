@@ -60,7 +60,7 @@ The Link Service action and each row's Unlink action SHALL be visible only to a 
 - **THEN** no "Link service" button and no per-row "Unlink" action are rendered
 
 ### Requirement: Compact consumers graph shows Service-to-Endpoint edges
-An Endpoint's Overview tab SHALL show a read-only graph with the Endpoint as the center node and each linked Service as a node with a directed edge from Service to Endpoint, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available. This graph SHALL also be viewable in a full-screen mode.
+An Endpoint's Overview tab SHALL show a read-only graph with the Endpoint as the center node and each linked Service as a node with a directed edge from Service to Endpoint, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available in the inline graph. This graph SHALL also be viewable in a full-screen mode, in which nodes can be repositioned as specified by the dependency-graph-exploration capability but connections still cannot be created or deleted.
 
 #### Scenario: Edge direction reflects dependency direction
 - **WHEN** the consumers graph is rendered for an Endpoint with linked Services
@@ -74,22 +74,30 @@ An Endpoint's Overview tab SHALL show a read-only graph with the Endpoint as the
 - **WHEN** a user clicks the center Endpoint node
 - **THEN** the user remains on the current Endpoint page
 
-#### Scenario: Graph nodes cannot be edited
-- **WHEN** a user attempts to drag a node, or draw or delete a connection, in the consumers graph (inline or full-screen)
+#### Scenario: Inline graph nodes cannot be edited
+- **WHEN** a user attempts to drag a node, or draw or delete a connection, in the inline consumers graph
 - **THEN** no change occurs — the graph is display-only
+
+#### Scenario: Connections cannot be edited in full screen
+- **WHEN** a user attempts to draw or delete a connection in the full-screen consumers graph
+- **THEN** no change occurs
 
 #### Scenario: Empty graph shows a call to action instead of a blank canvas
 - **WHEN** an Endpoint has no linked Services
 - **THEN** its Overview shows an explanatory empty state with a "Link service" action, not an empty graph canvas
 
 #### Scenario: Large consumer counts are capped on the compact inline graph
-- **WHEN** an Endpoint has more than 12 linked Services and the graph is shown in its compact, inline form on the Overview tab
-- **THEN** the compact graph shows at most 12 Service nodes plus an indicator of how many more exist, rather than rendering all of them
+- **WHEN** an Endpoint has more than 6 linked Services and the graph is shown in its compact, inline form on the Overview tab
+- **THEN** the compact graph shows 6 Service nodes plus a "… +N more" node stating how many more exist, rather than rendering all of them
 
-#### Scenario: Full screen shows every linked Service uncapped
-- **WHEN** a user opens the consumers graph in full-screen mode
-- **THEN** every linked Service is shown as a node, with no 12-node cap, using the same already-loaded data as the inline graph
+#### Scenario: Full screen is capped at 50 Services
+- **WHEN** a user opens the consumers graph in full-screen mode for an Endpoint with more than 50 linked Services
+- **THEN** 50 Service nodes are shown, plus a "… +N more" node leading to the Linked Services tab
 - **AND** a visible close action returns the user to the Overview tab without navigating away from the Endpoint page
+
+#### Scenario: Full screen shows every linked Service when there are 50 or fewer
+- **WHEN** a user opens the consumers graph in full-screen mode for an Endpoint with 18 linked Services
+- **THEN** every linked Service is shown as a node and no "more" node is drawn
 
 ### Requirement: Linked Services reflects a removed endpoint's status
 An Endpoint's Linked Services tab and consumers graph SHALL show a visible warning when the Endpoint itself has been removed (`status=removed`), rather than presenting its existing links as if the endpoint were still active.
@@ -152,3 +160,90 @@ Removing a `ServiceEndpointUsage` link whose `origin` is `yaml` through the REST
 #### Scenario: Unlinking a YAML-origin link over REST
 - **WHEN** a user unlinks a Service from an Endpoint and that link has origin `yaml`
 - **THEN** the request is rejected as a conflict and the link remains
+
+### Requirement: Linked Services listing uses the shared pagination control
+An Endpoint's Linked Services listing SHALL be paginated by the server and SHALL show the same pagination control as the API detail page lists: a page-size choice of 15, 30, 50 or 100, with 15 as the default, and a page number input. The control SHALL be shown whenever the listing is not empty, not only when it exceeds one page. The current page and page size SHALL be reflected in the URL.
+
+#### Scenario: Control is shown for a short list
+- **WHEN** an Endpoint has 18 linked Services and its Linked Services tab is opened
+- **THEN** the pagination control is shown, with the first 15 services on page 1 and 3 on page 2
+
+#### Scenario: Page size is sent to the server
+- **WHEN** a user selects 50 per page
+- **THEN** the listing is requested from the server with that page size and shows up to 50 services
+
+#### Scenario: Page and page size are shareable via URL
+- **WHEN** a user opens page 2 at 30 per page and shares the URL
+- **THEN** opening that URL shows page 2 at 30 per page
+
+#### Scenario: Changing filters returns to the first page
+- **WHEN** a user changes the search text, team filter or sort order
+- **THEN** the listing shows page 1 of the new results
+
+### Requirement: The consumers data for the graph is paginated and searchable
+The Endpoint consumers API that feeds the Overview graph SHALL accept `page`, `page_size` (default 50, at most 100) and `search`, SHALL return the requested page of linked Services in the same order as before (display name, then name), and SHALL report the total number of linked Services matching the search. `search` SHALL match a Service's name or display name, case-insensitively. A request without parameters SHALL return the first 50 Services, not every Service.
+
+#### Scenario: Default request is capped
+- **WHEN** an Endpoint has 120 linked Services and its consumers are requested with no parameters
+- **THEN** the response contains 50 Services and a total count of 120
+
+#### Scenario: Requesting a later page
+- **WHEN** consumers are requested with `page=2` and `page_size=50` for an Endpoint with 120 linked Services
+- **THEN** the response contains Services 51 to 100 in the default order
+
+#### Scenario: Search narrows both the page and the total
+- **WHEN** consumers are requested with `search=pay` and 4 linked Services have "pay" in their name or display name
+- **THEN** the response contains those 4 Services and a total count of 4
+
+#### Scenario: Unknown Endpoint
+- **WHEN** consumers are requested for an Endpoint that does not exist
+- **THEN** the response is a not-found error, as before
+
+### Requirement: The Service summary carries its system
+The Service summary returned with an Endpoint's linked Services and consumers SHALL include the Service's system reference, id and display name, or null when the Service has none.
+
+#### Scenario: Service with a system
+- **WHEN** a linked Service belongs to the system "core"
+- **THEN** its summary carries that system's reference, id and name
+
+#### Scenario: Service without a system
+- **WHEN** a linked Service has no system
+- **THEN** its system fields are null
+
+### Requirement: The Service summary tolerates a Service without an owner
+The Service summary returned with an Endpoint's linked Services and consumers SHALL carry null team reference, id and name for a Service that has no owner, instead of failing the request.
+
+#### Scenario: Service without an owner
+- **WHEN** a linked Service has no owner
+- **THEN** the response succeeds and its team fields are null
+
+### Requirement: The consumers data can be grouped by team or system
+The Endpoint consumers API SHALL accept `group_by` with the value `team` or `system`. With `group_by` and without `group_id`, the response SHALL include `groups`, one entry per team or system that holds at least two Services matching `search`, each with its id, name and the number of matching Services, ordered by name; the Services list SHALL then contain only matching Services not in any listed group (those without a team or system for the grouping, and those alone in their group), paginated as before, and `count` SHALL still be the total of all matching Services (grouped ones included) while `servicesCount` SHALL give the size of that list's remainder. With `group_by` and `group_id`, the response SHALL be the page of matching Services in that group, with `count` set to the group's matching total. Without `group_by`, the response SHALL be as before and SHALL NOT include `groups` or `servicesCount`. An unsupported `group_by` value SHALL be rejected as a validation error.
+
+#### Scenario: Group counts accompany the ungrouped Services
+- **WHEN** an Endpoint has 18 linked Services owned by 5 teams, 2 of them alone in their team, and consumers are requested with `group_by=team`
+- **THEN** the response lists the 3 teams with at least two Services with their counts and returns the 2 single Services in the Services list
+
+#### Scenario: Group members by group id
+- **WHEN** consumers are requested with `group_by=team` and `group_id` set to a team that owns 4 linked Services
+- **THEN** the response contains those 4 Services and a count of 4
+
+#### Scenario: Search narrows group counts
+- **WHEN** consumers are requested with `group_by=team` and `search=pay`, and 2 of a team's 5 Services match
+- **THEN** that team's entry reports a count of 2
+
+#### Scenario: Group by system
+- **WHEN** consumers are requested with `group_by=system`
+- **THEN** groups are the systems of the linked Services and Services without a system appear in the Services list
+
+#### Scenario: No grouping requested
+- **WHEN** consumers are requested without `group_by`
+- **THEN** the response has no `groups` and is otherwise unchanged
+
+#### Scenario: Unsupported grouping
+- **WHEN** consumers are requested with `group_by=tag`
+- **THEN** the response is a validation error
+
+#### Scenario: Group members exceeding a page
+- **WHEN** a group has 70 Services and its members are requested without `page_size`
+- **THEN** the response contains the first 50 and a count of 70

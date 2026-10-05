@@ -7,6 +7,8 @@ import { OperationsListTab } from './OperationsListTab'
 import { operationServicesApi, operationsApi } from '../lib/entities'
 import { makeOperation, makeOperationConsumers, makeServiceSummary } from '../testFixtures'
 
+const goToPage2 = () => fireEvent.click(document.querySelector('[data-qa="pagination-page-2"]')!)
+
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
@@ -130,5 +132,42 @@ describe('OperationsListTab', () => {
     renderTab()
 
     await waitFor(() => expect(screen.getByText('No operations')).toBeDefined())
+  })
+
+  it('shows a channel that straddles a page boundary on both pages', async () => {
+    const operations = Array.from({ length: 16 }, (_, index) =>
+      makeOperation({
+        id: `operation-${index}`,
+        channelAddress: index < 14 ? `channel.${index}` : 'shared.channel',
+        operationKey: `op-${index}`,
+        summary: `Operation ${index}`,
+      }),
+    )
+    vi.mocked(operationsApi.list).mockResolvedValue(operations)
+    vi.mocked(operationServicesApi.consumers).mockResolvedValue(makeOperationConsumers())
+
+    renderTab()
+    await waitFor(() => expect(screen.getByText('Operation 14')).toBeDefined())
+    expect(screen.queryByText('Operation 15')).toBeNull()
+    expect(screen.getByText('shared.channel')).toBeDefined()
+
+    goToPage2()
+
+    await waitFor(() => expect(screen.getByText('Operation 15')).toBeDefined())
+    expect(screen.getByText('shared.channel')).toBeDefined()
+  })
+
+  it('takes the publisher/subscriber summary from the role totals, not the returned page', async () => {
+    vi.mocked(operationsApi.list).mockResolvedValue([makeOperation({ channelAddress: 'booking.created' })])
+    vi.mocked(operationServicesApi.consumers).mockResolvedValue({
+      ...makeOperationConsumers([{ service: makeServiceSummary({ id: 'service-1' }), role: 'publisher' }]),
+      count: 70,
+      publisherCount: 60,
+      subscriberCount: 10,
+    })
+
+    renderTab()
+
+    await waitFor(() => expect(screen.getByText('60 publishers, 10 subscribers')).toBeDefined())
   })
 })

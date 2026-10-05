@@ -301,15 +301,19 @@ class ServiceSummaryOut(CamelModel):
     """The subset of a linked Service's `CatalogEntity` fields the Linked
     Services tab/consumers graph need — "team" is the Service's own `owner`
     (every kind's `owner` is its owning Group), not a
-    separate concept."""
+    separate concept. A Service
+    without an owner has null team fields, like one without a system has null system fields."""
 
     id: UUID
     ref: str
     name: str
     title: str
-    team: str
-    team_id: UUID
-    team_name: str
+    team: str | None = None
+    team_id: UUID | None = None
+    team_name: str | None = None
+    system: str | None = None
+    system_id: UUID | None = None
+    system_name: str | None = None
 
 
 class EndpointServiceOut(CamelModel):
@@ -342,14 +346,53 @@ class EndpointConsumerSummaryOut(CamelModel):
     status: EndpointStatus
 
 
+class ConsumerGroupOut(CamelModel):
+    """One team or system holding at least two Services matching `search`."""
+
+    id: UUID
+    name: str
+    count: int
+
+
 class EndpointConsumersOut(CamelModel):
-    """The compact consumers-graph data contract — kept forward-compatible with a future full-screen
-    explorer, so this returns every linked Service
-    unpaginated; the ≤12-node cap is a display concern the frontend applies
-    """
+    """The consumers-graph data contract: one page of the linked Services (ordered by title,
+    then name), narrowed by `search`. `count` is the total matching `search`, not the page size.
+
+    With `group_by` (and no `group_id`), `groups` lists the teams or systems holding at least two
+    matching Services and `services` holds only the Services outside those groups. With `group_by`
+    and `group_id`, `services` is the page of that group and `count` its matching total. `count`
+    always includes the grouped Services; `servicesCount` (only with `group_by` and no `group_id`)
+    is the size of the `services` remainder, for paging it. Without `group_by`, `groups` and
+    `servicesCount` are left out of the response."""
 
     endpoint: EndpointConsumerSummaryOut
     services: list[ServiceSummaryOut]
+    count: int
+    groups: list[ConsumerGroupOut] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    services_count: int | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+ConsumerGroupBy = Literal["team", "system"]
+
+
+class ConsumersQuery(BaseModel):
+    """Paging, search and optional grouping for the consumers-graph routes (`.../consumers/`)."""
+
+    search: str | None = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=50, ge=1, le=100)
+    group_by: ConsumerGroupBy | None = None
+    group_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _group_id_needs_group_by(self):
+        if self.group_id is not None and self.group_by is None:
+            raise ValueError("group_id requires group_by")
+        return self
 
 
 class EndpointServicesPath(BaseModel):
@@ -515,13 +558,47 @@ class OperationConsumerParticipantOut(CamelModel):
     role: OperationRole
 
 
+class OperationConsumersQuery(ConsumersQuery):
+    """`ConsumersQuery` plus the participant role a `group_id` is scoped to — a team can hold
+    publishers and subscribers of one channel, with different members on each side."""
+
+    role: OperationRole | None = None
+
+    @model_validator(mode="after")
+    def _group_id_needs_role(self):
+        if self.group_id is not None and self.role is None:
+            raise ValueError("group_id requires role")
+        return self
+
+
 class OperationConsumersOut(CamelModel):
-    """The compact consumers-graph data contract, aggregated by
-    `channel_address` rather than by the single Operation row — `participants` spans every `ApiOperation` sharing that
-    channel, not just this operation's own direct links."""
+    """The consumers-graph data contract, aggregated by `channel_address` rather than by the
+    single Operation row — `participants` spans every `ApiOperation` sharing that channel, not
+    just this operation's own direct links. It is one page, publishers first, then by title and
+    name, narrowed by `search`. The counts are totals matching `search`, independent of the page.
+
+    With `group_by` (and no `group_id`), `publisherGroups` and `subscriberGroups` list the teams or
+    systems holding at least two matching participants of that role, and `participants` holds only
+    those outside a group of their own role. With `group_by`, `group_id` and `role`, `participants`
+    is the page of that group and `count` its matching total (the role counts stay the channel's).
+    `count` always includes the grouped participants; `participantsCount` (only with `group_by` and
+    no `group_id`) is the size of the `participants` remainder, for paging it. Without `group_by`,
+    the group lists and `participantsCount` are left out of the response."""
 
     operation: OperationConsumerSummaryOut
     participants: list[OperationConsumerParticipantOut]
+    count: int
+    publisher_count: int
+    subscriber_count: int
+    publisher_groups: list[ConsumerGroupOut] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    subscriber_groups: list[ConsumerGroupOut] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    participants_count: int | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 class OperationServicesPath(BaseModel):

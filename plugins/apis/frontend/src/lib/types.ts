@@ -93,9 +93,14 @@ export interface ServiceSummary {
   ref: string
   name: string
   title: string
-  team: string
-  teamId: string
-  teamName: string
+  /** The Service's owning team; null when it has no owner. */
+  team: string | null
+  teamId: string | null
+  teamName: string | null
+  /** The Service's system; null when it has none. */
+  system: string | null
+  systemId: string | null
+  systemName: string | null
 }
 
 export interface EndpointService {
@@ -120,10 +125,35 @@ export interface EndpointConsumerSummary {
   status: EndpointStatus
 }
 
-/** `GET /api/endpoints/{endpointId}/consumers` — the compact graph-data contract: every linked Service, unpaginated. The consumers graph, the Overview preview list, and the removed-endpoint banner's count all read from this one fetch. */
+/** What the full-screen graphs can group Services by. */
+export type ConsumerGroupBy = 'team' | 'system'
+
+/** One team or system holding at least two matching Services (`count` is exact, independent of the page). */
+export interface ConsumerGroup {
+  id: string
+  name: string
+  count: number
+}
+
+/** Query for the `.../consumers` routes — one page of linked Services, optionally narrowed by `search`. With `groupBy` the response also lists groups and holds only the ungrouped Services; add `groupId` (and `role` for Operations) to page through one group's members. */
+export interface ConsumersParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  groupBy?: ConsumerGroupBy
+  groupId?: string
+  role?: OperationRole
+}
+
+/** `GET /api/endpoints/{endpointId}/consumers` — one page (default 50) of linked Services. `count` is the total matching `search`, so the graph and the removed-endpoint banner use it instead of `services.length`. */
 export interface EndpointConsumers {
   endpoint: EndpointConsumerSummary
   services: ServiceSummary[]
+  count: number
+  /** Present only when the request had `groupBy` and no `groupId`. */
+  groups?: ConsumerGroup[]
+  /** Size of the `services` remainder, for paging it; present only together with `groups`. `count` includes the grouped Services. */
+  servicesCount?: number
 }
 
 // --- Operation -
@@ -210,8 +240,16 @@ export interface OperationConsumerParticipant {
   role: OperationRole
 }
 
-/** `GET /api/operations/{operationId}/consumers` — aggregated by `channel_address`, not scoped to the single Operation row. */
+/** `GET /api/operations/{operationId}/consumers` — aggregated by `channel_address`, not scoped to the single Operation row. One page (default 50), publishers first; the counts are totals matching `search`, independent of the page. */
 export interface OperationConsumers {
   operation: OperationConsumerSummary
   participants: OperationConsumerParticipant[]
+  count: number
+  publisherCount: number
+  subscriberCount: number
+  /** Present only when the request had `groupBy` and no `groupId`; a team can be in both lists with different counts. */
+  publisherGroups?: ConsumerGroup[]
+  subscriberGroups?: ConsumerGroup[]
+  /** Size of the `participants` remainder, for paging it; present only together with the group lists. `count` includes the grouped participants. */
+  participantsCount?: number
 }
