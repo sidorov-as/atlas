@@ -1,0 +1,134 @@
+distribution: atlas.example.search-meilisearch@2026.09
+core: 0.1.0
+plugins:
+  atlas.standard-catalog@0.1.0:
+    backend:
+      package: atlas-plugin-standard-catalog
+      version: 0.1.0
+      hash: sha256:7f2ea1dd71a866e9054e16fe9f9685648349b03a014731625db8879255deab11
+    frontend:
+      package: '@atlas/plugin-standard-catalog'
+      version: 0.1.0
+      integrity: sha512-+aKufhifGchxpZ4sYcLjhmv/UtCRQaYxWdj2R12rFLsX5CkkwRlll46BQMV0YnoChXmqjqSBdvNFas7WndielQ==
+  atlas.apis@0.1.0:
+    backend:
+      package: atlas-plugin-apis
+      version: 0.1.0
+      hash: sha256:966bb8c1cdf8c9e736b86fffaf294823970cbc7e74c306b981da844b48e73b8c
+    frontend:
+      package: '@atlas/plugin-apis'
+      version: 0.1.0
+      integrity: sha512-MVYB3ISqfXJNaI7ekRIkUqLxSFyaRooOLBojN/8ftLMm9N3PvQwnkgs/SA+/GTK6wXb4SylGC0gr+4zdlvnheQ==
+  atlas.c4@0.1.0:
+    backend:
+      package: atlas-plugin-c4
+      version: 0.1.0
+      hash: sha256:5a306856a78dca70b3878a91670ca589cd1f1db61a1907bf6b13b7a3162f349a
+    frontend:
+      package: '@atlas/plugin-c4'
+      version: 0.1.0
+      integrity: sha512-uuEAFy9nwer1GZcuwxeUwBQBteN0s+eXsYuFR+3R5TMGlhWsUILxXfKbGyeGVZbUFyiSlGsFcqh+7B6mJ9NEFQ==
+  atlas.database-schema@0.1.0:
+    backend:
+      package: atlas-plugin-database-schema
+      version: 0.1.0
+      hash: sha256:a94c41ef38c9b8e8fdd6a7655ab6a56f52f136296115ac0075432af124b84300
+    frontend:
+      package: '@atlas/plugin-database-schema'
+      version: 0.1.0
+      integrity: sha512-OyFMOvdI+iNI7J+am/k2KMpLxw1DvHkpxVuWwpepowRKbMW1Pj6iLD9v06XHBzsKWAvUU27JRgXCS4FY28aqHw==
+  atlas.ingestion@0.1.0:
+    backend:
+      package: atlas-plugin-ingestion
+      version: 0.1.0
+      hash: sha256:de8c4d16fb7f4f55b19d7d2760905c5d2c1feb3035f7299b93e8b86b2d0b4c3c
+  atlas.flows@0.1.0:
+    backend:
+      package: atlas-plugin-flows
+      version: 0.1.0
+      hash: sha256:b8780e4906dac0e8a5f82017d1bca8a0d549e719037ddacf61a37d9f02d412ec
+    frontend:
+      package: '@atlas/plugin-flows'
+      version: 0.1.0
+      integrity: sha512-DTsoCSo0owMdL5JGqiSLDSXWoJZ2qJQddsXF4w+6a1TndmzNXf9ppCsfIWMUYSjuVo/Z61dpR0jfqV46TjfQ9Q==
+  atlas.mcp@0.1.0:
+    backend:
+      package: atlas-plugin-mcp
+      version: 0.1.0
+      hash: sha256:02cce2378bf3587eaf47f0cd89b85445caec42f6f9711725556c8499d1896df1
+  atlas.search-meilisearch@0.1.0:
+    backend:
+      package: atlas-plugin-search-meilisearch
+      version: 0.1.0
+      hash: sha256:40ddaa008a9e282a1b2b0d53e42121b93f03d9d98842751eb9ccc96e45a22ffd
+  atlas.search@0.1.0:
+    backend:
+      package: atlas-plugin-search
+      version: 0.1.0
+      hash: sha256:ea2ef69c11b6fc003d7a5cb9d063e9a90ec39acb7d11dd76bc660ce94445e344
+    frontend:
+      package: '@atlas/plugin-search'
+      version: 0.1.0
+      integrity: sha512-CR78q5p4hkhrt1/dOaX8rvlGy+igCII7FtB9FFN4fN+/bdXw2dita01f6SnvHLMWK4icrQKhT/o+TCdCzTzivQ==
+auth:
+  providers:
+  - id: atlas.auth.local
+    owner: atlas.catalog
+    contractVersion: atlas.auth.providers.v1
+    flowKind: credentials
+    remoteLogout: unsupported
+    presentation:
+      displayName: Username and password
+      credentialFields:
+      - id: username
+        label: Username
+        kind: text
+        autocomplete: username
+      - id: password
+        label: Password
+        kind: secret
+        autocomplete: current-password
+    signup: disabled
+    principalProvisioning: preprovisioned
+    actorProvisioning: manual
+    profileFields: []
+    groupSync:
+      mode: none
+      snapshotRequirement: unsupported
+      maxAgeSeconds: 28800
+      mappings: {}
+    restrictedAttributes: []
+  default: atlas.auth.local
+  sessionMaxAgeSeconds: 28800
+  publicOrigin: http://localhost:8000
+  trustedProxyAddresses: []
+  adminPassword:
+    mode: disabled
+    principalIds: []
+  outboundTrust:
+    allowedDestinations: []
+    allowDevelopmentHttp: false
+  passwordPolicy:
+    minimumLength: 15
+    maximumLength: 128
+    rejectCommon: true
+    rejectUserSimilarity: true
+  recovery:
+    mode: operator-managed
+    verifiedAddressesRequired: true
+    tokenMaxAgeSeconds: 3600
+services:
+  atlas.search-meilisearch/meilisearch:
+    plugin: atlas.search-meilisearch
+    id: meilisearch
+    image: getmeili/meilisearch:v1.12
+    port: 7700
+    healthCheck:
+    - curl
+    - -fsS
+    - http://localhost:7700/health
+    addressKey: url
+    secretKey: key
+    secretEnv: MEILI_MASTER_KEY
+    secretFromEnv: ATLAS_SERVICE_MEILISEARCH_KEY
+    dataPath: /meili_data

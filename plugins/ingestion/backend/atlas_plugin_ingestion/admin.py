@@ -47,7 +47,7 @@ class RegisteredRepositoryAdminForm(forms.ModelForm):
 
 @admin.register(RegisteredRepository)
 class RegisteredRepositoryAdmin(admin.ModelAdmin):
-    """`on_delete=PROTECT` on every `CatalogEntity.ingested_from` FK is what
+    """`on_delete=PROTECT` on `EntityClaim.repository` is what
     actually blocks deletion while a repository still claims an entity — Django
     admin's delete flow surfaces that as a "cannot delete" page listing every
     claiming entity.

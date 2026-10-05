@@ -26,6 +26,7 @@ from atlas_plugin_api.controllers import AtlasController
 from atlas_plugin_api.entity_helpers import (
     API_VERSION,
     FORBIDDEN_RESPONSE,
+    claim_relations,
     delete_blocked,
     entity_capabilities,
     ingested_from,
@@ -36,6 +37,7 @@ from atlas_plugin_api.entity_helpers import (
     tag_colors,
 )
 from django.apps import apps as django_apps
+from django.db import transaction
 from dmr.errors import ErrorType, format_error
 from dmr.response import APIError
 
@@ -51,6 +53,7 @@ __all__ = [
     "adopt",
     "blocked_by",
     "blocked_by_reason",
+    "claim_relations",
     "delete_blocked",
     "entity_capabilities",
     "ingested_from",
@@ -69,9 +72,7 @@ __all__ = [
 # imported by every other plugin's read/write views, so an
 # eager import here would crash them all whenever ingestion is deselected.
 #
-# A manifest that omits `atlas.ingestion` entirely still force-installs its
-# Django app (Core's own `ingested_from` FK needs it — `generate.py`'s
-# `CORE_REQUIRED_PLUGIN_ID`) and falls back to `disabled`, so
+# A selected but `disabled` plugin keeps its Django app installed, so
 # `apps.is_installed` alone would read True even when the plugin isn't
 # really active. Checking `DISABLED_PLUGINS` too treats "disabled" the same
 # as "unavailable" here — conflict-checking and repository adoption are
@@ -168,6 +169,10 @@ def resolve_adopt_repository(repository: str) -> "RegisteredRepository":
 
 def adopt(instance, request, body) -> None:
     EntityWritePermission.check_adopt(request.user, instance)
-    instance.source_kind = instance.SOURCE_YAML
-    instance.ingested_from = resolve_adopt_repository(body.repository)
-    instance.save(update_fields=["source_kind", "ingested_from", "updated_at"])
+    repository = resolve_adopt_repository(body.repository)
+    from atlas_plugin_ingestion.claims import claim_entity
+
+    with transaction.atomic():
+        instance.source_kind = instance.SOURCE_YAML
+        instance.save(update_fields=["source_kind", "updated_at"])
+        claim_entity(instance, repository)

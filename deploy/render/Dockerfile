@@ -23,6 +23,7 @@ COPY plugins/apis/frontend/package.json plugins/apis/frontend/package.json
 COPY plugins/c4/frontend/package.json plugins/c4/frontend/package.json
 COPY plugins/database-schema/frontend/package.json plugins/database-schema/frontend/package.json
 COPY plugins/flows/frontend/package.json plugins/flows/frontend/package.json
+COPY plugins/search/frontend/package.json plugins/search/frontend/package.json
 RUN npm ci
 COPY . .
 RUN npm run build --workspace=frontend
@@ -74,10 +75,13 @@ COPY plugins/c4/backend /code/plugins/c4/backend
 COPY plugins/database-schema/backend /code/plugins/database-schema/backend
 COPY plugins/ingestion/backend /code/plugins/ingestion/backend
 COPY plugins/flows/backend /code/plugins/flows/backend
+COPY plugins/search/backend /code/plugins/search/backend
+COPY plugins/search-postgres/backend /code/plugins/search-postgres/backend
 # Not selected in this demo distribution (see deploy/render/manifest.yaml), but
-# core/backend/pyproject.toml/uv.lock list it as a path dependency, so
+# core/backend/pyproject.toml/uv.lock list them as path dependencies, so
 # `uv sync --frozen` needs its source present.
 COPY plugins/mcp/backend /code/plugins/mcp/backend
+COPY plugins/search-meilisearch/backend /code/plugins/search-meilisearch/backend
 RUN uv sync --frozen --no-dev
 
 COPY core/backend .

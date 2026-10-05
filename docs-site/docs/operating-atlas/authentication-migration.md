@@ -48,10 +48,9 @@ Complete this checklist against a staging restore before upgrading production.
 Rollback is an infrastructure recovery, not a silent provider downgrade. Stop
 traffic, restore the matched database/manifest/lock/generated-artifact set, and
 keep affected Principals blocked until source and revocation generations are
-known to be enforced. If the membership-grant reverse migration is used instead
-of restoring a backup, it reconstructs only currently effective Actor/Group
-pairs; provider provenance, expiry, and independent grant reasons are lost.
-Test the selected local break-glass or alternate provider after rollback before
+known to be enforced. Atlas ships no reverse migration for membership grants:
+the migration history was regenerated before the first release, so rollback
+means restoring the matched backup. Test the selected local break-glass or alternate provider after rollback before
 reopening traffic. Never re-enable local signup or an unselected provider as an
 automatic fallback.
 
@@ -127,6 +126,5 @@ until operator removal or source/link revocation.
 
 An older build is unsafe if it ignores source/revocation generations, closed
 signup, explicit admin recovery, or assigned `AccountAccess` restrictions.
-Keep affected accounts blocked during infrastructure recovery. Reversing the
-grant migration preserves current effective pairs but loses provenance and
-expiry. Restore a tested backup when that loss is unacceptable.
+Keep affected accounts blocked during infrastructure recovery. There is no
+reverse migration for membership grants; restore a tested backup.

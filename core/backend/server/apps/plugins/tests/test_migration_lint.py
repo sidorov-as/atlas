@@ -190,8 +190,8 @@ def test_dependency_on_own_history_is_allowed():
 
 
 def test_core_depending_on_a_plugin_is_exempt():
-    # Mirrors the real repo: `catalog` depends on `ingestion` for
-    # `CatalogEntity.ingested_from` — Core isn't "a plugin" for this rule.
+    # Core isn't "a plugin" for this rule, even though the real `catalog`
+    # history no longer depends on any plugin.
     assert (
         _violation_for(
             "catalog",

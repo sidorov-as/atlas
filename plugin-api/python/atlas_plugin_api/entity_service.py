@@ -57,6 +57,18 @@ class EntityNotFoundError(LookupError):
     """No `CatalogEntity` exists for the given id."""
 
 
+class DuplicateEntityError(ValueError):
+    """An entity of this kind already has this name (names are unique per kind
+    and namespace, ignoring case). Raised by `create`, and by `update` when a
+    rename collides, so callers can answer with a client error instead of failing
+    on the database constraint."""
+
+    def __init__(self, kind_id: str, name: str) -> None:
+        super().__init__(f"A {kind_id} named {name!r} already exists")
+        self.kind_id = kind_id
+        self.name = name
+
+
 class UnknownEntityKindError(ValueError):
     """No `EntityKindHandler` is registered for the given `kind_id` (entity-kind-registry spec)."""
 
@@ -103,7 +115,6 @@ class EntityService(Protocol):
         spec: BaseModel,
         actor: Any,
         source: str = SOURCE_MANUAL,
-        ingested_from: Any = None,
     ) -> CatalogEntity: ...
 
     def update(
@@ -115,7 +126,6 @@ class EntityService(Protocol):
         spec: BaseModel | None = None,
         actor: Any,
         source: str = SOURCE_MANUAL,
-        ingested_from: Any = None,
     ) -> CatalogEntity: ...
 
     def delete(self, *, entity_id: UUID, actor: Any) -> None: ...

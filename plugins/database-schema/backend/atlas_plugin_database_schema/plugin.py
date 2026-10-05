@@ -13,7 +13,7 @@ Declares a required manifest dependency on `atlas.standard-catalog`, since
 the facet attaches to `Resource` entities and the `resource` kind is where
 `schema.host.v1` is declared.
 
-Registers no capability, permission, or Entity Kind of its own at runtime
+Registers a search source (`search_source.py`) as well as the facet writer below, but no capability, permission, or Entity Kind of its own at runtime
 (`schema.host.v1` is declared by Standard Catalog's `resource` kind
 handler, not by this plugin).
 
@@ -55,8 +55,24 @@ def register_runtime() -> None:
     `atlas_plugin_ingestion` at all when it's actually registering into its
     extension point, not merely to be imported (every plugin's backend
     package is always importable regardless of selection).
+
+    Ingestion is an optional companion, not a dependency: a distribution
+    that doesn't ship `atlas_plugin_ingestion` at all has nothing to
+    register into, so the facet-writer is simply skipped.
     """
-    from atlas_plugin_ingestion.extension_points import facet_writers
+    from atlas_plugin_api import register_search_source
+
+    from .search_source import database_schema_search_source
+
+    # Harmless without the search plugin: nothing reads the registry then.
+    register_search_source(database_schema_search_source, owner=PLUGIN.id)
+
+    try:
+        from atlas_plugin_ingestion.extension_points import facet_writers
+    except ModuleNotFoundError as exc:
+        if not (exc.name or "").startswith("atlas_plugin_ingestion"):
+            raise
+        return
 
     from .facet_writer import DatabaseSchemaFacetWriter
 

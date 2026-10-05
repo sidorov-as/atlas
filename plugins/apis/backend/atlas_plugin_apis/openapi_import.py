@@ -589,10 +589,11 @@ def _upsert_operations(api: Any, operations: list[ParsedOperation]) -> None:
         for endpoint in active
         if (endpoint.method, endpoint.path) not in seen
     ]
-    if stale_ids:
-        ApiEndpoint.objects.filter(pk__in=stale_ids).update(
-            status=ApiEndpoint.STATUS_REMOVED
-        )
+    # Saved one by one, not `QuerySet.update`: a bulk update sends no `post_save`, so search
+    # indexing would never hear about the removal.
+    for endpoint in ApiEndpoint.objects.filter(pk__in=stale_ids):
+        endpoint.status = ApiEndpoint.STATUS_REMOVED
+        endpoint.save(update_fields=["status", "updated_at"])
 
 
 def _upsert_operation(api: Any, operation: ParsedOperation) -> None:

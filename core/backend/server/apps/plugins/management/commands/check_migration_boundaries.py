@@ -7,11 +7,9 @@ would make the depended-on plugin un-removable (its migration table can't be
 unapplied/absent without breaking the dependent plugin's graph), defeating
 the whole point of `disabled`/`removed` being safe, data-preserving states.
 
-Core is exempt: it's not "a plugin" for purposes of this rule, and its own
-migration history already, deliberately, depends on `ingestion` (e.g.
-`catalog.0001_initial`, `catalog.0012_catalog_entity_identity`, for
-`CatalogEntity.ingested_from`) — a pre-existing, one-directional dependency
-this check doesn't second-guess.
+Core is exempt: it's not "a plugin" for purposes of this rule. (Its own
+migration history currently depends on no plugin; the claim of an entity by
+an ingestion repository is the ingestion plugin's own `EntityClaim` row.)
 """
 
 from __future__ import annotations

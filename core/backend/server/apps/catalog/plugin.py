@@ -55,7 +55,10 @@ PLUGIN = PluginDescriptor(
 
 
 def register_runtime() -> None:
-    from atlas_plugin_api import register_authentication_provider
+    from atlas_plugin_api import (
+        register_authentication_provider,
+        register_search_source,
+    )
 
     from server.apps.catalog.api.helpers import (
         adopt,
@@ -65,6 +68,7 @@ def register_runtime() -> None:
     from server.apps.catalog.authorization import policy_evaluator
     from server.apps.catalog.local_authentication import LocalCredentialProvider
     from server.apps.catalog.membership import membership_service
+    from server.apps.catalog.search_source import catalog_search_source
     from server.apps.catalog.services.architecture_relationship_service import (
         architecture_relationship_service,
     )
@@ -74,6 +78,7 @@ def register_runtime() -> None:
     )
 
     register_authentication_provider(LocalCredentialProvider(), owner=PLUGIN.id)
+    register_search_source(catalog_search_source, owner=PLUGIN.id)
 
     bind_entity_service(entity_service)
     bind_architecture_relationship_service(architecture_relationship_service)

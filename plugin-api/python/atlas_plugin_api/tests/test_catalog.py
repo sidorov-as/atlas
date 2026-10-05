@@ -88,7 +88,6 @@ def test_catalog_entity_protocol_is_structural():
         owner = None
         owner_id = None
         source_kind = "manual"
-        ingested_from = None
         status = "active"
         created_at = None
         updated_at = None

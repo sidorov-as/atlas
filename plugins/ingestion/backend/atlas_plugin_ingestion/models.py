@@ -2,6 +2,7 @@ import re
 from pathlib import PurePosixPath
 from typing import ClassVar
 
+from atlas_plugin_api import CATALOG_ENTITY_LABEL, INGESTION_CLAIM_ACCESSOR
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -157,3 +158,32 @@ class RegisteredRepository(models.Model):
 
     def __str__(self) -> str:
         return f"{self.source_id}/{self.path}"
+
+
+class EntityClaim(models.Model):
+    """Which repository claims a catalog entity (`source_kind=yaml`).
+
+    Owned by this plugin, not by the core entity row: core's schema carries
+    no reference to ingestion, so a distribution that doesn't select this
+    plugin has no ingestion tables and migrates cleanly. The reverse accessor
+    on the entity is `INGESTION_CLAIM_ACCESSOR`, which `atlas_plugin_api`'s
+    `ingested_from()` reads.
+
+    `repository` is `PROTECT`: a repository can't be unregistered while it
+    claims any entity, active or `removed`. Purging the entity deletes its
+    claim (`CASCADE`).
+    """
+
+    entity = models.OneToOneField(
+        CATALOG_ENTITY_LABEL,
+        on_delete=models.CASCADE,
+        related_name=INGESTION_CLAIM_ACCESSOR,
+    )
+    repository = models.ForeignKey(
+        RegisteredRepository,
+        on_delete=models.PROTECT,
+        related_name="claims",
+    )
+
+    def __str__(self) -> str:
+        return f"{self.entity_id} claimed by {self.repository}"

@@ -2,6 +2,7 @@
 
 import pytest
 from atlas_plugin_api import authentication as authentication_module
+from atlas_plugin_api import search as search_module
 from atlas_plugin_api.authentication import AuthenticationProviderRegistry
 
 from server.apps.plugins.composition import (
@@ -20,6 +21,17 @@ def _isolated_authentication_provider_registry(monkeypatch):
         authentication_module,
         "_authentication_provider_registry",
         AuthenticationProviderRegistry(),
+    )
+
+
+@pytest.fixture(autouse=True)
+def _isolated_search_source_registry(monkeypatch):
+    """Same for the catalog's search source registered at app startup."""
+
+    monkeypatch.setattr(
+        search_module,
+        "_search_source_registry",
+        search_module.SearchSourceRegistry(),
     )
 
 

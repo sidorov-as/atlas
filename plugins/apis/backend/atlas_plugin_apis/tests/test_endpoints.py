@@ -345,3 +345,29 @@ def test_admin_delete_action_is_not_registered(admin_request):
     admin_instance = ApiEndpointAdmin(ApiEndpoint, admin.site)
 
     assert "delete_selected" not in admin_instance.get_actions(admin_request)
+
+
+# --- schema type normalisation -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected_type", "expected_nullable"),
+    [
+        ({"type": "null"}, None, True),
+        ({"type": ["string", "null"]}, "string", True),
+        ({"type": ["string", "integer"]}, None, False),
+        ({"type": "weird"}, None, False),
+        ({"type": "string"}, "string", False),
+    ],
+)
+def test_endpoint_schema_out_tolerates_non_modelled_types(
+    raw, expected_type, expected_nullable
+):
+    from atlas_plugin_apis.api.schemas import EndpointSchemaOut
+
+    schema = EndpointSchemaOut.model_validate(
+        {"type": "object", "properties": {"result": raw}}
+    )
+
+    assert schema.properties["result"].type == expected_type
+    assert schema.properties["result"].nullable is expected_nullable

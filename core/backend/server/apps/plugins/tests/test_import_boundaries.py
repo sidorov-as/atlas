@@ -19,7 +19,9 @@ first-party plugins actually do:
   plugin's own admin test) stay allowlisted, test-only — first-party test
   fixtures/assertions a third-party plugin author's own tests wouldn't need
   a published contract for, symmetric with each other, not part of the
-  contract surface itself.
+  contract surface itself. `server.apps.plugins.resolver` and
+  `server.apps.plugins.runtime` are allowlisted the same way, for the
+  search plugin's test that a disabled plugin runs none of its hooks.
 - `ALLOWED_PLUGIN_TO_PLUGIN_EDGES`: a plugin importing another plugin's
   implementation modules directly, not through a declared contract-only
   package. Each remaining edge is documented as a known exception rather
@@ -90,6 +92,10 @@ ALLOWED_CORE_SUBMODULES: tuple[str, ...] = ()
 ALLOWED_CORE_TEST_SUBMODULES = (
     "server.apps.catalog.tests.factories",
     "server.apps.catalog.models.audit",
+    # `atlas_plugin_search`'s `tests/test_inert.py` drives core's own runtime
+    # phases to prove a disabled search plugin runs none of its hooks.
+    "server.apps.plugins.resolver",
+    "server.apps.plugins.runtime",
 )
 
 # Known plugin -> plugin implementation edges that predate this check

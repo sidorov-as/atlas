@@ -67,7 +67,7 @@ docker compose --env-file core/backend/.env -f docker-compose.dev.yml up --build
 
 Compose starts PostgreSQL first, waits for it to become healthy, runs the
 one-shot `migrate` service to apply Core and selected-plugin migrations, then
-starts the backend, frontend, and ingestion scheduler once `migrate` completes
+starts the backend, frontend, and scheduler once `migrate` completes
 successfully. Wait until the backend reports healthy and the frontend reports
 its local URL before continuing. If the command cannot connect to Docker,
 cannot bind a port, or stops during an image build, use [The development stack

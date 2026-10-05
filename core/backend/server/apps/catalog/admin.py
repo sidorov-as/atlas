@@ -115,7 +115,7 @@ class CatalogEntityAdmin(admin.ModelAdmin):
     list_display = ("name", "kind", "namespace", "owner", "source_kind")
     list_filter = ("kind", "source_kind")
     search_fields = ("name", "title")
-    autocomplete_fields = ("owner", "ingested_from")
+    autocomplete_fields = ("owner",)
 
 
 @admin.register(ArchitectureRelationship)

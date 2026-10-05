@@ -40,6 +40,9 @@ services:
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
       - ./plugins/mcp/backend:/code/plugins/mcp/backend
+      - ./plugins/search/backend:/code/plugins/search/backend
+      - ./plugins/search-postgres/backend:/code/plugins/search-postgres/backend
+      - ./plugins/search-meilisearch/backend:/code/plugins/search-meilisearch/backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +67,9 @@ services:
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
       - ./plugins/mcp/backend:/code/plugins/mcp/backend
+      - ./plugins/search/backend:/code/plugins/search/backend
+      - ./plugins/search-postgres/backend:/code/plugins/search-postgres/backend
+      - ./plugins/search-meilisearch/backend:/code/plugins/search-meilisearch/backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -91,6 +97,7 @@ services:
       - ./plugins/c4/frontend:/app/plugins/c4/frontend
       - ./plugins/database-schema/frontend:/app/plugins/database-schema/frontend
       - ./plugins/flows/frontend:/app/plugins/flows/frontend
+      - ./plugins/search/frontend:/app/plugins/search/frontend
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
       - frontend-node-modules:/app/node_modules
@@ -101,6 +108,8 @@ services:
         condition: service_healthy
     networks: [application]
 
+  # Platform scheduler: runs the jobs contributed by selected plugins
+  # (e.g. ingestion). Service name kept for compatibility.
   ingestor:
     build:
       context: .
@@ -121,6 +130,9 @@ services:
       - ./plugins/ingestion/backend:/code/plugins/ingestion/backend
       - ./plugins/flows/backend:/code/plugins/flows/backend
       - ./plugins/mcp/backend:/code/plugins/mcp/backend
+      - ./plugins/search/backend:/code/plugins/search/backend
+      - ./plugins/search-postgres/backend:/code/plugins/search-postgres/backend
+      - ./plugins/search-meilisearch/backend:/code/plugins/search-meilisearch/backend
     depends_on:
       migrate:
         condition: service_completed_successfully

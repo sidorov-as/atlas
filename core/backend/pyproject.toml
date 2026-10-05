@@ -13,6 +13,9 @@ dependencies = [
     "atlas-plugin-flows",
     "atlas-plugin-ingestion",
     "atlas-plugin-mcp",
+    "atlas-plugin-search",
+    "atlas-plugin-search-postgres",
+    "atlas-plugin-search-meilisearch",
     "atlas-plugin-standard-catalog",
     "atlas-plugin-auth-oidc",
     "atlas-plugin-auth-gitea",
@@ -62,6 +65,9 @@ atlas-plugin-database-schema = { path = "../../plugins/database-schema/backend",
 atlas-plugin-flows = { path = "../../plugins/flows/backend", editable = true }
 atlas-plugin-ingestion = { path = "../../plugins/ingestion/backend", editable = true }
 atlas-plugin-mcp = { path = "../../plugins/mcp/backend", editable = true }
+atlas-plugin-search = { path = "../../plugins/search/backend", editable = true }
+atlas-plugin-search-postgres = { path = "../../plugins/search-postgres/backend", editable = true }
+atlas-plugin-search-meilisearch = { path = "../../plugins/search-meilisearch/backend", editable = true }
 atlas-plugin-standard-catalog = { path = "../../plugins/standard-catalog/backend", editable = true }
 atlas-plugin-auth-oidc = { path = "../../plugins/auth-oidc/backend", editable = true }
 atlas-plugin-auth-gitea = { path = "../../plugins/auth-gitea/backend", editable = true }

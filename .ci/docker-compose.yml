@@ -1,4 +1,4 @@
-# Throwaway PostgreSQL for `make ci`'s backend pytest step (see .ci/run.sh).
+# Throwaway PostgreSQL and Meilisearch for `make ci`'s backend pytest step (see .ci/run.sh).
 #
 # Isolated from docker-compose.dev.yml's own `postgres`: `make ci` (see
 # .ci/run.sh) runs this under its own Compose project name, and it's
@@ -20,6 +20,21 @@ services:
       - "${CI_POSTGRES_PORT:-55432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Real instance for the Meilisearch adapter's tests (plugins/search-meilisearch).
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_MASTER_KEY: ci-meilisearch-key
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "${CI_MEILISEARCH_PORT:-57700}:7700"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7700/health"]
       interval: 5s
       timeout: 5s
       retries: 12

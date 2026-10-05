@@ -5,7 +5,7 @@ plugins:
     backend:
       package: atlas-plugin-standard-catalog
       version: 0.1.0
-      hash: sha256:835d1ed01e057bce26196274c8cba1be1a96085f9894414189739552f3187e9c
+      hash: sha256:7f2ea1dd71a866e9054e16fe9f9685648349b03a014731625db8879255deab11
     frontend:
       package: '@atlas/plugin-standard-catalog'
       version: 0.1.0
@@ -14,7 +14,7 @@ plugins:
     backend:
       package: atlas-plugin-apis
       version: 0.1.0
-      hash: sha256:e7a1c6f4de1717446b22bd88dd7062b8516410d8b02cf81207713df6ef592a9a
+      hash: sha256:0e3139c0f4946d0d4e9ce78162df8af16b6af9786115a603fb04b07d10f4f54f
     frontend:
       package: '@atlas/plugin-apis'
       version: 0.1.0
@@ -32,7 +32,7 @@ plugins:
     backend:
       package: atlas-plugin-database-schema
       version: 0.1.0
-      hash: sha256:43a5f26c0749b734648bfcfe8b1489ccfbbb41f733ead519ba3e23e47747f9c4
+      hash: sha256:8d0f62ee8a48095da6bbabfa88c2c289761374d350fa688d684b243ec0c3736d
     frontend:
       package: '@atlas/plugin-database-schema'
       version: 0.1.0
@@ -41,12 +41,12 @@ plugins:
     backend:
       package: atlas-plugin-ingestion
       version: 0.1.0
-      hash: sha256:0d03d93b721a98beca35332835f65bbbec2e2481285a25799ee0fbebca09fd2d
+      hash: sha256:de8c4d16fb7f4f55b19d7d2760905c5d2c1feb3035f7299b93e8b86b2d0b4c3c
   atlas.flows@0.1.0:
     backend:
       package: atlas-plugin-flows
       version: 0.1.0
-      hash: sha256:b1246b9c6820c4b732d4253dbd2f57fd60fcd59bbbd4cfb833fb134a01ec2450
+      hash: sha256:a204c5f448444bf5b398c949d3163ef2f8c8174e4e76634bfb8b876e5b767f68
     frontend:
       package: '@atlas/plugin-flows'
       version: 0.1.0
@@ -55,7 +55,21 @@ plugins:
     backend:
       package: atlas-plugin-mcp
       version: 0.1.0
-      hash: sha256:07cccab985918f872c91058a0e2a24f18d29d1208da96d2b16157bf8e518994a
+      hash: sha256:02cce2378bf3587eaf47f0cd89b85445caec42f6f9711725556c8499d1896df1
+  atlas.search-postgres@0.1.0:
+    backend:
+      package: atlas-plugin-search-postgres
+      version: 0.1.0
+      hash: sha256:8e1360f4ccccc4f59567898f8a5d02c1af27cadce6413c9fef3bd31d13a91b37
+  atlas.search@0.1.0:
+    backend:
+      package: atlas-plugin-search
+      version: 0.1.0
+      hash: sha256:3027ed3f844e3fb8bc43c3734a6f3ba7cd01708bdbd0bd3934d6d29bd6f6acc0
+    frontend:
+      package: '@atlas/plugin-search'
+      version: 0.1.0
+      integrity: sha512-CR78q5p4hkhrt1/dOaX8rvlGy+igCII7FtB9FFN4fN+/bdXw2dita01f6SnvHLMWK4icrQKhT/o+TCdCzTzivQ==
 auth:
   providers:
   - id: atlas.auth.local

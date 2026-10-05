@@ -107,7 +107,7 @@ operator procedures that invoke them.
 | `seed_booking_demo [--yes]` | Flushes the database, creates a disposable validated demo administrator, and creates the reproducible booking catalog | Getting Started demo step, screenshot data contract, command reference; mark destructive and explain interactive confirmation. |
 | `seed_flow_layout_tests` | Recreates synthetic `test-*` Flows below its dedicated test System | Developer/debug reference only; do not present as general demo data. |
 | `ingest` | Runs one ingestion pass and API spec refresh, then exits | Repository ingestion workflow, retries, and command reference. |
-| `runapscheduler` | Starts blocking ingestion discovery/spec-refresh jobs and handles process shutdown | Ingestion operations and topology reference; it is a service entry point, not an ad-hoc retry command. |
+| `runapscheduler` | Starts the blocking platform scheduler, registers jobs contributed by active plugins (for example ingestion discovery/spec-refresh), and handles process shutdown | Ingestion operations and topology reference; it is a service entry point, not an ad-hoc retry command. |
 | `check_migration_boundaries` | Fails when a plugin migration depends on another plugin instead of Core/itself | Plugin testing guide, migration operations, and command reference. |
 | `purge_plugin <plugin_id> [--confirm]` | Dry-run table/row scope by default; `--confirm` deletes selected plugin-owned model rows transactionally | Plugin lifecycle operator guide and command reference with irreversible warning and selected-code prerequisite. |
 

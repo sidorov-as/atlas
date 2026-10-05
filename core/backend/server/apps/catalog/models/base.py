@@ -77,13 +77,6 @@ class CatalogEntity(models.Model):
     source_kind = models.CharField(
         max_length=16, choices=SOURCE_KIND_CHOICES, default=SOURCE_MANUAL
     )
-    ingested_from = models.ForeignKey(
-        "ingestion.RegisteredRepository",
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="claimed_entities",
-    )
 
     # Removed/Revive/Purge lifecycle —
     # decoupled from any `deprecated`/`lifecycle` cosmetic flag a kind's

@@ -34,7 +34,7 @@ static files before the backend, ingestor, and gateway accept traffic.
 | --- | --- | --- |
 | `frontend` | `${ATLAS_PORT:-8080}` on the host | Serves the compiled SPA and Django static files; proxies application routes to the backend. |
 | `backend` | Internal application network | Serves Django and the HTTP API after its health check succeeds. |
-| `ingestor` | Internal database network | Runs scheduled ingestion work. |
+| `ingestor` | Internal database network | Runs the platform scheduler (`manage.py runapscheduler`) and the jobs that selected plugins contribute, such as ingestion. |
 | `initializer` | Internal database network, one-shot | Runs `migrate --noinput` and `collectstatic --noinput`. |
 | `postgres` | Internal database network | Stores Atlas data and reports readiness before initialization begins. |
 

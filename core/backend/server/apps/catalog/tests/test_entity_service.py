@@ -231,3 +231,69 @@ def test_delete_of_an_unavailable_entity_is_rejected(system, superuser_account):
         service.delete(entity_id=system.id, actor=superuser_account)
 
     assert CatalogEntity.objects.filter(pk=system.id).exists()
+
+
+def _create_system_via_api(client, name):
+    return client.post(
+        "/api/systems/",
+        {"metadata": {"name": name}, "spec": {"owner": "group:platform"}},
+    )
+
+
+def test_creating_a_duplicate_name_is_a_client_error_not_a_server_error(
+    owner_client, group
+):
+    assert _create_system_via_api(owner_client, "ledger").status_code == 201
+
+    # Names are unique per kind regardless of case.
+    for name in ("ledger", "LEDGER"):
+        response = _create_system_via_api(owner_client, name)
+
+        assert response.status_code == 400
+        assert "already exists" in str(response.json())
+    assert CatalogEntity.objects.filter(name__iexact="ledger").count() == 1
+    assert (
+        EntityAuditRecord.objects.filter(action=EntityAuditRecord.ACTION_CREATE)
+        .filter(diff__metadata__name__iexact="ledger")
+        .count()
+        == 1
+    )
+
+
+def test_the_same_name_is_allowed_for_a_different_kind(owner_client, group):
+    assert _create_system_via_api(owner_client, "ledger").status_code == 201
+
+    response = owner_client.post(
+        "/api/resources/",
+        {
+            "metadata": {"name": "ledger"},
+            "spec": {"type": "database", "owner": "group:platform"},
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_renaming_onto_an_existing_name_is_rejected(owner_client, group):
+    taken = _create_system_via_api(owner_client, "taken")
+    other = _create_system_via_api(owner_client, "other")
+    assert taken.status_code == other.status_code == 201
+
+    response = owner_client.patch(
+        f"/api/systems/{other.json()['id']}/", {"metadata": {"name": "Taken"}}
+    )
+
+    assert response.status_code == 400
+    assert CatalogEntity.objects.get(pk=other.json()["id"]).name == "other"
+
+
+def test_a_duplicate_name_does_not_mark_the_plugin_degraded(
+    owner_client, group
+):
+    from server.apps.plugins.health import plugin_health, reset_degraded
+
+    reset_degraded()
+    _create_system_via_api(owner_client, "ledger")
+    _create_system_via_api(owner_client, "ledger")
+
+    assert {item.status for item in plugin_health()} <= {"active", "disabled"}

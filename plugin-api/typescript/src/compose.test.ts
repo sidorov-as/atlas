@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { entityDetailTab, homeWidget, navItem, route, routeRef } from './builders'
+import { entityDetailTab, globalSearch, homeWidget, navItem, route, routeRef } from './builders'
 import { CORE_PLUGIN_ID, CompositionError, composeFrontendPlugins } from './compose'
 import type { FrontendPlugin } from './types'
 
@@ -133,6 +133,37 @@ describe('composeFrontendPlugins', () => {
       const message = (error as CompositionError).message
       expect(message).toContain('atlas.dup')
       expect(message).toContain('atlas.missing')
+    }
+  })
+
+  it('exposes the single globalSearch contribution, or undefined when absent', () => {
+    const search = globalSearch({ id: 'atlas.fixture.search', component: Noop })
+    const withSearch: FrontendPlugin = { id: 'atlas.fixture-search', contributions: [search] }
+    const without: FrontendPlugin = { id: 'atlas.fixture', contributions: [homeWidget({ id: 'atlas.fixture.widget', component: Noop })] }
+
+    expect(composeFrontendPlugins([without, withSearch]).globalSearch).toBe(search)
+    expect(composeFrontendPlugins([without]).globalSearch).toBeUndefined()
+  })
+
+  it('fails composition naming both plugins when two supply globalSearch', () => {
+    const pluginA: FrontendPlugin = {
+      id: 'atlas.search-a',
+      contributions: [globalSearch({ id: 'atlas.search-a.box', component: Noop })],
+    }
+    const pluginB: FrontendPlugin = {
+      id: 'atlas.search-b',
+      contributions: [globalSearch({ id: 'atlas.search-b.box', component: Noop })],
+    }
+
+    try {
+      composeFrontendPlugins([pluginA, pluginB])
+      expect.unreachable()
+    } catch (error) {
+      expect(error).toBeInstanceOf(CompositionError)
+      const message = (error as CompositionError).message
+      expect(message).toContain('globalSearch')
+      expect(message).toContain('atlas.search-a')
+      expect(message).toContain('atlas.search-b')
     }
   })
 })

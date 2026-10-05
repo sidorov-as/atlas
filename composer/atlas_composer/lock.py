@@ -53,6 +53,27 @@ class LockedPlugin(_Base):
     """Validated unresolved plugin configuration; secrets remain references."""
 
 
+class LockedService(_Base):
+    """One required service as the lock pins it. Holds the secret's
+    environment variable *name* only, never a value."""
+
+    plugin: str
+    id: str
+    image: str
+    port: int
+    health_check: tuple[str, ...] = Field(alias="healthCheck")
+    address_key: str = Field(alias="addressKey")
+    secret_key: str | None = Field(default=None, alias="secretKey")
+    secret_env: str | None = Field(default=None, alias="secretEnv")
+    """Environment variable the container reads its key from."""
+    secret_from_env: str | None = Field(default=None, alias="secretFromEnv")
+    """Environment variable the operator sets; the plugin config references it
+    as `{fromEnv: ...}`."""
+    data_path: str | None = Field(default=None, alias="dataPath")
+    external: bool = False
+    address: str | None = None
+
+
 class LockedCredentialField(_Base):
     id: str
     label: str
@@ -130,6 +151,10 @@ class Lock(_Base):
     """Keyed by `{plugin.id}@{plugin.version}`, e.g. `atlas.apis@1.4.2`."""
 
     auth: LockedAuthConfig = Field(default_factory=LockedAuthConfig)
+
+    services: dict[str, LockedService] = Field(default_factory=dict)
+    """Keyed by `{plugin.id}/{service.id}`; empty when no selected plugin
+    declares a service, which keeps such a lock byte-identical to before."""
 
 
 def load_lock(path: Path) -> Lock:

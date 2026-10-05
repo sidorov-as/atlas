@@ -52,6 +52,9 @@ COPY plugins/database-schema/backend /code/plugins/database-schema/backend
 COPY plugins/ingestion/backend /code/plugins/ingestion/backend
 COPY plugins/flows/backend /code/plugins/flows/backend
 COPY plugins/mcp/backend /code/plugins/mcp/backend
+COPY plugins/search/backend /code/plugins/search/backend
+COPY plugins/search-postgres/backend /code/plugins/search-postgres/backend
+COPY plugins/search-meilisearch/backend /code/plugins/search-meilisearch/backend
 RUN uv sync --frozen $(if [ "$DJANGO_ENV" = production ]; then echo --no-dev; fi)
 # Keep the renderer self-contained: the C4 library is bundled by c4-diagrams
 # and PlantUML runs locally, with no server URL or source mount dependency.

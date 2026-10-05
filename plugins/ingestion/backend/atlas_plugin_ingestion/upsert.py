@@ -65,6 +65,7 @@ from atlas_plugin_standard_catalog.contracts import (
 from django.db import transaction
 from pydantic import BaseModel
 
+from .claims import claim_entity, claiming_repository_id
 from .intent import EntityIntent
 from .models import ConflictRecord, RegisteredRepository
 from .validation import ManifestDocument
@@ -160,10 +161,8 @@ def upsert_entity(doc: ManifestDocument, repo: RegisteredRepository) -> CatalogE
         # persist its conflict record even though the upsert itself never runs,
         # and a rejected claim never reaches
         # the point below where an `EntityIntent` is even constructed.
-        is_rival = (
-            existing.source_kind == SOURCE_MANUAL
-            or existing.ingested_from_id != repo.id
-        )
+        claiming_repo_id = claiming_repository_id(existing)
+        is_rival = existing.source_kind == SOURCE_MANUAL or claiming_repo_id != repo.id
         if is_rival and existing.status == STATUS_REMOVED:
             # A removed entity's ref stays claimed (a removed entity keeps its name
             # reserved) — this reason
@@ -183,12 +182,13 @@ def upsert_entity(doc: ManifestDocument, repo: RegisteredRepository) -> CatalogE
             raise ClaimRejected(
                 f"{doc.kind} {name!r} is already claimed by a manual entity"
             )
-        if existing.ingested_from_id != repo.id:
+        if claiming_repo_id != repo.id:
             _record_conflict(
                 repo, kind_id, namespace, name, ConflictRecord.REASON_OTHER_REPOSITORY
             )
+            claimant = RegisteredRepository.objects.filter(pk=claiming_repo_id).first()
             raise ClaimRejected(
-                f"{doc.kind} {name!r} is already claimed by {existing.ingested_from}",
+                f"{doc.kind} {name!r} is already claimed by {claimant}",
             )
 
     # Arbitration has cleared the claim (or there was nothing to arbitrate) —
@@ -223,7 +223,6 @@ def upsert_entity(doc: ManifestDocument, repo: RegisteredRepository) -> CatalogE
                 spec=spec_patch,
                 actor=None,
                 source=intent.source_kind,
-                ingested_from=intent.ingested_from,
             )
         else:
             instance = get_entity_service().create(
@@ -233,8 +232,8 @@ def upsert_entity(doc: ManifestDocument, repo: RegisteredRepository) -> CatalogE
                 spec=intent.spec,
                 actor=None,
                 source=intent.source_kind,
-                ingested_from=intent.ingested_from,
             )
+        claim_entity(instance, intent.ingested_from)
         _resolve_conflicts(kind_id, namespace, name)
     return instance
 
@@ -307,7 +306,7 @@ def reconcile_claimed_entities(
         get_catalog_entity_model()
         .objects.filter(
             source_kind=SOURCE_YAML,
-            ingested_from=repo,
+            ingestion_claim__repository=repo,
             status=STATUS_ACTIVE,
         )
         .exclude(id__in=seen_ids)

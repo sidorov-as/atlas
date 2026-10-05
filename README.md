@@ -125,8 +125,9 @@ for details.
   (source in [`skills/`](skills/README.md)) let an AI assistant fill the catalog
   from a codebase and build flows through the MCP server.
 
-Runnable examples are available for [authentication](examples/authentication/README.md)
-and [repository ingestion](examples/ingestion/README.md). For host-only development,
+Runnable examples are available for [authentication](examples/authentication/README.md),
+[repository ingestion](examples/ingestion/README.md) and
+[search with Meilisearch](examples/search-meilisearch/README.md). For host-only development,
 see the [backend](core/backend/README.md) and [frontend](core/frontend/README.md)
 guides.
 

@@ -12,3 +12,5 @@ core/backend/*.sqlite3
 **/__pycache__
 **/*.pyc
 **/.mypy_cache
+plugins/*/backend/.venv
+composer/.venv

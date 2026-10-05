@@ -19,19 +19,24 @@ CI_POSTGRES_PORT="${CI_POSTGRES_PORT:-55432}"
 export CI_POSTGRES_PORT
 export DJANGO_DATABASE_HOST="${DJANGO_DATABASE_HOST:-localhost}"
 export DJANGO_DATABASE_PORT="$CI_POSTGRES_PORT"
+CI_MEILISEARCH_PORT="${CI_MEILISEARCH_PORT:-57700}"
+export CI_MEILISEARCH_PORT
+export ATLAS_TEST_MEILISEARCH_URL="http://localhost:${CI_MEILISEARCH_PORT}"
+export ATLAS_TEST_MEILISEARCH_KEY="ci-meilisearch-key"
+export ATLAS_REQUIRE_MEILISEARCH=1
 
 compose_ci() { docker compose -f .ci/docker-compose.yml -p atlas-ci "$@"; }
 
 summary_file=$(mktemp)
 cleanup() {
   echo ""
-  echo "==> Stopping .ci/ postgres"
+  echo "==> Stopping .ci/ services"
   compose_ci down --volumes >/dev/null
   rm -f "$summary_file"
 }
 trap cleanup EXIT
 
-echo "==> Starting .ci/ postgres (port ${CI_POSTGRES_PORT})"
+echo "==> Starting .ci/ postgres (port ${CI_POSTGRES_PORT}) and meilisearch (port ${CI_MEILISEARCH_PORT})"
 compose_ci up --wait
 
 failed=0

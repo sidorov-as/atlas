@@ -50,6 +50,37 @@ class PluginArtifact(_Base):
     source: ArtifactSource
 
 
+class ServiceOverride(_Base):
+    """Operator choice for one service a plugin declares in
+    `PluginDescriptor.required_services`. Without an entry the composer runs
+    the declared container; `external: true` points the plugin at an instance
+    the operator already runs and generates no container."""
+
+    external: bool = False
+    address: str | None = None
+    """Non-secret address of an external instance, e.g.
+    `http://search.internal:7700`. Required when `external` is true; the
+    composition check owns that error so it can name the plugin and service."""
+
+    @field_validator("address")
+    @classmethod
+    def _validate_address(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"https", "http"} or not parsed.hostname:
+            raise ValueError("service address must be an absolute HTTP(S) URL")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("service address must not carry credentials or a query")
+        return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def _address_requires_external(self) -> "ServiceOverride":
+        if self.address is not None and not self.external:
+            raise ValueError("service address is only valid with external: true")
+        return self
+
+
 class PluginEntry(_Base):
     id: str
     version: str
@@ -73,6 +104,10 @@ class PluginEntry(_Base):
     the plugin's own `PluginDescriptor.config_schema`; kept untyped here
     since the manifest schema itself has no per-plugin knowledge of what a
     valid shape is."""
+
+    services: dict[str, ServiceOverride] = Field(default_factory=dict)
+    """Per-service operator choices keyed by the service id the plugin
+    declares; see `ServiceOverride`."""
 
     @model_validator(mode="after")
     def _require_an_artifact(self) -> "PluginEntry":

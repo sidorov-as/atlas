@@ -179,6 +179,10 @@ INSTALLED_APPS = resolve_installed_apps(
         "corsheaders",
         "axes",
         "health_check",
+        # The scheduler's job store (`runapscheduler`): core-owned and
+        # unconditional, so any selected plugin can contribute jobs and
+        # migrations don't depend on the plugin set.
+        "django_apscheduler",
     ),
 )
 

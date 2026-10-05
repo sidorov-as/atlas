@@ -9,6 +9,7 @@ COPY plugins/apis/frontend/package.json plugins/apis/frontend/package.json
 COPY plugins/c4/frontend/package.json plugins/c4/frontend/package.json
 COPY plugins/database-schema/frontend/package.json plugins/database-schema/frontend/package.json
 COPY plugins/flows/frontend/package.json plugins/flows/frontend/package.json
+COPY plugins/search/frontend/package.json plugins/search/frontend/package.json
 RUN npm ci
 
 FROM dependencies AS build

@@ -5,6 +5,7 @@ import type {
   Contribution,
   EntityDetailTabContribution,
   FrontendPlugin,
+  GlobalSearchContribution,
   HomeWidgetContribution,
   NavItemContribution,
   RouteContribution,
@@ -27,6 +28,10 @@ export function entityDetailTab<TEntity>(
 
 export function homeWidget(input: Omit<HomeWidgetContribution, 'type'>): HomeWidgetContribution {
   return { type: 'homeWidget', ...input }
+}
+
+export function globalSearch(input: Omit<GlobalSearchContribution, 'type'>): GlobalSearchContribution {
+  return { type: 'globalSearch', ...input }
 }
 
 /** A lazy reference resolved at validation time, not at declaration time. */

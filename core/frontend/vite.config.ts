@@ -55,6 +55,7 @@ export default defineConfig({
       '../../plugins/c4/frontend/src/**/*.{test,spec}.{ts,tsx}',
       '../../plugins/database-schema/frontend/src/**/*.{test,spec}.{ts,tsx}',
       '../../plugins/flows/frontend/src/**/*.{test,spec}.{ts,tsx}',
+      '../../plugins/search/frontend/src/**/*.{test,spec}.{ts,tsx}',
     ],
     server: {
       deps: {

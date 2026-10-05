@@ -75,3 +75,10 @@ if apps.is_installed("atlas_plugin_mcp"):
     from atlas_plugin_mcp.api.urls import router as mcp_router
 
     urlpatterns.append(mcp_router.to_urlpatterns())
+
+if apps.is_installed("atlas_plugin_search"):
+    # search-api spec: a distribution without atlas.search exposes no search
+    # routes — gated here like every other optional plugin's router above.
+    from atlas_plugin_search.api.urls import router as search_router
+
+    urlpatterns.append(search_router.to_urlpatterns())

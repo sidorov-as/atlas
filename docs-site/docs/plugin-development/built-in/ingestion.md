@@ -45,10 +45,11 @@ architectural case study](database-schema.md) for the other side of this contrac
 
 ## Scheduled jobs
 
-Runs on `django-apscheduler`, which rides along as this plugin's own dependency rather than a
-core-level addition, since Ingestion is the only plugin scheduling background jobs today. Its two
-jobs discover new/changed manifests across registered repositories, and periodically re-check
-which registered sources have moved.
+Contributes its jobs to Core's shared scheduler (`manage.py runapscheduler`) through a
+`register_jobs(scheduler)` hook; `django-apscheduler` and the scheduler process belong to Core, so
+other plugins can schedule work without depending on Ingestion. Its two jobs discover new/changed
+manifests across registered repositories, and periodically re-check which registered sources have
+moved. The one-off `manage.py ingest` command runs the same job functions once.
 
 ## Cross-plugin surface
 

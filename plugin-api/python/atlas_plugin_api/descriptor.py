@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from .authentication import AuthenticationProviderContribution
 from .config import PluginConfigSchema
+from .services import RequiredService
 
 PLUGIN_ENTRY_POINT_GROUP = "atlas.plugins"
 """The `importlib.metadata` entry-point group a plugin distribution's wheel
@@ -60,10 +61,13 @@ class PluginDescriptor:
     unchanged."""
 
     job_ids: tuple[str, ...] = ()
-    """`django-apscheduler` job ids this plugin registers (e.g. via its own
-    `register_jobs`), if any. The runtime
-    entry-point-loading phase pauses these when the plugin is disabled and
-    resumes them when active, by id, without this plugin needing its own
+    """`django-apscheduler` job ids this plugin registers, if any. The plugin
+    registers them from a `register_jobs(scheduler)` hook on its entry-point
+    module (see `atlas_plugin_api.jobs`), which core's `runapscheduler`
+    calls for every active plugin and checks against this tuple: an id the
+    hook registers but this tuple omits fails scheduler startup. The runtime
+    entry-point-loading phase pauses these ids when the plugin is disabled
+    and resumes them when active, without this plugin needing its own
     disable/enable hook. Defaults to empty so every existing descriptor
     (and a plugin that schedules nothing) stays valid unchanged."""
 
@@ -72,7 +76,16 @@ class PluginDescriptor:
     ``django.setup()``. Runtime implementations are registered separately
     through ``register_authentication_provider`` after application startup."""
 
+    required_services: tuple[RequiredService, ...] = ()
+    """External services this plugin needs (a search server, say). The composer
+    records them in the lock, generates the deployment inputs that run them and
+    wires their address and secret reference into this plugin's configuration.
+    Defaults to empty so a plugin without one stays unchanged."""
+
     def __post_init__(self) -> None:
+        service_ids = [item.id for item in self.required_services]
+        if len(service_ids) != len(set(service_ids)):
+            raise ValueError(f"plugin {self.id!r} declares duplicate service ids")
         provider_ids = [item.descriptor.id for item in self.authentication_providers]
         if len(provider_ids) != len(set(provider_ids)):
             raise ValueError(

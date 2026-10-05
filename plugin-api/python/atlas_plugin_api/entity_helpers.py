@@ -29,6 +29,7 @@ from collections.abc import Callable
 from http import HTTPStatus
 from typing import Any
 
+from django.core.exceptions import FieldDoesNotExist
 from dmr import ResponseSpec
 from dmr.errors import ErrorModel, ErrorType, format_error
 from dmr.response import APIError
@@ -137,9 +138,31 @@ def entity_capabilities(instance: Any) -> list[str]:
     return kind_registry.capabilities_for(instance.kind)
 
 
+INGESTION_CLAIM_ACCESSOR = "ingestion_claim"
+"""Reverse accessor `atlas.ingestion`'s `EntityClaim` (one-to-one to the
+catalog entity) exposes on an entity row. Core's entity model carries no
+reference to ingestion; the claim, when ingestion is installed, is the
+ingestion plugin's own row pointing back at the entity."""
+
+
+def claim_relations() -> tuple[str, ...]:
+    """`select_related` names that load an entity's ingestion claim and its
+    repository, or `()` when `atlas.ingestion` is not installed (the
+    relation doesn't exist then). Spread into a list/detail queryset's
+    `select_related(...)` so `ingested_from()` doesn't query per row."""
+    try:
+        get_catalog_entity_model()._meta.get_field(INGESTION_CLAIM_ACCESSOR)
+    except FieldDoesNotExist:
+        return ()
+    return (f"{INGESTION_CLAIM_ACCESSOR}__repository",)
+
+
 def ingested_from(instance: Any) -> str | None:
-    """`"<source_id>/<path>"`, matching `RegisteredRepository.__str__`"""
-    return str(instance.ingested_from) if instance.ingested_from_id else None
+    """`"<source_id>/<path>"`, matching `RegisteredRepository.__str__`, or
+    `None` for an entity no repository claims (or when ingestion isn't
+    installed)."""
+    claim = getattr(instance, INGESTION_CLAIM_ACCESSOR, None)
+    return str(claim.repository) if claim is not None else None
 
 
 def relations_out(instance: Any) -> list[RelationOut]:

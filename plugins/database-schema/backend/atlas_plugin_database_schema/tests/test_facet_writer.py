@@ -59,3 +59,19 @@ def test_clear_is_a_no_op_when_no_facet_exists(resource):
     DatabaseSchemaFacetWriter().clear(resource)
 
     assert not DatabaseSchema.objects.filter(pk=resource.pk).exists()
+
+
+def test_register_runtime_is_skipped_when_ingestion_is_not_installed(monkeypatch):
+    import sys
+
+    from atlas_plugin_database_schema.plugin import register_runtime
+
+    # `None` in `sys.modules` makes the import raise `ModuleNotFoundError`,
+    # as in an image that doesn't ship `atlas_plugin_ingestion`.
+    monkeypatch.setitem(sys.modules, "atlas_plugin_ingestion", None)
+    monkeypatch.setitem(sys.modules, "atlas_plugin_ingestion.extension_points", None)
+    # The search source is already registered by startup, and registering twice is an error;
+    # this test is only about the ingestion skip.
+    monkeypatch.setattr("atlas_plugin_api.register_search_source", lambda *a, **k: None)
+
+    register_runtime()  # must not raise

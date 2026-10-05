@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "count": 150,
+  "count": 94,
   "issues": [
     {
       "rule_id": "SM019",
@@ -98,56 +98,28 @@
       "app_label": "apis_plugin",
       "migration_name": "0001_initial",
       "operation": "AddConstraint(apiendpoint)",
-      "operation_index": 2
+      "operation_index": 4
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "apis_plugin",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(apioperation)",
+      "operation_index": 5
     },
     {
       "rule_id": "SM011",
       "app_label": "apis_plugin",
       "migration_name": "0001_initial",
       "operation": "AddConstraint(serviceendpointusage)",
-      "operation_index": 3
+      "operation_index": 6
     },
     {
       "rule_id": "SM011",
       "app_label": "apis_plugin",
-      "migration_name": "0002_apioperation_serviceoperationusage_and_more",
-      "operation": "AddConstraint(apioperation)",
-      "operation_index": 2
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "apis_plugin",
-      "migration_name": "0002_apioperation_serviceoperationusage_and_more",
+      "migration_name": "0001_initial",
       "operation": "AddConstraint(serviceoperationusage)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "apis_plugin",
-      "migration_name": "0003_apioperation_deprecated",
-      "operation": "AddField(apioperation.deprecated)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "apis_plugin",
-      "migration_name": "0004_apioperation_external_docs",
-      "operation": "AddField(apioperation.external_docs)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "apis_plugin",
-      "migration_name": "0005_apiendpoint_external_docs_apiendpoint_security",
-      "operation": "AddField(apiendpoint.external_docs)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "apis_plugin",
-      "migration_name": "0005_apiendpoint_external_docs_apiendpoint_security",
-      "operation": "AddField(apiendpoint.security)",
-      "operation_index": 1
+      "operation_index": 7
     },
     {
       "rule_id": "SM028",
@@ -283,522 +255,221 @@
       "operation_index": 0
     },
     {
-      "rule_id": "SM033",
-      "app_label": "axes",
-      "migration_name": "0009_add_session_hash",
-      "operation": "AddField(accesslog.session_hash)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM001",
+      "rule_id": "SM019",
       "app_label": "catalog",
       "migration_name": "0001_initial",
-      "operation": "AddField(api.system)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM005",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddField(api.system)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddField(group.members)",
-      "operation_index": 7
-    },
-    {
-      "rule_id": "SM023",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddField(group.members)",
-      "operation_index": 7
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddConstraint(system)",
-      "operation_index": 8
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddConstraint(resource)",
-      "operation_index": 9
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddConstraint(component)",
-      "operation_index": 10
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddConstraint(api)",
-      "operation_index": 11
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0001_initial",
-      "operation": "AddConstraint(group)",
-      "operation_index": 12
-    },
-    {
-      "rule_id": "SM005",
-      "app_label": "catalog",
-      "migration_name": "0002_user_account",
-      "operation": "AddField(user.account)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0004_api_source_kind_component_source_kind_and_more",
-      "operation": "AddField(api.source_kind)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0004_api_source_kind_component_source_kind_and_more",
-      "operation": "AddField(component.source_kind)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0004_api_source_kind_component_source_kind_and_more",
-      "operation": "AddField(resource.source_kind)",
+      "operation": "CreateModel(AuthenticationRateLimit)",
       "operation_index": 2
     },
     {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0004_api_source_kind_component_source_kind_and_more",
-      "operation": "AddField(system.source_kind)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM008",
-      "app_label": "catalog",
-      "migration_name": "0007_reset_tag_colors",
-      "operation": "RunPython",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "AddField(api.spec_source)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "AddField(api.spec_url)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "AddField(api.spec_content)",
-      "operation_index": 2
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "AddField(api.spec_resolve_failed)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM008",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "RunPython",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM026",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "RunPython",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM002",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "RemoveField(api.definition)",
-      "operation_index": 6
-    },
-    {
-      "rule_id": "SM038",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "Migration",
-      "operation_index": null
-    },
-    {
-      "rule_id": "SM054",
-      "app_label": "catalog",
-      "migration_name": "0009_api_spec_source",
-      "operation": "Migration",
-      "operation_index": null
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(api.documentation)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(component.documentation)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(flow.documentation)",
-      "operation_index": 2
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(group.documentation)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(resource.documentation)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(system.documentation)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0010_add_documentation",
-      "operation": "AddField(user.documentation)",
-      "operation_index": 6
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(Relation)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(ArchitectureRelationship)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM002",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "RemoveField(flow.system)",
-      "operation_index": 2
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(Component)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(API)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(Resource)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(System)",
-      "operation_index": 6
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(Group)",
-      "operation_index": 7
-    },
-    {
-      "rule_id": "SM003",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "DeleteModel(User)",
-      "operation_index": 8
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "AddConstraint(catalogentity)",
-      "operation_index": 10
-    },
-    {
-      "rule_id": "SM005",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "AddField(flow.system)",
-      "operation_index": 17
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0012_catalog_entity_identity",
-      "operation": "AddField(flow.system)",
-      "operation_index": 17
-    },
-    {
       "rule_id": "SM019",
       "app_label": "catalog",
-      "migration_name": "0013_entity_audit_record",
-      "operation": "CreateModel(EntityAuditRecord)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0014_external_identity_link",
-      "operation": "CreateModel(ExternalIdentityLink)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0015_apidetails_endpoints_sync_failed_and_more",
-      "operation": "AddField(apidetails.endpoints_sync_failed)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0016_apidetails_operations_sync",
-      "operation": "AddField(apidetails.operations_sync_failed)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0017_catalog_entity_status",
-      "operation": "AddField(catalogentity.status)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0018_alter_catalogentity_owner_purgegrant",
-      "operation": "CreateModel(PurgeGrant)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0020_flow_autolayout_enabled_flow_layout_direction",
-      "operation": "AddField(flow.autolayout_enabled)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0020_flow_autolayout_enabled_flow_layout_direction",
-      "operation": "AddField(flow.layout_direction)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0021_flow_layout_engine",
-      "operation": "AddField(flow.layout_engine)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM008",
-      "app_label": "catalog",
-      "migration_name": "0023_seed_catalog_home_settings",
-      "operation": "RunPython",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0024_apidetails_resolved_base_url_and_more",
-      "operation": "AddField(apidetails.resolved_base_url)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM031",
-      "app_label": "catalog",
-      "migration_name": "0024_apidetails_resolved_base_url_and_more",
-      "operation": "AddField(apidetails.resolved_base_url)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM001",
-      "app_label": "catalog",
-      "migration_name": "0024_apidetails_resolved_base_url_and_more",
-      "operation": "AddField(apidetails.resolved_protocol)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0025_accountaccess",
-      "operation": "CreateModel(AccountAccessAuditRecord)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM031",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "AddField(externalidentitylink.source_id)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "AddField(externalidentitylink.source_id)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "AddConstraint(externalidentitylink)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "CreateModel(GroupMembershipGrant)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "CreateModel(MembershipGrantAuditRecord)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM008",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "RunPython",
-      "operation_index": 6
-    },
-    {
-      "rule_id": "SM038",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "Migration",
-      "operation_index": null
-    },
-    {
-      "rule_id": "SM054",
-      "app_label": "catalog",
-      "migration_name": "0027_group_membership_grants",
-      "operation": "Migration",
-      "operation_index": null
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0028_provisioning_services",
-      "operation": "AddField(externalidentitylink.revocation_generation)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0028_provisioning_services",
-      "operation": "AddField(externalidentitylink.last_applied_generation)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM019",
-      "app_label": "catalog",
-      "migration_name": "0028_provisioning_services",
+      "migration_name": "0001_initial",
       "operation": "CreateModel(AuthenticationSecurityEvent)",
       "operation_index": 3
     },
     {
       "rule_id": "SM019",
       "app_label": "catalog",
-      "migration_name": "0028_provisioning_services",
-      "operation": "CreateModel(ProvisioningAuditRecord)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0029_authentication_security",
-      "operation": "AddField(authenticationattempt.policy_generation)",
-      "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "catalog",
-      "migration_name": "0029_authentication_security",
-      "operation": "AddField(authenticationattempt.source_generation)",
-      "operation_index": 1
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(AccountAccessAuditRecord)",
+      "operation_index": 7
     },
     {
       "rule_id": "SM019",
       "app_label": "catalog",
-      "migration_name": "0029_authentication_security",
+      "migration_name": "0001_initial",
       "operation": "CreateModel(AuthenticationPrincipalState)",
-      "operation_index": 3
+      "operation_index": 12
     },
     {
       "rule_id": "SM019",
       "app_label": "catalog",
-      "migration_name": "0029_authentication_security",
-      "operation": "CreateModel(AuthenticationRateLimit)",
-      "operation_index": 4
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(EntityAuditRecord)",
+      "operation_index": 14
+    },
+    {
+      "rule_id": "SM019",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(ExternalIdentityLink)",
+      "operation_index": 15
+    },
+    {
+      "rule_id": "SM019",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(MembershipGrantAuditRecord)",
+      "operation_index": 17
+    },
+    {
+      "rule_id": "SM019",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(ProvisioningAuditRecord)",
+      "operation_index": 19
+    },
+    {
+      "rule_id": "SM019",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(PurgeGrant)",
+      "operation_index": 20
+    },
+    {
+      "rule_id": "SM019",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "CreateModel(GroupMembershipGrant)",
+      "operation_index": 26
+    },
+    {
+      "rule_id": "SM001",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddField(groupdetails.members)",
+      "operation_index": 27
+    },
+    {
+      "rule_id": "SM023",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddField(groupdetails.members)",
+      "operation_index": 27
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(catalogentity)",
+      "operation_index": 29
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(architecturerelationship)",
+      "operation_index": 30
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(architecturerelationship)",
+      "operation_index": 31
+    },
+    {
+      "rule_id": "SM017",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(architecturerelationship)",
+      "operation_index": 32
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(externalidentitylink)",
+      "operation_index": 33
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(flow)",
+      "operation_index": 34
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(purgegrant)",
+      "operation_index": 35
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(relation)",
+      "operation_index": 36
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(relation)",
+      "operation_index": 37
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(relation)",
+      "operation_index": 38
+    },
+    {
+      "rule_id": "SM015",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AlterUniqueTogether(legacygroupmembershippair)",
+      "operation_index": 39
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(groupmembershipgrant)",
+      "operation_index": 40
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(groupmembershipgrant)",
+      "operation_index": 41
+    },
+    {
+      "rule_id": "SM010",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddIndex(groupmembershipgrant)",
+      "operation_index": 42
+    },
+    {
+      "rule_id": "SM017",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(groupmembershipgrant)",
+      "operation_index": 43
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(groupmembershipgrant)",
+      "operation_index": 44
+    },
+    {
+      "rule_id": "SM011",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "AddConstraint(groupmembershipgrant)",
+      "operation_index": 45
+    },
+    {
+      "rule_id": "SM054",
+      "app_label": "catalog",
+      "migration_name": "0001_initial",
+      "operation": "Migration",
+      "operation_index": null
+    },
+    {
+      "rule_id": "SM008",
+      "app_label": "catalog",
+      "migration_name": "0002_seed_catalog_home_settings",
+      "operation": "RunPython",
+      "operation_index": 0
     },
     {
       "rule_id": "SM028",
@@ -883,62 +554,6 @@
       "migration_name": "0009_djangojobexecution_unique_job_executions",
       "operation": "AddConstraint(djangojobexecution)",
       "operation_index": 0
-    },
-    {
-      "rule_id": "SM002",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "RemoveField(registeredrepository.access_token)",
-      "operation_index": 1
-    },
-    {
-      "rule_id": "SM002",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "RemoveField(registeredrepository.full_name)",
-      "operation_index": 2
-    },
-    {
-      "rule_id": "SM031",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "AddField(registeredrepository.path)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "AddField(registeredrepository.path)",
-      "operation_index": 3
-    },
-    {
-      "rule_id": "SM031",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "AddField(registeredrepository.source_id)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "AddField(registeredrepository.source_id)",
-      "operation_index": 4
-    },
-    {
-      "rule_id": "SM011",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "AddConstraint(registeredrepository)",
-      "operation_index": 5
-    },
-    {
-      "rule_id": "SM054",
-      "app_label": "ingestion",
-      "migration_name": "0004_registeredrepository_source_id_path",
-      "operation": "Migration",
-      "operation_index": null
     },
     {
       "rule_id": "SM028",
@@ -1030,13 +645,6 @@
       "migration_name": "0004_app_provider_id_settings",
       "operation": "AddField(socialapp.provider_id)",
       "operation_index": 0
-    },
-    {
-      "rule_id": "SM033",
-      "app_label": "socialaccount",
-      "migration_name": "0004_app_provider_id_settings",
-      "operation": "AddField(socialapp.settings)",
-      "operation_index": 1
     },
     {
       "rule_id": "SM029",

@@ -112,7 +112,6 @@ class CatalogEntity(Protocol):
     owner: Any
     owner_id: Any
     source_kind: str
-    ingested_from: Any
     status: str
     created_at: Any
     updated_at: Any

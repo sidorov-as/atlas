@@ -18,11 +18,26 @@ directly there (`from atlas_plugin_api.controllers import AtlasController`)
 is safe.
 """
 
+from http import HTTPStatus
+
 from dmr import Controller
+from dmr.errors import ErrorType, format_error
 from dmr.plugins.pydantic import PydanticSerializer
+
+from .entity_service import DuplicateEntityError
 
 
 class AtlasController(Controller):
     """Pin the DMR serializer without relying on generic introspection."""
 
     serializer = PydanticSerializer
+
+    def handle_error(self, endpoint, controller, exc):
+        """A name that is already taken is the caller's conflict to resolve,
+        for every entity kind, not an unhandled failure of the plugin."""
+        if isinstance(exc, DuplicateEntityError):
+            return self.to_error(
+                format_error(str(exc), error_type=ErrorType.value_error),
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+        raise exc

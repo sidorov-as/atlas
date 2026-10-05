@@ -10,11 +10,8 @@ dependency on `atlas.standard-catalog` (ingestion must be able to intend
 entities of any registered kind), checked by
 `server.apps.plugins.composition._check_plugin_dependencies`.
 
-`django_apscheduler` is listed alongside this plugin's own app — it's the
-program's chosen background-job runtime, needed only
-when `atlas.ingestion` (the only plugin scheduling jobs so far) is selected,
-so it rides along as this plugin's own dependency rather than a core
-`additional_apps` entry.
+Its periodic jobs run on the core scheduler (`runapscheduler`) through
+`register_jobs()` below; the scheduler's `django_apscheduler` app is core's.
 """
 
 from collections.abc import Callable
@@ -26,13 +23,15 @@ from .config import IngestionPluginConfig, SourceConfig
 from .job_ids import DISCOVERY_JOB_ID, SPEC_REFRESH_JOB_ID
 
 if TYPE_CHECKING:
+    from apscheduler.schedulers.base import BaseScheduler
+
     from .connectors.git import GitConnector
 
 PLUGIN = PluginDescriptor(
     id="atlas.ingestion",
     version="0.1.0",
     compatibility={"atlasCore": ">=0.1 <1"},
-    django_apps=("django_apscheduler", "atlas_plugin_ingestion"),
+    django_apps=("atlas_plugin_ingestion",),
     entry_point="atlas_plugin_ingestion.plugin:PLUGIN",
     requires_plugins={"atlas.standard-catalog": ">=0.1 <1"},
     job_ids=(DISCOVERY_JOB_ID, SPEC_REFRESH_JOB_ID),
@@ -82,6 +81,28 @@ def register_runtime() -> None:
     for source in config.sources:
         connectors.register(source.id, _git_connector_factory(source))
     parsers.register(PARSER_ID, CatalogInfoYamlParser())
+
+
+def register_jobs(scheduler: "BaseScheduler") -> None:
+    """Register the discovery-run and spec-refresh jobs on
+    `INGESTOR_POLL_INTERVAL`-second triggers (the `atlas_plugin_api.jobs`
+    hook, called by core's `runapscheduler` for an active plugin).
+
+    The spec refresh is conceptually `atlas.apis`'s own concern, but is
+    scheduled here since this is where the periodic jobs were introduced.
+    """
+    from atlas_plugin_api import add_interval_job
+    from django.conf import settings
+
+    from .pipeline import refresh_spec_urls, run_ingestion_pass
+
+    interval = settings.INGESTOR_POLL_INTERVAL
+    add_interval_job(
+        scheduler, run_ingestion_pass, job_id=DISCOVERY_JOB_ID, seconds=interval
+    )
+    add_interval_job(
+        scheduler, refresh_spec_urls, job_id=SPEC_REFRESH_JOB_ID, seconds=interval
+    )
 
 
 def _git_connector_factory(source: SourceConfig) -> Callable[[], "GitConnector"]:

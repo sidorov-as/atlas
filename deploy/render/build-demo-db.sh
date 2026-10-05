@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build-time step of deploy/render/Dockerfile: create a local PostgreSQL
-# cluster, apply migrations, load the booking demo and collect static files,
-# so the container starts with a ready catalog and no network dependencies.
+# cluster, apply migrations, load the booking demo, build the search index and
+# collect static files, so the container starts with a ready catalog and no
+# network dependencies.
 set -euo pipefail
 cd /code/core/backend
 
@@ -27,6 +28,9 @@ createdb --host=127.0.0.1 --username="$POSTGRES_USER" "$POSTGRES_DB"
 
 python manage.py migrate --noinput
 python manage.py seed_booking_demo --yes
+# The demo runs no scheduler, so ship a ready search index: build it right
+# after the catalog is seeded.
+python manage.py reindex
 python manage.py collectstatic --noinput
 
 pg_ctl stop --wait --silent --mode=fast

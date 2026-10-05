@@ -7,6 +7,7 @@ import type {
   EntityDetailTabContribution,
   ExtensionPointCardinality,
   FrontendPlugin,
+  GlobalSearchContribution,
   HomeWidgetContribution,
   NavItemContribution,
   RouteContribution,
@@ -23,6 +24,7 @@ const EXTENSION_POINT_CARDINALITY: Record<Contribution['type'], ExtensionPointCa
   navItem: 'collection',
   entityDetailTab: 'collection',
   homeWidget: 'collection',
+  globalSearch: 'singleton',
 }
 
 export class CompositionError extends Error {
@@ -42,6 +44,8 @@ export interface ComposedContributions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly entityDetailTabs: readonly EntityDetailTabContribution<any>[]
   readonly homeWidgets: readonly HomeWidgetContribution[]
+  /** The single search occupant, or `undefined` when no installed plugin supplies one. */
+  readonly globalSearch: GlobalSearchContribution | undefined
 }
 
 function assertCardinality(errors: string[], type: Contribution['type'], contributions: readonly { id: string }[]) {
@@ -64,6 +68,7 @@ export function composeFrontendPlugins(plugins: readonly FrontendPlugin[]): Comp
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const entityDetailTabs: EntityDetailTabContribution<any>[] = []
   const homeWidgets: HomeWidgetContribution[] = []
+  const globalSearches: { contribution: GlobalSearchContribution; pluginId: string }[] = []
 
   for (const plugin of plugins) {
     for (const contribution of plugin.contributions) {
@@ -89,6 +94,9 @@ export function composeFrontendPlugins(plugins: readonly FrontendPlugin[]): Comp
           break
         case 'homeWidget':
           homeWidgets.push(contribution)
+          break
+        case 'globalSearch':
+          globalSearches.push({ contribution, pluginId: plugin.id })
           break
       }
     }
@@ -119,10 +127,15 @@ export function composeFrontendPlugins(plugins: readonly FrontendPlugin[]): Comp
   assertCardinality(errors, 'navItem', navItems)
   assertCardinality(errors, 'entityDetailTab', entityDetailTabs)
   assertCardinality(errors, 'homeWidget', homeWidgets)
+  if (EXTENSION_POINT_CARDINALITY.globalSearch === 'singleton' && globalSearches.length > 1) {
+    errors.push(
+      `Extension point "globalSearch" is singleton but was supplied by ${globalSearches.length} plugins: ${globalSearches.map((entry) => `"${entry.pluginId}" (${entry.contribution.id})`).join(', ')}`,
+    )
+  }
 
   if (errors.length > 0) {
     throw new CompositionError(errors)
   }
 
-  return { routes, navItems: resolvedNavItems, entityDetailTabs, homeWidgets }
+  return { routes, navItems: resolvedNavItems, entityDetailTabs, homeWidgets, globalSearch: globalSearches[0]?.contribution }
 }

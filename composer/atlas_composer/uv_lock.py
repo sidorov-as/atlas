@@ -8,9 +8,10 @@ dependencies through `uv` instead of Poetry — see the `migrate-backend-to-uv`
 change.
 """
 
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+import tomllib
 
 from ._hashing import hash_directory
 

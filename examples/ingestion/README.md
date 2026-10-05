@@ -67,9 +67,9 @@ Bootstrap runs in stages, each idempotent and safe to rerun:
    rerunning `manage.py ingest` is always safe (see
    [Register and ingest a repository](../../docs-site/docs/using-atlas/ingest-repository.md)).
 6. `ingestor` starts alongside everything else and stays up: it runs
-   `python manage.py runapscheduler`, which registers `atlas.ingestion`'s
-   `atlas.ingestion.discovery` and `atlas.ingestion.spec_refresh` jobs in the
-   `django_apscheduler`-backed job store and re-runs them every
+   `python manage.py runapscheduler` (Core's shared scheduler), which runs `atlas.ingestion`'s
+   `atlas.ingestion.discovery` and `atlas.ingestion.spec_refresh` jobs (persisted in the
+   `django_apscheduler` job store) and re-runs them every
    `INGESTOR_POLL_INTERVAL` seconds (60 by default; not set in this example's
    `.env`) — so a `catalog-info.yaml` edit is picked up automatically,
    without a manual `manage.py ingest`. It's independent of `ingest-once`

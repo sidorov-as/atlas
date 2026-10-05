@@ -8,6 +8,7 @@ REST surface.
 
 import pytest
 from atlas_plugin_flows.models import Flow
+from atlas_plugin_ingestion.claims import claim_entity
 from dmr.response import APIError
 
 from server.apps.catalog.kinds import ValidateDeleteError
@@ -47,8 +48,11 @@ def test_manual_remove_is_blocked_for_a_yaml_managed_entity(
         source_id="test-source", path="org/repo"
     )
     managed = create_system(
-        name="managed", owner=group, source_kind="yaml", ingested_from=repo
+        name="managed",
+        owner=group,
+        source_kind="yaml",
     )
+    claim_entity(managed, repo)
 
     with pytest.raises(APIError):
         EntityService().remove(entity_id=managed.id, actor=superuser_account)
@@ -79,8 +83,11 @@ def test_manual_revive_is_blocked_for_a_yaml_managed_entity(
         source_id="test-source", path="org/repo"
     )
     managed = create_system(
-        name="managed", owner=group, source_kind="yaml", ingested_from=repo
+        name="managed",
+        owner=group,
+        source_kind="yaml",
     )
+    claim_entity(managed, repo)
     EntityService().remove(
         entity_id=managed.id,
         actor=superuser_account,
@@ -150,8 +157,11 @@ def test_purge_grant_holder_purges_yaml_entity_despite_manual_write_block(
         source_id="test-source", path="org/repo"
     )
     managed = create_system(
-        name="managed", owner=group, source_kind="yaml", ingested_from=repo
+        name="managed",
+        owner=group,
+        source_kind="yaml",
     )
+    claim_entity(managed, repo)
     EntityService().remove(
         entity_id=managed.id,
         actor=owner_account,
@@ -433,8 +443,11 @@ def test_history_reports_no_actor_for_an_ingestion_triggered_action(group):
         source_id="test-source", path="org/repo"
     )
     managed = create_system(
-        name="managed", owner=group, source_kind="yaml", ingested_from=repo
+        name="managed",
+        owner=group,
+        source_kind="yaml",
     )
+    claim_entity(managed, repo)
     EntityService().remove(
         entity_id=managed.id, actor=None, source=CatalogEntity.SOURCE_YAML
     )

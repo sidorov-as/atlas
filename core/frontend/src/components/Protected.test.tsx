@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Protected } from './Protected'
 import { useSession } from '../lib/SessionContext'
-import type { ResolvedNavItem } from '@atlas/plugin-api'
+import type { GlobalSearchContribution, ResolvedNavItem } from '@atlas/plugin-api'
 import type { SessionState } from '../lib/auth'
 
 afterEach(() => cleanup())
@@ -17,8 +17,17 @@ vi.mock('../lib/SessionContext', () => ({
 // codebase, and heavy to mount in jsdom) so this test isolates `Protected`'s
 // own nav-item-filtering logic instead of Gravity's `AsideHeader` internals.
 vi.mock('./AppShell', () => ({
-  AppShell: ({ navItems, children }: { navItems: readonly ResolvedNavItem[]; children: React.ReactNode }) => (
+  AppShell: ({
+    navItems,
+    globalSearch,
+    children,
+  }: {
+    navItems: readonly ResolvedNavItem[]
+    globalSearch?: GlobalSearchContribution
+    children: React.ReactNode
+  }) => (
     <div>
+      {globalSearch && <globalSearch.component />}
       <nav>{navItems.map((item) => <span key={item.id}>{item.title}</span>)}</nav>
       {children}
     </div>
@@ -33,7 +42,7 @@ const SETTINGS_NAV_ITEM: ResolvedNavItem = {
   resolvedPath: '/settings',
 }
 
-function renderProtected(session: SessionState) {
+function renderProtected(session: SessionState, globalSearch?: GlobalSearchContribution) {
   vi.mocked(useSession).mockReturnValue({
     session,
     isLoading: false,
@@ -45,7 +54,7 @@ function renderProtected(session: SessionState) {
   return render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
-        <Route element={<Protected navItems={[SETTINGS_NAV_ITEM]} />}>
+        <Route element={<Protected navItems={[SETTINGS_NAV_ITEM]} globalSearch={globalSearch} />}>
           <Route path="/" element={<div>page content</div>} />
         </Route>
       </Routes>
@@ -62,5 +71,20 @@ describe('Protected', () => {
   it('hides the Settings nav item for a non-admin', () => {
     renderProtected({ isAuthenticated: true, user: null, isAdmin: false, isReadOnly: false })
     expect(screen.queryByText('Settings')).toBeNull()
+  })
+
+  it('renders the search contribution when present and nothing extra when absent', () => {
+    const session = { isAuthenticated: true, user: null, isAdmin: false, isReadOnly: false }
+    const { unmount } = renderProtected(session, {
+      type: 'globalSearch',
+      id: 'atlas.fixture.search',
+      component: () => <div>search box</div>,
+    })
+    expect(screen.getByText('search box')).toBeDefined()
+    unmount()
+
+    renderProtected(session)
+    expect(screen.queryByText('search box')).toBeNull()
+    expect(screen.getByText('page content')).toBeDefined()
   })
 })

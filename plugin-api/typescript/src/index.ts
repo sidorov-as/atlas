@@ -1,4 +1,4 @@
-export { defineFrontendPlugin, entityDetailTab, entitySupports, homeWidget, navItem, route, routeRef } from './builders'
+export { defineFrontendPlugin, entityDetailTab, entitySupports, globalSearch, homeWidget, navItem, route, routeRef } from './builders'
 export { CORE_PLUGIN_ID, CORE_RESERVED_PATHS, CompositionError, composeFrontendPlugins } from './compose'
 export type {
   AuthenticationBootstrapConfig,
@@ -18,6 +18,7 @@ export type {
   EntityDetailTabContribution,
   ExtensionPointCardinality,
   FrontendPlugin,
+  GlobalSearchContribution,
   HomeWidgetContribution,
   NavItemContribution,
   RouteContribution,

@@ -42,6 +42,9 @@ from .auth import LOCAL_AUTHENTICATION_PROVIDER, LOCAL_PROVIDER_ID
 from .lock import Lock
 from .manifest import Manifest
 from .semver import range_contains
+from .services import resolve_required_services, wire_plugin_config
+
+SEARCH_PLUGIN_ID = "atlas.search"
 
 
 class CompositionError(Exception):
@@ -113,6 +116,29 @@ class InvalidPluginConfigError(CompositionError):
             f"{plugin_id!r} has invalid configuration: {error}",
         )
         self.plugin_id = plugin_id
+
+
+class InvalidRequiredServiceError(CompositionError):
+    """A declared or configured required service cannot be composed."""
+
+
+class ConflictingServiceError(InvalidRequiredServiceError):
+    def __init__(self, service_id: str, first: str, second: str, field: str) -> None:
+        super().__init__(
+            f"Service {service_id!r} is declared by {first!r} and {second!r} "
+            f"with conflicting {field}",
+        )
+        self.service_id = service_id
+        self.plugins = (first, second)
+
+
+class InvalidSearchEngineSelectionError(CompositionError):
+    def __init__(self, engine_plugin_id: str, reason: str) -> None:
+        super().__init__(
+            f"{SEARCH_PLUGIN_ID!r} setting 'engine' names {engine_plugin_id!r}, "
+            f"but {reason}",
+        )
+        self.engine_plugin_id = engine_plugin_id
 
 
 class InvalidAuthenticationSelectionError(CompositionError):
@@ -285,6 +311,30 @@ def check_authentication_selection(
             )
 
 
+def check_search_engine_selection(manifest: Manifest) -> None:
+    """An explicit `engine` for the search plugin must name a selected,
+    non-disabled plugin with a backend. Only an explicit choice is checked
+    here: no descriptor marks a plugin as an engine, so a missing or
+    ambiguous engine is the search plugin's own startup error."""
+    search = next((e for e in manifest.plugins if e.id == SEARCH_PLUGIN_ID), None)
+    if search is None or search.disabled:
+        return
+    engine_id = search.config.get("engine")
+    if engine_id is None:
+        return
+    engine = next((e for e in manifest.plugins if e.id == engine_id), None)
+    if engine is None:
+        raise InvalidSearchEngineSelectionError(
+            engine_id, "that plugin is not in the manifest"
+        )
+    if engine.disabled:
+        raise InvalidSearchEngineSelectionError(engine_id, "that plugin is disabled")
+    if engine.backend is None:
+        raise InvalidSearchEngineSelectionError(
+            engine_id, "that plugin has no backend artifact"
+        )
+
+
 def check_no_duplicate_plugin_ids(manifest: Manifest) -> None:
     """A manifest naming the same plugin id twice can't be a resolution
     bug (each `PluginEntry` resolves independently) — it's an operator
@@ -385,6 +435,85 @@ def check_no_dependency_cycle(
         visit(node)
 
 
+RESERVED_SERVICE_IDS = frozenset(
+    {"postgres", "initializer", "backend", "ingestor", "frontend"}
+)
+"""Compose service names the base `docker-compose.yml` already uses."""
+
+_SERVICE_DEFINITION_FIELDS = (
+    "image",
+    "port",
+    "health_check",
+    "data_path",
+    "secret_env",
+    "external",
+    "address",
+)
+
+
+def check_required_services(
+    manifest: Manifest,
+    lock: Lock,
+    descriptors: Mapping[str, PluginDescriptor],
+) -> None:
+    """Required services must be declarable, wirable and recorded in the lock.
+
+    Skips plugins missing from `descriptors`, like the other descriptor-based
+    checks.
+    """
+    selected = {entry.id: entry for entry in manifest.plugins if not entry.disabled}
+    for plugin_id, entry in selected.items():
+        descriptor = descriptors.get(plugin_id)
+        if descriptor is None:
+            continue
+        declared = {service.id: service for service in descriptor.required_services}
+        for service_id, override in entry.services.items():
+            if service_id not in declared:
+                raise InvalidRequiredServiceError(
+                    f"{plugin_id!r} configures service {service_id!r}, which it "
+                    "does not declare",
+                )
+            if override.external and override.address is None:
+                raise InvalidRequiredServiceError(
+                    f"{plugin_id!r} marks service {service_id!r} as external "
+                    "but gives no address",
+                )
+        for service in declared.values():
+            if service.id in RESERVED_SERVICE_IDS:
+                raise InvalidRequiredServiceError(
+                    f"{plugin_id!r} declares service {service.id!r}, which is "
+                    "reserved by the base deployment",
+                )
+            schema = descriptor.config_schema
+            fields = set(schema.model_fields) if schema is not None else set()
+            for key, field_name in service.config_keys.items():
+                if field_name not in fields:
+                    raise InvalidRequiredServiceError(
+                        f"{plugin_id!r} cannot wire service {service.id!r}: "
+                        f"{key} key {field_name!r} is not a field of its "
+                        "configuration schema",
+                    )
+
+    resolved = resolve_required_services(manifest, descriptors)
+    seen: dict[str, str] = {}
+    for key, service in resolved.items():
+        first = seen.setdefault(service.id, key)
+        if first == key:
+            continue
+        other = resolved[first]
+        for field_name in _SERVICE_DEFINITION_FIELDS:
+            if getattr(service, field_name) != getattr(other, field_name):
+                raise ConflictingServiceError(
+                    service.id, other.plugin, service.plugin, field_name
+                )
+
+    if lock.services != resolved:
+        raise InvalidRequiredServiceError(
+            "lock required services do not match the manifest and plugin "
+            "declarations; run atlas-compose resolve again",
+        )
+
+
 def check_plugin_config(
     manifest: Manifest,
     descriptors: Mapping[str, PluginDescriptor],
@@ -395,12 +524,15 @@ def check_plugin_config(
     `plugin-architecture.md:549-558`'s "invalid non-secret configuration".
     A `fromEnv` secret reference validates as a valid `SecretRef` shape,
     never resolved (no environment access happens here)."""
+    services = resolve_required_services(manifest, descriptors)
     for entry in manifest.plugins:
         descriptor = descriptors.get(entry.id)
         if descriptor is None or descriptor.config_schema is None:
             continue
         try:
-            descriptor.config_schema.model_validate(entry.config)
+            descriptor.config_schema.model_validate(
+                wire_plugin_config(entry.id, entry.config, services)
+            )
         except ValidationError as exc:
             raise InvalidPluginConfigError(entry.id, str(exc)) from exc
 
@@ -421,6 +553,8 @@ def validate_composition(
     descriptors = descriptors or {}
     check_no_duplicate_plugin_ids(manifest)
     check_authentication_selection(manifest, lock, descriptors)
+    check_search_engine_selection(manifest)
+    check_required_services(manifest, lock, descriptors)
     check_backend_frontend_versions_match(lock)
     check_core_compatibility(manifest, descriptors)
     check_dependencies(manifest, descriptors)

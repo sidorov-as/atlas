@@ -94,7 +94,7 @@ def run_ingestion_pass() -> None:
 def refresh_spec_urls() -> None:
     """Re-fetch `spec_url` for every API with `spec_source='url'`.
 
-    This plugin's own periodic job (scheduler.py's `SPEC_REFRESH_JOB_ID`) —
+    This plugin's own periodic job (`SPEC_REFRESH_JOB_ID`, registered by `plugin.register_jobs`) —
     the actual ORM query, fetch, and save live in `atlas_plugin_apis.
     extension_points.due_for_spec_refresh()`, since `atlas_plugin_apis` owns `ApiDetails`;
     this function just calls it on this plugin's own schedule.

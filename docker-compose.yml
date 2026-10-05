@@ -59,6 +59,8 @@ services:
       retries: 6
     networks: [application, database]
 
+  # Platform scheduler: runs the jobs contributed by selected plugins
+  # (e.g. ingestion). Service name kept for compatibility.
   ingestor:
     build:
       context: .
