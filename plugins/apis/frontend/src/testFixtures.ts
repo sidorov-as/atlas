@@ -86,6 +86,9 @@ export function makeServiceSummary(overrides: Partial<ServiceSummary> = {}): Ser
     team: 'group:platform',
     teamId: 'group-1',
     teamName: 'platform',
+    system: 'system:default/core',
+    systemId: 'system-1',
+    systemName: 'core',
     ...overrides,
   }
 }
@@ -94,6 +97,7 @@ export function makeConsumers(services: ServiceSummary[] = [], endpointOverrides
   return {
     endpoint: { id: 'endpoint-1', method: 'GET', path: '/v1/invoices', status: 'active', ...endpointOverrides },
     services,
+    count: services.length,
   }
 }
 
@@ -157,5 +161,8 @@ export function makeOperationConsumers(
       ...operationOverrides,
     },
     participants,
+    count: participants.length,
+    publisherCount: participants.filter((participant) => participant.role === 'publisher').length,
+    subscriberCount: participants.filter((participant) => participant.role === 'subscriber').length,
   }
 }

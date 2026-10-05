@@ -30,7 +30,7 @@ vi.mock('frontend/lib/entities', () => ({
 }))
 
 vi.mock('../lib/entities', () => ({
-  operationServicesApi: { link: vi.fn() },
+  operationServicesApi: { link: vi.fn(), linkedServiceRolePairs: vi.fn() },
 }))
 
 function makeComponent(overrides: Partial<ComponentEntity> = {}): ComponentEntity {
@@ -56,7 +56,9 @@ function makeProviderComponent(): ComponentEntity {
   return makeComponent({ id: 'provider-1', metadata: { ...makeComponent().metadata, name: 'booking-service' } })
 }
 
-function renderDialog(props: Partial<Parameters<typeof LinkOperationServiceDialog>[0]> = {}) {
+function renderDialog(props: Partial<Parameters<typeof LinkOperationServiceDialog>[0]> & { linked?: string[] } = {}) {
+  const { linked = [], ...dialogProps } = props
+  vi.mocked(operationServicesApi.linkedServiceRolePairs).mockResolvedValue(linked)
   const onClose = vi.fn()
   const onLinked = vi.fn()
   render(
@@ -65,9 +67,8 @@ function renderDialog(props: Partial<Parameters<typeof LinkOperationServiceDialo
         open
         onClose={onClose}
         operation={makeOperation()}
-        linkedServiceRolePairs={new Set()}
         onLinked={onLinked}
-        {...props}
+        {...dialogProps}
       />
     </ThemeProvider>,
   )
@@ -92,7 +93,7 @@ describe('LinkOperationServiceDialog', () => {
     vi.mocked(componentsApi.list).mockResolvedValue({
       count: 1, numPages: 1, perPage: 100, page: { number: 1, objectList: [makeComponent()] },
     })
-    renderDialog({ linkedServiceRolePairs: new Set(['service-1:subscriber']) })
+    renderDialog({ linked: ['service-1:subscriber'] })
 
     fireEvent.click(await screen.findByText('Select a service…'))
     await waitFor(() => expect(screen.getByText('Already linked')).toBeDefined())
@@ -104,7 +105,7 @@ describe('LinkOperationServiceDialog', () => {
     })
     // Linked as subscriber, but the dialog defaults to the publisher/subscriber
     // picker's own default role — publisher is not yet linked.
-    renderDialog({ linkedServiceRolePairs: new Set(['service-1:subscriber']) })
+    renderDialog({ linked: ['service-1:subscriber'] })
 
     fireEvent.click(screen.getByText('Publisher'))
     fireEvent.click(await screen.findByText('Select a service…'))
@@ -157,7 +158,7 @@ describe('LinkOperationServiceDialog', () => {
     // Only linked as publisher — selecting it while the default role
     // (subscriber) is active is allowed (the option isn't disabled), then
     // switching the role picker to publisher lands on the already-linked pair.
-    renderDialog({ linkedServiceRolePairs: new Set(['service-1:publisher']) })
+    renderDialog({ linked: ['service-1:publisher'] })
 
     fireEvent.click(await screen.findByText('Select a service…'))
     fireEvent.click(await screen.findByText('billing-service'))
@@ -166,5 +167,16 @@ describe('LinkOperationServiceDialog', () => {
     await waitFor(() => expect(screen.getByText('This service is already linked with this role.')).toBeDefined())
     const button = screen.getByText('Link').closest('button')
     expect(button?.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('disables a service linked beyond the first 50 links, using the exact server check', async () => {
+    vi.mocked(componentsApi.list).mockResolvedValue({
+      count: 1, numPages: 1, perPage: 100, page: { number: 1, objectList: [makeComponent()] },
+    })
+    const manyLinks = Array.from({ length: 60 }, (_, index) => `other-${index}:subscriber`)
+    renderDialog({ linked: [...manyLinks, 'service-1:subscriber'] })
+
+    fireEvent.click(await screen.findByText('Select a service…'))
+    await waitFor(() => expect(screen.getByText('Already linked')).toBeDefined())
   })
 })

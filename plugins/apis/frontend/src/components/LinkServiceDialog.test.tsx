@@ -30,7 +30,7 @@ vi.mock('frontend/lib/entities', () => ({
 }))
 
 vi.mock('../lib/entities', () => ({
-  endpointServicesApi: { link: vi.fn() },
+  endpointServicesApi: { link: vi.fn(), linkedServiceIds: vi.fn() },
 }))
 
 function makeComponent(overrides: Partial<ComponentEntity> = {}): ComponentEntity {
@@ -52,7 +52,9 @@ function makeComponent(overrides: Partial<ComponentEntity> = {}): ComponentEntit
   }
 }
 
-function renderDialog(props: Partial<Parameters<typeof LinkServiceDialog>[0]> = {}) {
+function renderDialog(props: Partial<Parameters<typeof LinkServiceDialog>[0]> & { linked?: string[] } = {}) {
+  const { linked = [], ...dialogProps } = props
+  vi.mocked(endpointServicesApi.linkedServiceIds).mockResolvedValue(linked)
   const onClose = vi.fn()
   const onLinked = vi.fn()
   render(
@@ -62,9 +64,8 @@ function renderDialog(props: Partial<Parameters<typeof LinkServiceDialog>[0]> = 
         onClose={onClose}
         endpoint={makeEndpoint()}
         api={makeApi()}
-        linkedServiceIds={new Set()}
         onLinked={onLinked}
-        {...props}
+        {...dialogProps}
       />
     </ThemeProvider>,
   )
@@ -76,7 +77,7 @@ describe('LinkServiceDialog', () => {
     vi.mocked(componentsApi.list).mockResolvedValue({
       count: 1, numPages: 1, perPage: 100, page: { number: 1, objectList: [makeComponent()] },
     })
-    renderDialog({ linkedServiceIds: new Set(['service-1']) })
+    renderDialog({ linked: ['service-1'] })
 
     fireEvent.click(await screen.findByText('Select a service…'))
     await waitFor(() => expect(screen.getByText('Already linked')).toBeDefined())
@@ -136,5 +137,15 @@ describe('LinkServiceDialog', () => {
 
     const button = screen.getByText('Link').closest('button')
     expect(button?.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('disables a service linked beyond the first 50 links, using the exact server check', async () => {
+    vi.mocked(componentsApi.list).mockResolvedValue({
+      count: 1, numPages: 1, perPage: 100, page: { number: 1, objectList: [makeComponent()] },
+    })
+    renderDialog({ linked: [...Array.from({ length: 60 }, (_, index) => `other-${index}`), 'service-1'] })
+
+    fireEvent.click(await screen.findByText('Select a service…'))
+    await waitFor(() => expect(screen.getByText('Already linked')).toBeDefined())
   })
 })

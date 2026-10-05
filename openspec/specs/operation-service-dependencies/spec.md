@@ -73,7 +73,7 @@ The Link Service action and each row's Unlink action SHALL be visible only to a 
 - **THEN** no "Link service" button and no per-row "Unlink" action are rendered
 
 ### Requirement: Publishers & subscribers graph is scoped to the shared channel, not one Operation row
-An Operation's Overview tab SHALL show a read-only graph aggregating every `Operation` (including ones belonging to other API documents) that shares its `channel_address`, showing each aggregated Operation's linked Services (including each Operation's document-owner role implied by `direction`) as publisher or subscriber nodes, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available. This graph SHALL also be viewable in a full-screen mode.
+An Operation's Overview tab SHALL show a read-only graph aggregating every `Operation` (including ones belonging to other API documents) that shares its `channel_address`, showing each aggregated Operation's linked Services (including each Operation's document-owner role implied by `direction`) as publisher or subscriber nodes, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available in the inline graph. This graph SHALL also be viewable in a full-screen mode, in which nodes can be repositioned as specified by the dependency-graph-exploration capability but connections still cannot be created or deleted.
 
 #### Scenario: Two operations on the same channel from different APIs share one graph
 - **WHEN** Operation A (on API X, `direction=send`) and Operation B (on API Y, `direction=receive`) share the same `channel_address`
@@ -87,22 +87,34 @@ An Operation's Overview tab SHALL show a read-only graph aggregating every `Oper
 - **WHEN** a user clicks a Service node in the publishers/subscribers graph
 - **THEN** the user is navigated to that Service's detail page
 
-#### Scenario: Graph nodes cannot be edited
-- **WHEN** a user attempts to drag a node, or draw or delete a connection, in the publishers/subscribers graph (inline or full-screen)
+#### Scenario: Inline graph nodes cannot be edited
+- **WHEN** a user attempts to drag a node, or draw or delete a connection, in the inline publishers/subscribers graph
 - **THEN** no change occurs — the graph is display-only
+
+#### Scenario: Connections cannot be edited in full screen
+- **WHEN** a user attempts to draw or delete a connection in the full-screen publishers/subscribers graph
+- **THEN** no change occurs
 
 #### Scenario: Empty graph shows a call to action instead of a blank canvas
 - **WHEN** a channel has no linked Services and no document-owner-implied roles beyond the current Operation's own
 - **THEN** its Overview shows an explanatory empty state with a "Link service" action, not an empty graph canvas
 
 #### Scenario: Large participant counts are capped on the compact inline graph
-- **WHEN** a channel's aggregated publishers and subscribers exceed 12 nodes and the graph is shown in its compact, inline form on the Overview tab
-- **THEN** the compact graph shows at most 12 nodes plus an indicator of how many more exist, rather than rendering all of them
+- **WHEN** a channel's aggregated publishers and subscribers exceed 6 nodes and the graph is shown in its compact, inline form on the Overview tab
+- **THEN** the compact graph shows at most 6 Service nodes plus, on each side that has undrawn participants, a "… +N more" node stating how many more exist on that side
 
-#### Scenario: Full screen shows every participant uncapped
-- **WHEN** a user opens the publishers/subscribers graph in full-screen mode
-- **THEN** every aggregated publisher and subscriber is shown as a node, with no 12-node cap, using the same already-loaded data as the inline graph
+#### Scenario: Full screen is capped at 50 participants across both roles
+- **WHEN** a user opens the publishers/subscribers graph in full-screen mode for a channel with more than 50 participants
+- **THEN** at most 50 Service nodes are shown across publishers and subscribers together, filled publishers first, plus a "… +N more" node on each side that has undrawn participants
 - **AND** a visible close action returns the user to the Overview tab without navigating away from the Operation page
+
+#### Scenario: A side with no drawn nodes still shows its "more" node
+- **WHEN** a channel has 60 publishers and 3 subscribers and the 50-node budget is spent on publishers
+- **THEN** the subscriber side shows a "+3 more" node, so subscribers are never invisible
+
+#### Scenario: Full screen shows every participant when there are 50 or fewer
+- **WHEN** a user opens the publishers/subscribers graph in full-screen mode for a channel with 18 participants
+- **THEN** every participant is shown as a node and no "more" node is drawn
 
 ### Requirement: Cross-API aggregation respects each aggregated API's visibility
 The channel-scoped publishers/subscribers graph and the `/consumers` aggregation SHALL exclude any aggregated `Operation` whose own `API` is not visible to the requesting principal, and SHALL do so without revealing that a hidden Operation exists (no count, placeholder node, or error naming it).
@@ -182,3 +194,90 @@ Removing a `ServiceOperationUsage` link whose `origin` is `yaml` through the RES
 #### Scenario: Origin is per role
 - **WHEN** a Service holds a `yaml` link as publisher and a `manual` link as subscriber on one Operation, and the subscriber link is unlinked
 - **THEN** the subscriber link is removed and the publisher link remains
+
+### Requirement: Linked Services listing uses the shared pagination control
+An Operation's Linked Services listing SHALL be paginated by the server and SHALL show the same pagination control as the API detail page lists: a page-size choice of 15, 30, 50 or 100 (default 15), and a page number input. The control SHALL be shown whenever the listing is not empty, not only when it exceeds one page. The current page and page size SHALL be reflected in the URL.
+
+#### Scenario: Control is shown for a short list
+- **WHEN** an Operation has 18 linked Services and its Linked Services tab is opened
+- **THEN** the pagination control is shown, with the first 15 services on page 1 and 3 on page 2
+
+#### Scenario: Page size is sent to the server
+- **WHEN** a user selects 50 per page
+- **THEN** the listing is requested from the server with that page size and shows up to 50 services
+
+#### Scenario: Changing filters returns to the first page
+- **WHEN** a user changes the search text, role filter, team filter or sort order
+- **THEN** the listing shows page 1 of the new results
+
+### Requirement: The channel participants data for the graph is paginated and searchable
+The Operation consumers API that feeds the Overview graph SHALL accept `page`, `page_size` (default 50, at most 100) and `search`. It SHALL return the requested page of the channel's aggregated participants, ordered publishers first, then subscribers, each by display name then name. It SHALL report the total number of participants matching the search, and separately the number of publishers and the number of subscribers matching the search. `search` SHALL match a Service's name or display name, case-insensitively. A request without parameters SHALL return the first 50 participants, not every participant.
+
+#### Scenario: Default request is capped
+- **WHEN** a channel has 70 aggregated participants and its consumers are requested with no parameters
+- **THEN** the response contains 50 participants and a total count of 70
+
+#### Scenario: Role totals accompany the page
+- **WHEN** a channel has 60 publishers and 10 subscribers
+- **THEN** the response reports a publisher count of 60 and a subscriber count of 10 regardless of which page is returned
+
+#### Scenario: Publishers come before subscribers
+- **WHEN** the first page of a channel with both roles is requested
+- **THEN** publishers appear before subscribers, and within each role Services are ordered by display name
+
+#### Scenario: Document-owner implied roles are included
+- **WHEN** a channel's Operation belongs to an API whose provider Service is its implied publisher
+- **THEN** that Service is counted and returned as a publisher, as before
+
+#### Scenario: Search narrows page and totals
+- **WHEN** consumers are requested with `search=notif` and 3 participants match
+- **THEN** the response contains those 3 participants and a total count of 3
+
+### Requirement: The participant summary carries its system
+The Service summary returned with an Operation's linked Services and channel participants SHALL include the Service's system reference, id and display name, or null when the Service has none.
+
+#### Scenario: Participant with a system
+- **WHEN** a channel participant belongs to the system "core"
+- **THEN** its summary carries that system's reference, id and name
+
+#### Scenario: Participant without a system
+- **WHEN** a channel participant has no system
+- **THEN** its system fields are null
+
+### Requirement: The Service summary tolerates a Service without an owner
+The Service summary returned with an Operation's linked Services and channel participants SHALL carry null team reference, id and name for a Service that has no owner, instead of failing the request.
+
+#### Scenario: Participant without an owner
+- **WHEN** a channel participant has no owner
+- **THEN** the response succeeds and its team fields are null
+
+### Requirement: The channel participants data can be grouped by team or system per role
+The Operation consumers API SHALL accept `group_by` with the value `team` or `system`. With `group_by` and without `group_id`, the response SHALL include `publisherGroups` and `subscriberGroups`, each listing the teams or systems that hold at least two participants of that role matching `search`, with id, name and the number of matching participants of that role, ordered by name; the participants list SHALL then contain only matching participants not in a listed group of their own role, paginated and ordered as before, and `count` SHALL still be the total of all matching participants while `participantsCount` SHALL give the size of that list's remainder. With `group_by`, `group_id` and `role`, the response SHALL be the page of matching participants of that role in that group, with `count` set to that total. A request with `group_id` and without `role` SHALL be rejected as a validation error. Without `group_by`, the response SHALL be as before and SHALL NOT include group lists or `participantsCount`. An unsupported `group_by` value SHALL be rejected as a validation error. Document-owner implied roles SHALL be grouped like any other participant.
+
+#### Scenario: Groups per role
+- **WHEN** a channel has publishers from 3 teams with at least two Services each and subscribers from 4 such teams, and consumers are requested with `group_by=team`
+- **THEN** `publisherGroups` lists 3 teams and `subscriberGroups` lists 4 teams, each with its role's count
+
+#### Scenario: The same team on both sides
+- **WHEN** a team has 3 publishers and 2 subscribers on the channel
+- **THEN** it appears in `publisherGroups` with a count of 3 and in `subscriberGroups` with a count of 2
+
+#### Scenario: Group members by group id and role
+- **WHEN** consumers are requested with `group_by=team`, `group_id` of a team and `role=subscriber`
+- **THEN** the response contains that team's subscribers on the channel and a count equal to their number
+
+#### Scenario: Group id without role
+- **WHEN** consumers are requested with `group_id` and no `role`
+- **THEN** the response is a validation error
+
+#### Scenario: Search narrows group counts
+- **WHEN** consumers are requested with `group_by=team` and `search=notif` and 1 of a team's 3 subscribers matches
+- **THEN** that team's entry in `subscriberGroups` is omitted if fewer than two matching participants remain, and its remaining participant is returned in the participants list
+
+#### Scenario: No grouping requested
+- **WHEN** consumers are requested without `group_by`
+- **THEN** the response has no group lists and is otherwise unchanged
+
+#### Scenario: Document-owner implied publisher is grouped
+- **WHEN** the channel's provider Service is the implied publisher and shares a team with another publisher
+- **THEN** both are counted in that team's publisher group

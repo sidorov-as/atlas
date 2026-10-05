@@ -52,7 +52,7 @@ export function EndpointOverviewTab({
 }) {
   const { session } = useSession()
   const canLinkService = endpoint.status === 'active' && Boolean(session?.isAuthenticated)
-  const totalLinked = consumers?.services.length ?? 0
+  const totalLinked = consumers?.count ?? 0
 
   const pathParams = endpoint.request.parameters.filter((parameter) => parameter.location === 'path')
   const queryParams = endpoint.request.parameters.filter((parameter) => parameter.location === 'query')

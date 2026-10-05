@@ -4,6 +4,7 @@ import { Alert, Icon, Label, Select, SegmentedRadioGroup, Skeleton, TextInput } 
 import { TriangleExclamation } from '@gravity-ui/icons'
 import { EntityTable } from 'frontend/components/EntityTable'
 import { useAsync } from 'frontend/lib/useAsync'
+import { DEFAULT_PAGE_SIZE, ListPagination } from './ListPagination'
 import { MethodBadge } from './MethodBadge'
 import { endpointsApi } from '../lib/entities'
 import type { Endpoint, EndpointMethod, EndpointStatus } from '../lib/types'
@@ -26,6 +27,8 @@ export function EndpointsListTab({ apiId }: { apiId: string }) {
   const [method, setMethod] = useState<EndpointMethod | null>(null)
   const [deprecated, setDeprecated] = useState<'true' | 'false' | null>(null)
   const [status, setStatus] = useState<EndpointStatus>('active')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const filters = useMemo(
     () => ({
@@ -42,14 +45,20 @@ export function EndpointsListTab({ apiId }: { apiId: string }) {
     [apiId, JSON.stringify(filters)],
   )
 
+  // The list endpoint isn't paginated, so slice client-side after the server-side filters.
+  const total = endpoints?.length ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / pageSize))
+  const currentPage = Math.min(page, lastPage)
+  const pageItems = (endpoints ?? []).slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
-        <TextInput placeholder="Search path, summary, operation ID…" value={search} onUpdate={setSearch} hasClear style={{ maxWidth: 280, flex: '1 1 220px' }} />
+        <TextInput placeholder="Search path, summary, operation ID…" value={search} onUpdate={(value) => { setSearch(value); setPage(1) }} hasClear style={{ maxWidth: 280, flex: '1 1 220px' }} />
         <Select
           placeholder="Method"
           value={method ? [method] : []}
-          onUpdate={(value) => setMethod((value[0] as EndpointMethod) ?? null)}
+          onUpdate={(value) => { setMethod((value[0] as EndpointMethod) ?? null); setPage(1) }}
           options={METHOD_OPTIONS}
           hasClear
           width={140}
@@ -57,14 +66,14 @@ export function EndpointsListTab({ apiId }: { apiId: string }) {
         <Select
           placeholder="Deprecated"
           value={deprecated ? [deprecated] : []}
-          onUpdate={(value) => setDeprecated((value[0] as 'true' | 'false') ?? null)}
+          onUpdate={(value) => { setDeprecated((value[0] as 'true' | 'false') ?? null); setPage(1) }}
           options={DEPRECATED_OPTIONS}
           hasClear
           width={170}
         />
         <SegmentedRadioGroup
           value={status}
-          onUpdate={(value) => setStatus(value as EndpointStatus)}
+          onUpdate={(value) => { setStatus(value as EndpointStatus); setPage(1) }}
           options={STATUS_OPTIONS}
         />
       </div>
@@ -79,7 +88,7 @@ export function EndpointsListTab({ apiId }: { apiId: string }) {
         </div>
       ) : (
         <EntityTable
-          data={endpoints ?? []}
+          data={pageItems}
           columns={[
             { id: 'method', name: 'Method', template: (item: Endpoint) => <MethodBadge method={item.method} /> },
             { id: 'path', name: 'Path', template: (item: Endpoint) => <code>{item.path}</code> },
@@ -100,6 +109,15 @@ export function EndpointsListTab({ apiId }: { apiId: string }) {
           emptyMessage={status === 'removed' ? 'No removed endpoints' : 'No endpoints'}
         />
       )}
+      <ListPagination
+        page={currentPage}
+        pageSize={pageSize}
+        total={total}
+        onUpdate={(nextPage, nextPageSize) => {
+          setPage(nextPage)
+          setPageSize(nextPageSize)
+        }}
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@
 // regardless of a node's angle on the radial ring, without per-node
 // direction bookkeeping.
 import { memo } from 'react'
+import { SideHandles } from './SideHandles'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Text } from '@gravity-ui/uikit'
 import { RelationTargetLink } from 'frontend/components/RelationTargetLink'
@@ -47,8 +48,11 @@ function ServiceNodeComponent({ data }: NodeProps<ServiceFlowNode>) {
       }}
     >
       <Handle type="source" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
+      <SideHandles />
       <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.service.title || data.service.name}</Text>
-      <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{data.service.teamName}</Text>
+      {data.service.teamName && (
+        <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{data.service.teamName}</Text>
+      )}
     </div>
   )
 }
@@ -80,6 +84,7 @@ function EndpointNodeComponent({ data }: NodeProps<EndpointFlowNode>) {
       }}
     >
       <Handle type="target" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
+      <SideHandles />
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
         <MethodBadge method={data.endpoint.method} />
       </div>

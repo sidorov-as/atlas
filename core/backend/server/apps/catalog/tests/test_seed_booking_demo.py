@@ -6,8 +6,16 @@ via `ApiDetails.post_save`, replacing the old hand-authored
 `OPERATIONS` fixture.
 """
 
+from collections import Counter
+
 import pytest
-from atlas_plugin_apis.models import ApiOperation, ServiceOperationUsage
+from atlas_plugin_apis.consumers import channel_participants
+from atlas_plugin_apis.models import (
+    ApiEndpoint,
+    ApiOperation,
+    ServiceEndpointUsage,
+    ServiceOperationUsage,
+)
 from atlas_plugin_c4.c4 import build_system_context
 from django.core.management import call_command
 
@@ -137,3 +145,61 @@ def test_seed_operation_usages_link_to_the_importer_produced_rows():
         ServiceOperationUsage.objects.filter(operation=delivery_status).count()
         == 2
     )
+
+
+def test_seed_listing_endpoint_is_used_by_several_teams_for_the_grouped_graph():
+    call_command("seed_booking_demo", "--yes")
+
+    endpoint = ApiEndpoint.objects.get(
+        api__name="listings-api", method="GET", path="/listings/{id}"
+    )
+    teams = Counter(
+        usage.service.owner.name
+        for usage in ServiceEndpointUsage.objects.filter(
+            endpoint=endpoint
+        ).select_related("service__owner")
+    )
+
+    assert sum(teams.values()) == 16
+    assert teams == {
+        "booking-team": 4,
+        "search-team": 2,
+        "payments-team": 2,
+        "listings-team": 2,
+        "identity-team": 2,
+        "notifications-team": 3,
+        "partner-integrations-team": 1,
+    }
+
+
+def test_seed_cancelled_channel_has_grouped_publishers_and_subscribers():
+    call_command("seed_booking_demo", "--yes")
+
+    operation = ApiOperation.objects.get(
+        api__name="booking-events-api", operation_key="booking.cancelled-send"
+    )
+    participants = channel_participants(
+        list(
+            ApiOperation.objects.filter(
+                channel_address=operation.channel_address
+            ).select_related("api", "api__owner")
+        )
+    )
+    by_role = {"publisher": Counter(), "subscriber": Counter()}
+    for service, role in participants:
+        by_role[role][service.owner.name] += 1
+
+    # The document owner `booking-service` is the implied publisher, grouped
+    # with its team's explicit publishers.
+    assert by_role["publisher"] == {
+        "booking-team": 3,
+        "listings-team": 2,
+        "partner-integrations-team": 1,
+    }
+    assert by_role["subscriber"] == {
+        "payments-team": 3,
+        "notifications-team": 4,
+        "listings-team": 2,
+        "identity-team": 2,
+        "search-team": 1,
+    }

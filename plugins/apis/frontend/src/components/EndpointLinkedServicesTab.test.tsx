@@ -10,6 +10,8 @@ import { endpointServicesApi } from '../lib/entities'
 import { makeApi, makeEndpoint, makeServiceSummary } from '../testFixtures'
 import type { EndpointService } from '../lib/types'
 
+const paginationControl = () => document.querySelector('[data-qa="pagination-page-sizer"]')
+
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
@@ -62,7 +64,6 @@ function renderTab(endpointOverrides: Parameters<typeof makeEndpoint>[0] = {}) {
         <EndpointLinkedServicesTab
           endpoint={makeEndpoint(endpointOverrides)}
           api={makeApi()}
-          linkedServices={[]}
           onServicesChanged={vi.fn()}
         />
       </MemoryRouter>
@@ -225,5 +226,44 @@ describe('EndpointLinkedServicesTab', () => {
     vi.mocked(endpointServicesApi.list).mockResolvedValue(EMPTY_PAGE)
     renderTab()
     await waitFor(() => expect(groupsApi.list).toHaveBeenCalled())
+  })
+
+  it('shows the pagination control for a short list and sends the default page size', async () => {
+    mockSession({ isAuthenticated: true })
+    vi.mocked(endpointServicesApi.list).mockResolvedValue({
+      count: 18, numPages: 2, perPage: 15, page: { number: 1, objectList: [makeUsage()] },
+    })
+
+    renderTab()
+
+    await waitFor(() => expect(paginationControl()).not.toBeNull())
+    expect(endpointServicesApi.list).toHaveBeenLastCalledWith('endpoint-1', expect.objectContaining({ pageSize: 15 }))
+  })
+
+  it('reads page and page_size from the URL', async () => {
+    mockSession({ isAuthenticated: true })
+    vi.mocked(endpointServicesApi.list).mockResolvedValue(EMPTY_PAGE)
+
+    render(
+      <ThemeProvider theme="light">
+        <MemoryRouter initialEntries={['/?page=2&page_size=30']}>
+          <EndpointLinkedServicesTab endpoint={makeEndpoint()} api={makeApi()} onServicesChanged={vi.fn()} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    await waitFor(() =>
+      expect(endpointServicesApi.list).toHaveBeenLastCalledWith('endpoint-1', expect.objectContaining({ page: 2, pageSize: 30 })),
+    )
+  })
+
+  it('hides the pagination control when the list is empty', async () => {
+    mockSession({ isAuthenticated: true })
+    vi.mocked(endpointServicesApi.list).mockResolvedValue(EMPTY_PAGE)
+
+    renderTab()
+
+    await waitFor(() => expect(endpointServicesApi.list).toHaveBeenCalled())
+    expect(paginationControl()).toBeNull()
   })
 })

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, Icon, Label, Pagination, Select, SegmentedRadioGroup, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
+import { Alert, Icon, Label, Select, SegmentedRadioGroup, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
 import { TriangleExclamation } from '@gravity-ui/icons'
 import { EntityTable } from 'frontend/components/EntityTable'
 import { useAsync } from 'frontend/lib/useAsync'
 import { DirectionBadge } from './DirectionBadge'
+import { DEFAULT_PAGE_SIZE, ListPagination } from './ListPagination'
 import { operationServicesApi, operationsApi } from '../lib/entities'
 import type { Operation, OperationDirection, OperationStatus } from '../lib/types'
 
@@ -47,7 +48,7 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
   const [direction, setDirection] = useState<OperationDirection | null>(null)
   const [status, setStatus] = useState<OperationStatus>('active')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(15)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const filters = useMemo(
     () => ({ search: search || undefined, direction: direction ?? undefined, status }),
@@ -81,8 +82,8 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
       groups.map(async (group) => {
         try {
           const consumers = await operationServicesApi.consumers(group.operations[0].id)
-          const publishers = consumers.participants.filter((participant) => participant.role === 'publisher').length
-          const subscribers = consumers.participants.filter((participant) => participant.role === 'subscriber').length
+          // Role totals come from the response, not `participants.length`: the list is one page.
+          const { publisherCount: publishers, subscriberCount: subscribers } = consumers
           return [group.channelAddress, { publishers, subscribers }] as const
         } catch {
           return [group.channelAddress, { publishers: 0, subscribers: 0 }] as const
@@ -176,21 +177,15 @@ export function OperationsListTab({ apiId }: { apiId: string }) {
           })}
         </div>
       )}
-      {total > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <Pagination
-            page={currentPage}
-            pageSize={pageSize}
-            total={total}
-            pageSizeOptions={[15, 30, 50, 100]}
-            showInput
-            onUpdate={(nextPage, nextPageSize) => {
-              setPage(nextPageSize === pageSize ? nextPage : 1)
-              setPageSize(nextPageSize)
-            }}
-          />
-        </div>
-      )}
+      <ListPagination
+        page={currentPage}
+        pageSize={pageSize}
+        total={total}
+        onUpdate={(nextPage, nextPageSize) => {
+          setPage(nextPage)
+          setPageSize(nextPageSize)
+        }}
+      />
     </div>
   )
 }

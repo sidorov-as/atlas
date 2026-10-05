@@ -14,7 +14,7 @@
 // the moment a future change scopes this permission further).
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Alert, Button, Icon, Pagination, Select, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
+import { Alert, Button, Icon, Select, Skeleton, Text, TextInput } from '@gravity-ui/uikit'
 import { ArrowDown, ArrowUp, Link as LinkIcon, LinkSlash } from '@gravity-ui/icons'
 import { ConfirmDialog } from 'frontend/components/ConfirmDialog'
 import { EntityTable } from 'frontend/components/EntityTable'
@@ -26,24 +26,21 @@ import type { ApiEntity } from 'frontend/lib/types'
 import { useAsync } from 'frontend/lib/useAsync'
 import { useConfirm } from 'frontend/lib/useConfirm'
 import { endpointServicesApi } from '../lib/entities'
-import type { Endpoint, EndpointService, ServiceSummary } from '../lib/types'
+import type { Endpoint, EndpointService } from '../lib/types'
 import { LinkServiceDialog } from './LinkServiceDialog'
+import { DEFAULT_PAGE_SIZE, ListPagination, PAGE_SIZE_OPTIONS } from './ListPagination'
 
 type SortField = 'service' | 'team'
 type SortOrder = 'asc' | 'desc'
 
-const PAGE_SIZE = 20
 
 export function EndpointLinkedServicesTab({
   endpoint,
   api,
-  linkedServices,
   onServicesChanged,
 }: {
   endpoint: Endpoint
   api: ApiEntity | undefined
-  /** Every currently-linked Service (unpaginated, from the shared consumers fetch) — used to disable already-linked options in the Link dialog even when this tab's own (filtered/paginated) table doesn't include them. */
-  linkedServices: ServiceSummary[]
   /** Called after a successful link/unlink so the parent can refresh the graph, the Overview preview, and the tab counter — this tab refreshes its own table itself. */
   onServicesChanged: () => void
 }) {
@@ -60,6 +57,8 @@ export function EndpointLinkedServicesTab({
   const sort: SortField = searchParams.get('sort') === 'team' ? 'team' : 'service'
   const order: SortOrder = searchParams.get('order') === 'desc' ? 'desc' : 'asc'
   const page = Number(searchParams.get('page') ?? '1') || 1
+  const requestedSize = Number(searchParams.get('page_size'))
+  const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize) ? requestedSize : DEFAULT_PAGE_SIZE
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
@@ -84,9 +83,9 @@ export function EndpointLinkedServicesTab({
       sort,
       order,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
     }),
-    [endpoint.id, search, teamId, sort, order, page],
+    [endpoint.id, search, teamId, sort, order, page, pageSize],
   )
 
   const { data: teamsPage } = useAsync(() => groupsApi.list({ pageSize: 100 }), [])
@@ -96,7 +95,6 @@ export function EndpointLinkedServicesTab({
   }))
 
   const services = data?.page.objectList ?? []
-  const linkedServiceIds = new Set(linkedServices.map((service) => service.id))
 
   function handleLinked() {
     reload()
@@ -196,9 +194,12 @@ export function EndpointLinkedServicesTab({
               {
                 id: 'team',
                 name: 'Team',
-                template: (item: EndpointService) => (
-                  <RelationTargetLink target={item.service.team} targetKind="group" targetId={item.service.teamId} />
-                ),
+                template: (item: EndpointService) =>
+                  item.service.team && item.service.teamId ? (
+                    <RelationTargetLink target={item.service.team} targetKind="group" targetId={item.service.teamId} />
+                  ) : (
+                    '—'
+                  ),
               },
               ...(canLinkOrUnlink ? [{
                 id: 'actions',
@@ -218,15 +219,18 @@ export function EndpointLinkedServicesTab({
             getRowId={(item: EndpointService) => item.id}
             emptyMessage="No services are linked to this endpoint yet"
           />
-          {data && data.count > PAGE_SIZE && (
-            <div style={{ marginTop: 16 }}>
-              <Pagination
-                page={page}
-                pageSize={PAGE_SIZE}
-                total={data.count}
-                onUpdate={(nextPage) => updateParams({ page: String(nextPage) })}
-              />
-            </div>
+          {data && (
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={data.count}
+              onUpdate={(nextPage, nextPageSize) =>
+                updateParams({
+                  page: nextPage === 1 ? null : String(nextPage),
+                  page_size: nextPageSize === DEFAULT_PAGE_SIZE ? null : String(nextPageSize),
+                })
+              }
+            />
           )}
           {data && data.count > 0 && (
             <Text color="secondary" style={{ display: 'block', marginTop: 12 }}>
@@ -241,7 +245,6 @@ export function EndpointLinkedServicesTab({
         onClose={() => setDialogOpen(false)}
         endpoint={endpoint}
         api={api}
-        linkedServiceIds={linkedServiceIds}
         onLinked={handleLinked}
       />
       <ConfirmDialog {...confirmDialogProps} />
