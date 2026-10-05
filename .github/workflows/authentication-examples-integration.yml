@@ -133,4 +133,3 @@ jobs:
           server/apps/catalog/tests/test_provisioning.py::test_incomplete_exact_snapshot_rolls_back_and_failure_event_survives
           server/apps/catalog/tests/test_provisioning.py::test_concurrent_first_login_creates_one_identity_and_actor
           server/apps/catalog/tests/test_membership_grants.py::test_legacy_oidc_grant_can_transfer_without_residual_manual_access
-          server/apps/catalog/tests/test_membership_grant_migration.py
