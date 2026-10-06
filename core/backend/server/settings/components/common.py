@@ -327,6 +327,19 @@ ATLAS_APIS_SPEC_URL_ALLOWLIST = config(
     default="",
 )
 
+# Upload tickets (`mcp-upload-links`): how long an unused ticket stays valid,
+# and how long expired/consumed rows are kept before cleanup deletes them.
+ATLAS_UPLOAD_TICKET_TTL_SECONDS = config(
+    "ATLAS_UPLOAD_TICKET_TTL_SECONDS", cast=int, default=600
+)
+ATLAS_UPLOAD_TICKET_RETENTION_SECONDS = config(
+    "ATLAS_UPLOAD_TICKET_RETENTION_SECONDS", cast=int, default=86400
+)
+# Largest body the `atlas.database-schema` upload target accepts.
+ATLAS_DATABASE_SCHEMA_UPLOAD_MAX_BYTES = config(
+    "ATLAS_DATABASE_SCHEMA_UPLOAD_MAX_BYTES", cast=int, default=5 * 1024 * 1024
+)
+
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"

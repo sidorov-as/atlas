@@ -5,6 +5,7 @@
 // target handle, both centered, so it can connect to the center node and take
 // the edges of its own expanded Services.
 import { memo } from 'react'
+import { TruncatedTooltip } from './TruncatedTooltip'
 import { SideHandles } from './SideHandles'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { ChevronDown, ChevronRight } from '@gravity-ui/icons'
@@ -76,7 +77,9 @@ function GroupNodeComponent({ data }: NodeProps<GroupFlowNode>) {
         style={{ flex: '0 0 auto', width: 10, height: 10, borderRadius: '50%', background: 'var(--tag-fg)' }}
       />
       <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-        <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.name}</Text>
+        <TruncatedTooltip content={data.name} placement="top">
+          <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.name}</Text>
+        </TruncatedTooltip>
         <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{groupCaption(data)}</Text>
       </div>
       <Icon data={data.expanded ? ChevronDown : ChevronRight} size={16} />

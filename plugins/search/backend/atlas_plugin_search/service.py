@@ -183,7 +183,9 @@ def search(
     for candidate, hit, source in collected[start : start + page_size]:
         snippet = None
         if use_highlights and candidate.highlight:
-            snippet = highlight_snippet(candidate.highlight, text)
+            snippet = highlight_snippet(
+                candidate.highlight, text, candidate.highlight_matches
+            )
         if snippet is None:
             snippet = build_snippet(hit.text, hit.summary, text)
         results.append(

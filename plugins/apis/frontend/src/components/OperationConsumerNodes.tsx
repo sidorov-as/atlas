@@ -7,9 +7,10 @@
 // edges draw true node-center-to-node-center lines regardless of a node's
 // angle on the ring, without per-node direction bookkeeping.
 import { memo } from 'react'
+import { TruncatedTooltip } from './TruncatedTooltip'
 import { SideHandles } from './SideHandles'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
-import { Text, Tooltip } from '@gravity-ui/uikit'
+import { Text } from '@gravity-ui/uikit'
 import { RoleBadge } from './RoleBadge'
 import type { OperationRole, ServiceSummary } from '../lib/types'
 
@@ -56,13 +57,13 @@ function ServiceRoleNodeComponent({ data }: NodeProps<ServiceRoleFlowNode>) {
       <div style={{ marginBottom: 4 }}>
         <RoleBadge role={data.role} />
       </div>
-      <Tooltip content={data.service.title || data.service.name} placement="top">
+      <TruncatedTooltip content={data.service.title || data.service.name} placement="top">
         <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.service.title || data.service.name}</Text>
-      </Tooltip>
+      </TruncatedTooltip>
       {data.service.teamName && (
-        <Tooltip content={data.service.teamName} placement="bottom">
+        <TruncatedTooltip content={data.service.teamName} placement="bottom">
           <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{data.service.teamName}</Text>
-        </Tooltip>
+        </TruncatedTooltip>
       )}
     </div>
   )
@@ -95,7 +96,7 @@ function ChannelNodeComponent({ data }: NodeProps<ChannelFlowNode>) {
       <Handle type="source" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
       <Handle type="target" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
       <SideHandles />
-      <Tooltip content={data.channelAddress} placement="top">
+      <TruncatedTooltip content={data.channelAddress} placement="top">
         <Text
           variant="body-2"
           ellipsis
@@ -103,7 +104,7 @@ function ChannelNodeComponent({ data }: NodeProps<ChannelFlowNode>) {
         >
           {data.channelAddress}
         </Text>
-      </Tooltip>
+      </TruncatedTooltip>
       {data.channelProtocol && (
         <Text color="secondary" variant="caption-2" style={{ display: 'block' }}>{data.channelProtocol}</Text>
       )}

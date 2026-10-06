@@ -163,6 +163,16 @@ describe('SearchDialog', () => {
     await waitFor(() => expect(screen.queryByLabelText('Search query')).toBeNull())
   })
 
+  it('marks the word after an emoji at the UTF-16 offsets the API returns', async () => {
+    vi.mocked(searchApi.search).mockResolvedValue(
+      response([result({ snippet: { text: '\u{1F600} payment gateway', matches: [[3, 10]] } })]),
+    )
+    renderBox()
+    await typeQuery('paymnt')
+
+    expect((await screen.findByText('payment')).tagName).toBe('MARK')
+  })
+
   it('renders markup in titles and snippets as literal text', async () => {
     vi.mocked(searchApi.search).mockResolvedValue(
       response([

@@ -15,6 +15,7 @@ from dmr.response import APIError
 
 from .. import runtime, service, status
 from ..plugin import STATUS_ADMIN_PERMISSION
+from ..snippets import utf16_matches
 from .schemas import (
     KindCountOut,
     SearchQuery,
@@ -81,7 +82,10 @@ class SearchController(AtlasController):
                     title=r.title,
                     link=r.link,
                     snippet=(
-                        SnippetOut(text=r.snippet.text, matches=list(r.snippet.matches))
+                        SnippetOut(
+                            text=r.snippet.text,
+                            matches=utf16_matches(r.snippet.text, r.snippet.matches),
+                        )
                         if r.snippet
                         else None
                     ),

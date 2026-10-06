@@ -23,9 +23,11 @@ dependency.
 
 import httpx2
 from fastmcp import FastMCP
+from fastmcp.server.providers.openapi import MCPType, RouteMap
 
 from .config import Config
 from .icons import search_flow_icons
+from .uploads import ATTACH_PATH, make_request_attach
 
 _REQUEST_TIMEOUT_SECONDS = 30.0
 
@@ -100,6 +102,32 @@ the API to the Service's `consumesAPI`; unlinking never removes it. Before
 removing links, repeat the call with `dryRun` true and show the user what would
 go."""
 
+_UPLOAD_INSTRUCTIONS = """\
+
+Attaching a large file to an entity: when you can run shell commands and the
+content is large or already a file on disk, create the entity first (without
+the spec), call request_attach with `entity` as `kind:name` and the `field`
+(`spec` of an `api`, `schema` of a `resource`), then upload the raw file with
+the returned `exampleCommand` (a PUT). That keeps the text out of this
+conversation. Treat the returned URL as a secret: don't show it to the user or
+store it. For small content, or when you cannot run commands, pass it inline
+instead (`spec_content` in create_entity/update_entity, or
+set_resource_schema). If neither works, ask the user to upload it. In the
+upload response `ok` means the content was SAVED; for a schema,
+`summary.parse_status` and `parse_error` say separately whether it parsed. A
+rejected upload (`ok` false) may be retried with a corrected file against the
+same URL until it expires. If the URL's host is unreachable from your shell
+(for example host.docker.internal when this server runs in a container),
+substitute a reachable host and keep the path."""
+
+_SET_SCHEMA_INSTRUCTIONS = """\
+
+set_resource_schema saves a Resource's SQL schema inline (`resource` as
+`resource:name`, `dialect`, `sourceSql`). A successful call means the SQL was
+SAVED; `parseStatus` and `parseError` say separately whether it parsed, so
+read them and fix the SQL if parsing failed. Use `dryRun` first, as for other
+writes."""
+
 
 def _auth_headers(pat: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {pat}"}
@@ -143,6 +171,17 @@ def _has_api_usage_tools(openapi_spec: dict) -> bool:
     )
 
 
+def _has_upload_tool(openapi_spec: dict) -> bool:
+    """`request_attach` exists only when Atlas registered an upload target."""
+    return ATTACH_PATH in openapi_spec.get("paths", {})
+
+
+def _has_set_schema_tool(openapi_spec: dict) -> bool:
+    return any(
+        path.endswith("/resources/schema/") for path in openapi_spec.get("paths", {})
+    )
+
+
 def build_server(config: Config) -> FastMCP:
     openapi_spec = _fetch_openapi_spec(config)
     has_flow_tools = _has_flow_tools(openapi_spec)
@@ -154,6 +193,11 @@ def build_server(config: Config) -> FastMCP:
         instructions += _API_INSTRUCTIONS
     if _has_api_usage_tools(openapi_spec):
         instructions += _API_USAGE_INSTRUCTIONS
+    has_upload_tool = _has_upload_tool(openapi_spec)
+    if _has_set_schema_tool(openapi_spec):
+        instructions += _SET_SCHEMA_INSTRUCTIONS
+    if has_upload_tool:
+        instructions += _UPLOAD_INSTRUCTIONS
 
     # This client — not the one-off request `_fetch_openapi_spec` made
     # above — is what every generated tool actually calls through; it
@@ -170,7 +214,18 @@ def build_server(config: Config) -> FastMCP:
         client=client,
         name="Atlas",
         instructions=instructions,
+        # `request_attach` is hand-written below (it turns the relative upload
+        # path into a full URL), so its generated twin is not listed.
+        route_maps=[
+            RouteMap(pattern=rf"^{ATTACH_PATH}$", mcp_type=MCPType.EXCLUDE),
+            RouteMap(mcp_type=MCPType.TOOL),
+        ]
+        if has_upload_tool
+        else None,
     )
+
+    if has_upload_tool:
+        mcp_server.tool(make_request_attach(client, config))
 
     if has_flow_tools:
         # Unlike every other tool here, this one is answered entirely by

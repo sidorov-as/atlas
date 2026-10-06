@@ -36,6 +36,7 @@ from atlas_plugin_api.entity_service import bind_entity_service
 from atlas_plugin_api.membership import bind_membership_service
 from atlas_plugin_api.pat import bind_pat_validator
 from atlas_plugin_api.permissions import bind_policy_evaluator
+from atlas_plugin_api.uploads import bind_upload_ticket_service
 
 from .auth_descriptors import LOCAL_PROVIDER_DESCRIPTOR
 
@@ -76,6 +77,9 @@ def register_runtime() -> None:
     from server.apps.catalog.services.pat_service import (
         validate_personal_access_token,
     )
+    from server.apps.catalog.services.upload_ticket_service import (
+        upload_ticket_service,
+    )
 
     register_authentication_provider(LocalCredentialProvider(), owner=PLUGIN.id)
     register_search_source(catalog_search_source, owner=PLUGIN.id)
@@ -90,3 +94,4 @@ def register_runtime() -> None:
         blocked_by_reason=blocked_by_reason,
     )
     bind_pat_validator(validate_personal_access_token)
+    bind_upload_ticket_service(upload_ticket_service)

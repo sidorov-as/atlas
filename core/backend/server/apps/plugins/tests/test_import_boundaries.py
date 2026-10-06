@@ -139,6 +139,9 @@ DECLARED_CONTRACT_SUBMODULES: dict[str, tuple[str, ...]] = {
         "atlas_plugin_apis.extension_points",
     ),
     "atlas_plugin_ingestion": ("atlas_plugin_ingestion.extension_points",),
+    "atlas_plugin_database_schema": (
+        "atlas_plugin_database_schema.extension_points",
+    ),
     "atlas_plugin_flows": (
         "atlas_plugin_flows.contracts",
         "atlas_plugin_flows.extension_points",

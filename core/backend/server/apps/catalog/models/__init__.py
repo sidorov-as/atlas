@@ -36,6 +36,7 @@ from .provisioning import (
 from .purge_grant import PurgeGrant
 from .relation import Relation
 from .tag import DEFAULT_TAG_COLOR, TAG_PALETTE, Tag, ensure_tags_exist
+from .upload_ticket import UploadTicket
 
 __all__ = [
     "DEFAULT_TAG_COLOR",
@@ -71,6 +72,7 @@ __all__ = [
     "PurgeGrant",
     "Relation",
     "Tag",
+    "UploadTicket",
     "ensure_tags_exist",
     "generate_token_secret",
     "hash_token_secret",

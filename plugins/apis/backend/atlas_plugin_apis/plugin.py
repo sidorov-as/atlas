@@ -73,10 +73,15 @@ def register_runtime() -> None:
     (`server.apps.plugins.runtime.load_runtime_entry_points`), after
     `django.setup()` — never at import time.
     """
-    from atlas_plugin_api import register_permission, register_search_source
+    from atlas_plugin_api import (
+        register_permission,
+        register_search_source,
+        register_upload_target,
+    )
 
     from atlas_plugin_apis.kinds import register_apis_kinds
     from atlas_plugin_apis.search_source import api_search_source
+    from atlas_plugin_apis.upload import api_spec_upload_target
 
     register_apis_kinds(owner=PLUGIN.id)
     register_permission(ENDPOINT_READ_PERMISSION, owner=PLUGIN.id)
@@ -91,3 +96,4 @@ def register_runtime() -> None:
     register_permission(OPERATION_DEPENDENCY_DELETE_PERMISSION, owner=PLUGIN.id)
     # Harmless without the search plugin: nothing reads the registry then.
     register_search_source(api_search_source, owner=PLUGIN.id)
+    register_upload_target(api_spec_upload_target(), owner=PLUGIN.id)

@@ -13,6 +13,7 @@ concrete spec shape genuinely varies by `kind` and this API has no
 "one schema per kind" endpoint split for a tool-calling client to route on.
 """
 
+from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -439,3 +440,56 @@ class ValidateFlowIn(CamelModel):
 class ValidateFlowOut(CamelModel):
     valid: bool
     violations: list[str]
+
+
+class SetResourceSchemaIn(CamelModel):
+    """Body for `set_resource_schema`; unknown keys are rejected so a
+    misspelled field fails the write instead of vanishing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    resource: str = Field(description="The Resource, as `resource:name`.")
+    dialect: Literal["postgresql", "mysql", "mssql"] = "postgresql"
+    source_sql: str = Field(
+        max_length=2 * 1024 * 1024,
+        description="The DDL (CREATE TABLE statements) as text.",
+    )
+
+
+class SetResourceSchemaOut(CamelModel):
+    """`ok` is implied by the 200: it means the SQL was saved. Whether it
+    parsed is `parse_status`, with the parser's message in `parse_error`."""
+
+    resource: str
+    dialect: str
+    parse_status: Literal["ok", "failed"]
+    parse_error: str
+    table_count: int
+
+
+class RequestAttachIn(CamelModel):
+    """Body for `request_attach`; unknown keys are rejected."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    entity: str = Field(description="The target entity, as `kind:name`.")
+    field: str = Field(
+        description="The field to fill, e.g. `spec` of an `api`, `schema` of "
+        "a `resource`. An unsupported field is rejected with the supported list."
+    )
+    params: dict[str, Any] = Field(
+        default_factory=dict,
+        description='Target parameters, e.g. `{"dialect": "mysql"}` for a '
+        "`resource` `schema` (default `postgresql`).",
+    )
+
+
+class RequestAttachOut(CamelModel):
+    entity: str
+    field: str
+    upload_path: str = Field(
+        description="Path of the one-time upload URL, relative to the Atlas "
+        "base URL. It is a secret: do not log or share it."
+    )
+    expires_at: datetime
+    max_bytes: int

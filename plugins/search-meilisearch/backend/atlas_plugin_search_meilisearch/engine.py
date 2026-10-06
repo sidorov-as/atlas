@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+import unicodedata
 import uuid
 from collections.abc import Collection, Iterable
 from itertools import batched
@@ -32,18 +33,107 @@ INDEX_SETTINGS: dict[str, Any] = {
 }
 
 # Private-use characters mark matches in the engine's formatted text. They are
-# removed again below: the search plugin locates matches itself and takes
-# plain text, so nothing from the index can arrive at the UI as markup.
+# not whitespace and not markup, so cleaning leaves them in place and the
+# offsets are read off the cleaned text; the markers themselves never leave
+# this module, so nothing from the index can arrive at the UI as markup.
 _MATCH_START = ""
 _MATCH_END = ""
 _TAG = re.compile(r"</?[A-Za-z][^>]*>|<!--.*?-->", re.DOTALL)
 _WHITESPACE = re.compile(r"\s+")
 
 
+def to_highlight(formatted: str) -> tuple[str, tuple[tuple[int, int], ...]]:
+    """Engine-formatted text -> plain text and the code-point ranges it matched.
+
+    The text has no match markers or HTML tags and has collapsed whitespace; the
+    ranges address that final text and cover whole words. Unbalanced or nested markers (a marker lost
+    inside an HTML tag, say) are dropped rather than guessed at.
+    """
+    cleaned = _WHITESPACE.sub(" ", _TAG.sub(" ", formatted)).strip()
+    text: list[str] = []
+    matches: list[tuple[int, int]] = []
+    start: int | None = None
+    for char in cleaned:
+        if char == _MATCH_START:
+            if start is None:
+                start = len(text)
+        elif char == _MATCH_END:
+            if start is not None:
+                matches.append((start, len(text)))
+                start = None
+        else:
+            text.append(char)
+    plain = "".join(text)
+    spans = [span for m in matches if (span := _trimmed(plain, *m))]
+    return plain, _merged([_whole_word(plain, *span) for span in spans])
+
+
+def _trimmed(text: str, start: int, end: int) -> tuple[int, int] | None:
+    """The range without surrounding whitespace, or None when nothing is left."""
+    while start < end and text[start].isspace():
+        start += 1
+    while end > start and text[end - 1].isspace():
+        end -= 1
+    return (start, end) if start < end else None
+
+
+def _is_unsegmented(char: str) -> bool:
+    """Scripts written without spaces: the engine splits them, a word edge cannot."""
+    code = ord(char)
+    return (
+        0x3040 <= code <= 0x30FF  # hiragana, katakana
+        or 0x3400 <= code <= 0x9FFF  # CJK ideographs
+        or 0xF900 <= code <= 0xFAFF
+        or 0x20000 <= code <= 0x2FFFF
+        or 0x0E00 <= code <= 0x0E7F  # Thai
+    )
+
+
+def _is_word_char(char: str) -> bool:
+    return unicodedata.category(char)[0] in "LNM"
+
+
+def _same_word(before: str, after: str) -> bool:
+    """Whether two neighbouring characters belong to one word.
+
+    The engine ends a word at anything that is not a letter or digit (so at `_`
+    and `-`), between a lowercase and an uppercase letter (camelCase), and
+    around scripts written without spaces.
+    """
+    if not (_is_word_char(before) and _is_word_char(after)):
+        return False
+    if _is_unsegmented(before) or _is_unsegmented(after):
+        return False
+    return not (before.islower() and after.isupper())
+
+
+def _whole_word(text: str, start: int, end: int) -> tuple[int, int]:
+    """The range grown to the edges of the words it touches.
+
+    The engine marks only the matched part of a word for a typo or a prefix
+    (`paymen` of `payment`); a reader expects the whole word marked.
+    """
+    while start > 0 and _same_word(text[start - 1], text[start]):
+        start -= 1
+    while end < len(text) and _same_word(text[end - 1], text[end]):
+        end += 1
+    return start, end
+
+
+def _merged(spans: list[tuple[int, int]]) -> tuple[tuple[int, int], ...]:
+    """Spans in text order with overlapping ones joined."""
+    merged: list[tuple[int, int]] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return tuple(merged)
+
+
 def to_plain_highlight(formatted: str) -> str:
     """Engine-formatted text -> plain text without match markers or HTML tags."""
-    text = formatted.replace(_MATCH_START, "").replace(_MATCH_END, "")
-    return _WHITESPACE.sub(" ", _TAG.sub(" ", text)).strip()
+    return to_highlight(formatted)[0]
 
 
 class MeilisearchSearchEngine:
@@ -156,16 +246,17 @@ class MeilisearchSearchEngine:
 
     def _candidate(self, hit: dict[str, Any]) -> SearchCandidate:
         formatted = hit.get("_formatted") or {}
-        highlight = None
+        highlight, matches = None, ()
         for field in ("body", "summary"):
             value = formatted.get(field)
             if isinstance(value, str) and _MATCH_START in value:
-                highlight = to_plain_highlight(value) or None
+                highlight, matches = to_highlight(value)
                 break
         return SearchCandidate(
             id=hit["document_id"],
             score=float(hit.get("_rankingScore", 0.0)),
-            highlight=highlight,
+            highlight=highlight or None,
+            highlight_matches=matches if highlight else (),
         )
 
     def _add(self, index: str, chunk: tuple[SearchDocument, ...]) -> None:

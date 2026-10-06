@@ -178,10 +178,48 @@ def _api_urls() -> list:
     ]
 
 
+def _database_schema_urls() -> list:
+    if not django_apps.is_installed("atlas_plugin_database_schema"):
+        return []
+
+    from .resource_schema_views import SetResourceSchemaController
+
+    return [
+        path(
+            "resources/schema/",
+            SetResourceSchemaController.as_view(),
+            name="mcp-set-resource-schema",
+        ),
+    ]
+
+
+def _upload_urls() -> list:
+    from atlas_plugin_api import list_upload_targets
+
+    if not list_upload_targets():
+        return []
+
+    from .upload_views import RequestAttachController
+
+    return [
+        path(
+            "uploads/",
+            RequestAttachController.as_view(),
+            name="mcp-request-attach",
+        ),
+    ]
+
+
 def build_router() -> Router:
     return Router(
         "api/plugins/atlas.mcp/",
-        [*_CATALOG_URLS, *_flow_urls(), *_api_urls()],
+        [
+            *_CATALOG_URLS,
+            *_flow_urls(),
+            *_api_urls(),
+            *_database_schema_urls(),
+            *_upload_urls(),
+        ],
     )
 
 

@@ -217,8 +217,10 @@ common fields.
 | `pageSize` | 1 to 50, default 20. |
 
 Each result has `id`, `kind`, `kindLabel`, `title`, `link` and `snippet`
-(`text` plus `matches`, a list of `[start, end)` character offsets into `text`).
-The snippet is plain text, never markup. The envelope adds `total`, `page`,
+(`text` plus `matches`, a list of `[start, end)` offsets into `text` in UTF-16 code
+units, so a character outside the Basic Multilingual Plane such as an emoji counts as
+two; slice the text with them as JavaScript does). The snippet is plain text, never
+markup. The envelope adds `total`, `page`,
 `pageSize` and `hasMore`. The endpoint answers 404 when the plugin is inactive
 and 503 when the engine fails. Generated OpenAPI is authoritative for exact
 signatures; see the [HTTP API](../api-reference/index.md).

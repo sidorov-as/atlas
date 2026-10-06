@@ -6,6 +6,8 @@ fetch uses, and what `FastMCP.from_openapi` is handed — not `fastmcp`'s or
 `httpx2`'s own behavior.
 """
 
+import re
+
 import httpx2
 import pytest
 from atlas_mcp import server as server_module
@@ -53,7 +55,8 @@ def _patch_schema_fetch(monkeypatch, spec):
 def _patch_from_openapi(monkeypatch):
     captured = {}
 
-    def fake_from_openapi(cls, *, openapi_spec, client, name, instructions):
+    def fake_from_openapi(cls, *, openapi_spec, client, name, instructions, **kwargs):
+        captured["kwargs"] = kwargs
         captured["openapi_spec"] = openapi_spec
         captured["client"] = client
         captured["name"] = name
@@ -237,3 +240,58 @@ def test_build_server_does_not_register_search_flow_icons_without_flows(
     server_module.build_server(config)
 
     assert captured["server"].registered_tools == []
+
+
+def test_build_server_describes_the_upload_paths_only_with_the_upload_operation(
+    monkeypatch, config
+):
+    _patch_schema_fetch(monkeypatch, {"paths": {"/api/plugins/atlas.mcp/uploads/": {}}})
+    with_upload = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    _patch_schema_fetch(
+        monkeypatch, {"paths": {"/api/plugins/atlas.mcp/catalog/search/": {}}}
+    )
+    without_upload = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    text = with_upload["instructions"]
+    for expected in ("request_attach", "exampleCommand", "inline", "ask the user"):
+        assert expected in text
+    assert "SAVED" in text
+    assert "same URL" in text
+    assert "host.docker.internal" in text
+    assert "request_attach" not in without_upload["instructions"]
+    assert without_upload["kwargs"]["route_maps"] is None
+
+
+def test_build_server_replaces_the_generated_request_attach_with_the_wrapper(
+    monkeypatch, config
+):
+    _patch_schema_fetch(monkeypatch, {"paths": {"/api/plugins/atlas.mcp/uploads/": {}}})
+    captured = _patch_from_openapi(monkeypatch)
+
+    server_module.build_server(config)
+
+    route_maps = captured["kwargs"]["route_maps"]
+    assert route_maps[0].mcp_type.value == "EXCLUDE"
+    assert re.search(route_maps[0].pattern, "/api/plugins/atlas.mcp/uploads/")
+    (tool,) = captured["server"].registered_tools
+    assert tool.__name__ == "request_attach"
+
+
+def test_build_server_describes_set_resource_schema_only_when_present(
+    monkeypatch, config
+):
+    _patch_schema_fetch(
+        monkeypatch, {"paths": {"/api/plugins/atlas.mcp/resources/schema/": {}}}
+    )
+    present = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    _patch_schema_fetch(monkeypatch, {"paths": {}})
+    absent = _patch_from_openapi(monkeypatch)
+    server_module.build_server(config)
+
+    assert "parseError" in present["instructions"]
+    assert "set_resource_schema" not in absent["instructions"]
