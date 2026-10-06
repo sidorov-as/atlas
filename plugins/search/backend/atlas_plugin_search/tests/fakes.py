@@ -1,5 +1,6 @@
 """An in-memory engine and a catalog-backed source for the plugin's tests."""
 
+import re
 from collections.abc import Collection, Iterable, Iterator, Sequence
 
 from atlas_plugin_api import (
@@ -16,10 +17,21 @@ SECRET_PREFIX = "secret"
 
 
 class FakeEngine:
-    """Word-prefix matching, title matches ranked above body matches."""
+    """Word-prefix matching, title matches ranked above body matches.
 
-    def __init__(self, engine_id: str = "fake", *, highlights: bool = False):
+    With ``match_offsets`` a highlight also carries the offsets of the words
+    that start with a query term.
+    """
+
+    def __init__(
+        self,
+        engine_id: str = "fake",
+        *,
+        highlights: bool = False,
+        match_offsets: bool = False,
+    ):
         self.id = engine_id
+        self.match_offsets = match_offsets
         self.capabilities = EngineCapabilities(highlights=highlights)
         self.documents: dict[str, SearchDocument] = {}
         self.fail = False
@@ -67,7 +79,14 @@ class FakeEngine:
                 score += any(w.startswith(term) for w in body)
             if score:
                 highlight = document.summary if self.capabilities.highlights else None
-                scored.append(SearchCandidate(document.id, score, highlight))
+                matches = ()
+                if highlight and self.match_offsets:
+                    matches = tuple(
+                        m.span()
+                        for m in re.finditer(r"\w+", highlight)
+                        if any(m.group().lower().startswith(t) for t in terms)
+                    )
+                scored.append(SearchCandidate(document.id, score, highlight, matches))
         scored.sort(key=lambda c: (-c.score, c.id))
         return scored[offset : offset + limit]
 

@@ -18,7 +18,9 @@ class SearchQuery(BaseModel):
 class SnippetOut(CamelModel):
     text: str
     matches: list[tuple[int, int]]
-    """`[start, end)` character offsets into `text`; slice to highlight."""
+    """`[start, end)` offsets into `text` counted in UTF-16 code units, the unit of
+    JavaScript string indexes; slice to highlight. A character outside the Basic
+    Multilingual Plane (such as an emoji) counts as two."""
 
 
 class SearchResultOut(CamelModel):

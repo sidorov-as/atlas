@@ -178,10 +178,41 @@ reports no tools available, or every call fails, see
   (and `spec.relationships`; use `create_relationship`). Call `describe_kinds`
   for the accepted fields. Add `dryRun` to any authoring write to preview it
   without saving.
+- **An upload URL doesn't connect**: it starts with `ATLAS_API_URL`, which may
+  be a container-only host (`host.docker.internal`). Replace the host with one
+  your shell can reach and keep the path. A `404` on the PUT means the link is
+  unknown, expired, already used, or its token was revoked; request a new one.
 - **Flow tools (`list_flows`, etc.) are missing**: the distribution
   `ATLAS_API_URL` points at doesn't have `atlas.flows` selected alongside
   `atlas.mcp` — this process only ever exposes what that distribution's own
   OpenAPI document lists.
+
+## `request_attach` (upload links)
+
+Passing a large API spec or database schema as a tool argument burns the
+model's context. When Atlas has an upload target registered (`atlas.apis`
+for an API `spec`, `atlas.database-schema` for a Resource `schema`),
+this server lists `request_attach`: the agent gives `entity` (`kind:name`),
+`field`, and any `params`, and gets back a one-time upload URL plus a ready
+`curl --fail-with-body -T <file> <url>` command. The agent runs it in its
+shell, so the file never passes through the conversation and the agent never
+holds the PAT. Small content, or an agent without a shell, uses the inline
+paths (`spec_content`, `set_resource_schema`) instead.
+
+Unlike the other tools, `request_attach` is hand-written here
+(`atlas_mcp/uploads.py`): Atlas returns a *relative* upload path, and this
+process builds the full URL from `ATLAS_API_URL`.
+
+**Container host caveat.** The URL starts with `ATLAS_API_URL`. If this server
+runs in Docker with `ATLAS_API_URL=http://host.docker.internal:8000`, that host
+is not resolvable from the agent's own shell. The tool result and the server
+instructions tell the agent to substitute a reachable host (such as
+`localhost:8000`) and keep the path unchanged. Against a deployed Atlas with a
+public `ATLAS_API_URL` nothing needs changing.
+
+The upload PUT itself is not an MCP tool and takes no `Authorization` header:
+the URL is the credential. See [Features & Integrations →
+MCP](../docs-site/docs/features/mcp.md) for the security properties.
 
 ## `search_flow_icons`
 

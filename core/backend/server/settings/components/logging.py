@@ -1,3 +1,5 @@
+import logging
+import re
 from collections.abc import Callable
 
 import structlog
@@ -12,6 +14,22 @@ _LOG_TRACEBACKS = config("DJANGO_LOG_TRACEBACKS", cast=bool, default=False)
 _TRACEBACK_PROCESSORS = (
     [structlog.processors.format_exc_info] if _LOG_TRACEBACKS else []
 )
+
+_UPLOAD_PATH = re.compile(r"(/api/uploads/)[^\s/?\"'<>]+")
+
+
+class RedactUploadTokenFilter(logging.Filter):
+    """Upload ticket tokens travel in the URL path, which Django's request
+    and server loggers print verbatim (e.g. `Not Found: <path>`), so mask
+    them before any handler formats the record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "/api/uploads/" in message:
+            record.msg = _UPLOAD_PATH.sub(r"\1[REDACTED]", message)
+            record.args = ()
+        return True
+
 
 LOGGING = {
     "version": 1,
@@ -31,10 +49,31 @@ LOGGING = {
             ],
         },
     },
+    "filters": {
+        "redact_upload_token": {"()": RedactUploadTokenFilter},
+    },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "console"}
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "console",
+            "filters": ["redact_upload_token"],
+        }
     },
     "root": {"handlers": ["console"], "level": "INFO"},
+    # Django's own loggers keep the handlers it built before this config
+    # loaded, which print request paths unfiltered; route them through ours.
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
 }
 
 

@@ -12,26 +12,17 @@ table that was never migrated into existence.
 from atlas_plugin_api import CatalogEntity
 
 from .models import DatabaseSchema
-from .parser import SqlParseError, parse_schema
+from .writer import apply_schema_source
 
 
 class DatabaseSchemaFacetWriter:
-    """`apply`/`clear` reuse the same `parse_schema()` the manual CRUD path
-    (`api.views._apply_source`) already uses — a failed parse still saves
-    `source_sql` verbatim (entity-facets, database-schema-plugin specs: "A
+    """`apply`/`clear` go through the same `apply_schema_source()` the manual
+    CRUD path uses — a failed parse still saves `source_sql` verbatim (entity-facets, database-schema-plugin specs: "A
     failed parse preserves the saved SQL")."""
 
     def apply(self, entity: CatalogEntity, dialect: str, source_sql: str) -> None:
         facet, _ = DatabaseSchema.objects.get_or_create(entity=entity)
-        facet.dialect = dialect
-        facet.source_sql = source_sql
-        try:
-            facet.parsed_schema = parse_schema(source_sql, dialect=dialect)
-            facet.parse_status = DatabaseSchema.PARSE_STATUS_OK
-        except SqlParseError:
-            facet.parsed_schema = {}
-            facet.parse_status = DatabaseSchema.PARSE_STATUS_FAILED
-        facet.save()
+        apply_schema_source(facet, dialect=dialect, source_sql=source_sql)
 
     def clear(self, entity: CatalogEntity) -> None:
         DatabaseSchema.objects.filter(pk=entity.pk).delete()

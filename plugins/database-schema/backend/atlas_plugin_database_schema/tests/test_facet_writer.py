@@ -73,5 +73,6 @@ def test_register_runtime_is_skipped_when_ingestion_is_not_installed(monkeypatch
     # The search source is already registered by startup, and registering twice is an error;
     # this test is only about the ingestion skip.
     monkeypatch.setattr("atlas_plugin_api.register_search_source", lambda *a, **k: None)
+    monkeypatch.setattr("atlas_plugin_api.register_upload_target", lambda *a, **k: None)
 
     register_runtime()  # must not raise

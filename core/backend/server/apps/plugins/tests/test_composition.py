@@ -371,6 +371,11 @@ def test_boundary_composes_with_c4_deselected(monkeypatch):
     monkeypatch.setattr(
         purge_module, "purge_scanners", purge_module.PurgeScannerRegistry()
     )
+    # `atlas.apis` registers its `(api, spec)` upload target — fresh registry,
+    # same reason.
+    from atlas_plugin_api import uploads as uploads_module
+
+    monkeypatch.setattr(uploads_module, "_targets", {})
 
     descriptors = load_selected_descriptors(
         (

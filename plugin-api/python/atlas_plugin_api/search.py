@@ -127,14 +127,39 @@ class SearchCandidate:
 
     ``highlight`` is plain text with no markup; only meaningful when the
     engine declares ``EngineCapabilities.highlights``.
+
+    ``highlight_matches`` optionally locates what the engine matched inside
+    ``highlight``: ordered, non-overlapping, non-empty ``[start, end)`` ranges
+    counted in Unicode code points (Python string indexes) of ``highlight``.
+    The highlight is final: the offsets are valid for it exactly as given, so
+    a consumer must not clean or otherwise transform the text before using
+    them. Without offsets the consumer locates the matches itself.
     """
 
     id: str
     score: float
     highlight: str | None = None
+    highlight_matches: tuple[tuple[int, int], ...] = ()
 
     def __post_init__(self) -> None:
         split_document_id(self.id)
+        if not self.highlight_matches:
+            return
+        if self.highlight is None:
+            raise ValueError("search candidate has match offsets but no highlight")
+        previous_end = 0
+        for start, end in self.highlight_matches:
+            if not 0 <= start < end <= len(self.highlight):
+                raise ValueError(
+                    f"search candidate match ({start}, {end}) is empty or outside "
+                    f"the highlight of {len(self.highlight)} characters"
+                )
+            if start < previous_end:
+                raise ValueError(
+                    f"search candidate match ({start}, {end}) is unordered or "
+                    "overlaps the previous one"
+                )
+            previous_end = end
 
 
 @dataclass(frozen=True, slots=True)

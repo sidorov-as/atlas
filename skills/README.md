@@ -27,7 +27,7 @@ curator's files and stop if it is missing.
 - The [Atlas MCP server](../mcp/README.md) connected to your assistant.
 - A Personal Access Token with `catalog:read` and `catalog:write` for entity work, plus
   `flows:read` and `flows:write` for flows, and `apis:write` to link Services to API endpoints and
-  operations.
+  operations, and for uploading an API spec through `request_attach`.
 - The `mcp-authoring-tools` tools (`describe_kinds`, relationship tools, `dryRun`) are
   preferred. Against an older server the skills say what they cannot do and continue at
   reduced capability only if you agree.

@@ -86,6 +86,13 @@ List fields are replaced on update, so read first and send the merged list.
 | `owner`    | yes      | `group:` ref                                      |
 | `system`   | no       | `system:` ref                                     |
 
+A `database` Resource can also carry a database schema (SQL DDL), which is not a `spec` field. When the
+`set_resource_schema` tool is present, call it with `resource` (`resource:<name>`), `dialect` (`postgresql`,
+`mysql`, `mssql`) and `sourceSql`, after the Resource exists. A success means the SQL was saved: read
+`parseStatus` and `parseError` and report a failed parse. For a large DDL file you can run shell commands on,
+call `request_attach` with field `schema` and `params` `{"dialect": "..."}`, then run the returned command
+(see [api-specs.md](api-specs.md#upload-link-for-large-files) for the flow). Both need `catalog:write`.
+
 ```json
 {
   "kind": "Resource",

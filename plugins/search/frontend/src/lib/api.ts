@@ -5,7 +5,7 @@ const BASE = '/api/plugins/atlas.search'
 
 export interface SearchSnippet {
   text: string
-  /** `[start, end)` character offsets into `text`. */
+  /** `[start, end)` offsets into `text` in UTF-16 code units, the unit of JS string indexes. */
   matches: [number, number][]
 }
 

@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from server.apps.catalog.api.urls import router as catalog_router
+from server.apps.catalog.upload_views import upload_view
 from server.health import (
     AtlasHealthCheckView,
     AuthenticationProviderHealthView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("healthz/", AtlasHealthCheckView.as_view()),
     path("healthz/plugins/", PluginHealthView.as_view()),
     path("healthz/auth/providers/", AuthenticationProviderHealthView.as_view()),
+    path("api/uploads/<str:token>", upload_view, name="upload-ticket-put"),
     catalog_router.to_urlpatterns(),
     standard_catalog_router.to_urlpatterns(),
 ]

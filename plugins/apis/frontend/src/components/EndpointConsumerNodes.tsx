@@ -5,6 +5,7 @@
 // regardless of a node's angle on the radial ring, without per-node
 // direction bookkeeping.
 import { memo } from 'react'
+import { TruncatedTooltip } from './TruncatedTooltip'
 import { SideHandles } from './SideHandles'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { Text } from '@gravity-ui/uikit'
@@ -49,9 +50,13 @@ function ServiceNodeComponent({ data }: NodeProps<ServiceFlowNode>) {
     >
       <Handle type="source" position={Position.Top} style={CENTERED_HANDLE_STYLE} />
       <SideHandles />
-      <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.service.title || data.service.name}</Text>
+      <TruncatedTooltip content={data.service.title || data.service.name} placement="top">
+        <Text variant="body-2" ellipsis style={{ display: 'block' }}>{data.service.title || data.service.name}</Text>
+      </TruncatedTooltip>
       {data.service.teamName && (
-        <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{data.service.teamName}</Text>
+        <TruncatedTooltip content={data.service.teamName} placement="bottom">
+          <Text color="secondary" variant="caption-2" ellipsis style={{ display: 'block' }}>{data.service.teamName}</Text>
+        </TruncatedTooltip>
       )}
     </div>
   )
@@ -88,13 +93,15 @@ function EndpointNodeComponent({ data }: NodeProps<EndpointFlowNode>) {
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
         <MethodBadge method={data.endpoint.method} />
       </div>
-      <Text
-        variant="body-2"
-        ellipsis
-        style={{ display: 'block', fontFamily: 'var(--g-text-code-font-family, monospace)' }}
-      >
-        {data.endpoint.path}
-      </Text>
+      <TruncatedTooltip content={data.endpoint.path} placement="top">
+        <Text
+          variant="body-2"
+          ellipsis
+          style={{ display: 'block', fontFamily: 'var(--g-text-code-font-family, monospace)' }}
+        >
+          {data.endpoint.path}
+        </Text>
+      </TruncatedTooltip>
       {data.provider && (
         // Bubble-phase (not capture-phase) stopPropagation: it must run after
         // the link's own onClick (preventDefault + navigate), not before —
@@ -103,6 +110,7 @@ function EndpointNodeComponent({ data }: NodeProps<EndpointFlowNode>) {
         // `onNodeClick` (a no-op for the endpoint node either way).
         <div
           onClick={(event) => event.stopPropagation()}
+          title={data.provider.target}
           style={{ marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
         >
           <Text color="secondary" variant="caption-2">Provided by </Text>

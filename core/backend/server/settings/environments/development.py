@@ -32,8 +32,13 @@ INSTALLED_APPS += ("django_migration_linter", "django_safe_migrations")
 # `# safe-migrations: ignore SM033` can't be used instead: the linter finds the
 # operation line only for `operations = [...]`, not for the `operations:
 # ClassVar[list] = [...]` form that ruff (RUF012) requires in migrations.
+#
+# SM019 (reserved keyword field names) is disabled: it fires on `user`
+# ForeignKeys, whose column is `user_id`, so there is no reserved-word column.
+# SM054 (several heavy operations on one table) is disabled: it is
+# informational and flags small-table timestamp migrations.
 SAFE_MIGRATIONS = {
-    "DISABLED_RULES": ["SM033"],
+    "DISABLED_RULES": ["SM019", "SM033", "SM054"],
     "WARNINGS_AS_ERRORS": ["SM002", "SM003"],
     "EXCLUDED_APPS": [
         "admin",

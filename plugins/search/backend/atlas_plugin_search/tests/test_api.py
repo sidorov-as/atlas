@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 import pytest
-from atlas_plugin_api import SearchDocument, SearchHit
+from atlas_plugin_api import SearchCandidate, SearchDocument, SearchHit
 from atlas_plugin_api import search as search_contract
 
 from atlas_plugin_search import indexer, runtime
@@ -283,6 +283,40 @@ def test_engine_supplied_highlights_override_core_snippets(
     snippet = _search(user_client, q="payment").json()["results"][0]["snippet"]
 
     assert snippet["text"] == "engine highlight for payment"
+
+
+def test_engine_offsets_mark_matches_the_query_does_not_prefix(
+    user_client, activate, make_note, engine
+):
+    engine.capabilities = type(engine.capabilities)(highlights=True)
+    activate()
+    make_note("note", "the payment gateway")
+    indexer.drain_pending()
+    highlight = "the payment gateway"
+    real_query = engine.query
+
+    def query(text, **kwargs):
+        return [
+            SearchCandidate(c.id, c.score, highlight, ((4, 11),))
+            for c in real_query("payment", **kwargs)
+        ]
+
+    engine.query = query
+
+    snippet = _search(user_client, q="paymnt").json()["results"][0]["snippet"]
+
+    assert snippet["text"] == highlight
+    assert snippet["matches"] == [[4, 11]]
+
+
+def test_snippet_offsets_are_utf16_code_units(user_client, indexed):
+    indexed(("billing", "\U0001f600 payment gateway"))
+
+    snippet = _search(user_client, q="payment").json()["results"][0]["snippet"]
+
+    units = snippet["text"].encode("utf-16-le")
+    marked = [units[2 * a : 2 * b].decode("utf-16-le") for a, b in snippet["matches"]]
+    assert marked == ["payment"]
 
 
 def test_a_broken_source_does_not_fail_the_request(user_client, indexed, source):

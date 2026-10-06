@@ -73,12 +73,19 @@ are not offered.
 | `unlink_endpoint_consumers`\*\*     | Remove a Service's links to endpoints, in a batch                                      | `apis:write`    |
 | `link_operation_participants`\*\*   | Link a Service to operations it publishes or subscribes on, in a batch                 | `apis:write`    |
 | `unlink_operation_participants`\*\* | Remove a Service's publisher or subscriber role on operations, in a batch              | `apis:write`    |
+| `request_attach`\*\*\*              | Get a one-time upload URL for an API spec or a Resource's database schema               | `apis:write` for a spec, `catalog:write` for a schema |
+| `set_resource_schema`\*\*\*\*       | Save a Resource's database schema from SQL text; reports whether it parsed             | `catalog:write` |
 
 \* Present only when `atlas.flows` is also selected.
 
 \*\* Present only when `atlas.apis` is also selected. The consumer tools return
 only Services explicitly linked to that endpoint or operation, not Services
 that consume the owning API as a whole.
+
+\*\*\* Present only when a plugin registers an upload target (`atlas.apis` for
+an API `spec`, `atlas.database-schema` for a Resource `schema`).
+
+\*\*\*\* Present only when `atlas.database-schema` is also selected.
 
 Writes are limited to System, Component, Resource, and API. Group and Actor
 are read-only through MCP, as they are in the REST API. Deleting takes two
@@ -119,6 +126,57 @@ Links created through MCP have origin `manual` and source `mcp`; links made in
 the web UI have source `ui`. Both fields are visible in Django admin only, not
 in the web UI or the REST API. A link with origin `yaml` is managed by
 ingestion and the unlink tools refuse to remove it.
+
+### Uploading large files with `request_attach`
+
+An API spec can run to megabytes, and passing it as `spec_content` sends every
+byte through the model's context. When the agent can run shell commands, it
+calls `request_attach` instead and gets a one-time URL; it then sends the raw
+file with `curl -T file <url>`. The file goes straight to Atlas, and the agent
+never holds the token.
+
+The entity must exist first (an API without a spec is valid). The call takes
+`entity` as `kind:name`, a `field`, and any `params`:
+
+| Target                | `field`  | `params`                                     | Limit                              |
+|-----------------------|----------|----------------------------------------------|------------------------------------|
+| `api`                 | `spec`   | none                                         | 20 MiB                             |
+| `resource`            | `schema` | `dialect`: `postgresql` (default), `mysql`, `mssql` | `ATLAS_DATABASE_SCHEMA_UPLOAD_MAX_BYTES` (5 MiB by default) |
+
+The upload reply is `{"ok": true, "summary": {...}}`. `ok` means the content
+was saved. For an API, `summary` has the spec kind and the number of endpoints
+or operations; a document that does not parse, exceeds the parse limits, or
+is the wrong kind for the API's type is rejected and the stored spec stays as
+it was. For a schema, a body that cannot be parsed is still saved, and
+`summary.parse_status` and `parse_error` say so. A rejected upload returns
+`{"ok": false, "error": "..."}` and the same URL accepts a corrected file
+until it expires.
+
+Small content, or an agent without a shell, uses the inline paths:
+`spec_content` on `create_entity`/`update_entity`, and `set_resource_schema`
+(`resource`, `dialect`, `sourceSql`, with `dryRun` like other writes).
+
+**Security properties of an upload link:**
+
+- The URL is the only credential. The `PUT` has no `Authorization` header and
+  is not an MCP tool.
+- The token in the URL has 256 bits of randomness; Atlas stores only its hash
+  and returns it once. It is kept out of Atlas's logs.
+- A link covers one field of one entity, expires after
+  `ATLAS_UPLOAD_TICKET_TTL_SECONDS`, and is consumed only by an upload that is
+  accepted. A failed upload leaves it usable until expiry.
+- Issuing needs the same rights as a normal write: the token's scope, the
+  owner's edit permission, and an entity not managed by `catalog-info.yaml`.
+  The permission is checked again at upload time and the write is made as the
+  token's owner.
+- If the token that issued a link is revoked or expires, or its owner is
+  deactivated, the link stops working.
+- An unknown, expired, used, or revoked link all answer with the same `404`.
+- The body size is capped while it is read, so a missing or false
+  `Content-Length` does not bypass the limit.
+- The URL starts with the transport's `ATLAS_API_URL`. Run in Docker with a
+  container-only host such as `host.docker.internal`, it may not resolve from
+  the agent's shell; the agent is told to substitute a reachable host.
 
 ### Strict validation
 
@@ -190,10 +248,10 @@ allow it. The available scopes are:
 | Scope           | Grants                                                                                                                 |
 |-----------------|------------------------------------------------------------------------------------------------------------------------|
 | `catalog:read`  | `describe_kinds`, `list_relationships`. Other read tools are open to any valid token.                                  |
-| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`, and the relationship writes                         |
+| `catalog:write` | `create_entity`, `update_entity`, `remove_entity`, `purge_entity`, the relationship writes, `set_resource_schema`, and `request_attach` for a schema                        |
 | `flows:read`    | `validate_flow`. Other read tools are open to any valid token.                                                         |
 | `flows:write`   | `create_flow`, `update_flow`, `delete_flow`                                                                            |
-| `apis:write`    | `link_endpoint_consumers`, `unlink_endpoint_consumers`, `link_operation_participants`, `unlink_operation_participants` |
+| `apis:write`    | `link_endpoint_consumers`, `unlink_endpoint_consumers`, `link_operation_participants`, `unlink_operation_participants`, and `request_attach` for an API spec |
 
 A token with no scopes can read but not write, which makes it a safe default
 for an assistant that only answers questions. A read-scoped token attempting

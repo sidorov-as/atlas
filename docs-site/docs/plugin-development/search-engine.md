@@ -63,6 +63,14 @@ plain-text `highlight` to use as the snippet. Leave it `False` and core builds t
 snippet from the resolved text, which gives the same behaviour on every engine.
 A highlight must be plain text with no markup.
 
+A candidate may also carry `highlight_matches`: ordered, non-overlapping `[start, end)`
+ranges of what the engine matched, counted in Unicode code points of `highlight`. With
+them the snippet marks exactly those ranges, so a typo, word form or synonym the engine
+matched is marked too. Without them the search plugin marks the words that start with a
+query word. The highlight is used as given when offsets are present, so strip markup and
+collapse whitespace before computing them. `SearchCandidate` rejects offsets that are
+empty, out of range, unordered or overlapping, and offsets without a highlight.
+
 `typo_tolerance=True` declares that a small misspelling of an indexed word still
 finds the document. It is informational for operators and tests; leave it `False` if
 your engine matches exact terms.

@@ -98,5 +98,5 @@ def validate_personal_access_token(
         )
 
     return ResolvedPersonalAccessToken(
-        user=token.owner, scopes=frozenset(token.scopes)
+        user=token.owner, scopes=frozenset(token.scopes), token_id=token.pk
     )

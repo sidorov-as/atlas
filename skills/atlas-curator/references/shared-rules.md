@@ -29,7 +29,7 @@ Then act on what is found:
 - **`atlas-scout` or `atlas-flow` cannot find `atlas-curator`.** Stop and tell the user to
   install the full set of skills; do not continue without it.
 
-Token scopes: entity writes need `catalog:write`; flow writes need `flows:write`; endpoint and operation links need `apis:write`. A write
+Token scopes: entity writes need `catalog:write`; flow writes need `flows:write`; endpoint and operation links need `apis:write`; an upload link for an API spec needs `apis:write`, and for a database schema `catalog:write`. A write
 rejected for a missing scope or permission is a connection problem. Report which scope is
 needed and do not retry the same request.
 

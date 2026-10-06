@@ -88,6 +88,52 @@ def test_hit_and_candidate_validate_ids():
         SearchCandidate(id="nokey", score=1.0)
 
 
+def test_candidate_accepts_highlight_matches():
+    candidate = SearchCandidate(
+        id="note:1",
+        score=1.0,
+        highlight="a payment gateway",
+        highlight_matches=((2, 9), (10, 17)),
+    )
+    assert candidate.highlight_matches == ((2, 9), (10, 17))
+
+
+def test_candidate_without_matches_is_valid():
+    assert SearchCandidate(id="note:1", score=1.0).highlight_matches == ()
+    candidate = SearchCandidate(id="note:1", score=1.0, highlight="text")
+    assert candidate.highlight_matches == ()
+
+
+@pytest.mark.parametrize(
+    "highlight, matches",
+    [
+        (None, ((0, 1),)),  # offsets without a highlight
+        ("payment", ((3, 3),)),  # empty range
+        ("payment", ((4, 2),)),  # reversed range
+        ("payment", ((-1, 3),)),  # before the text
+        ("payment", ((2, 8),)),  # past the end
+        ("payment gateway", ((8, 15), (0, 7))),  # unordered
+        ("payment gateway", ((0, 5), (4, 7))),  # overlapping
+    ],
+)
+def test_candidate_rejects_invalid_highlight_matches(highlight, matches):
+    with pytest.raises(ValueError):
+        SearchCandidate(
+            id="note:1", score=1.0, highlight=highlight, highlight_matches=matches
+        )
+
+
+def test_candidate_matches_are_counted_in_code_points():
+    highlight = "\U0001f600 payment"
+    SearchCandidate(
+        id="note:1", score=1.0, highlight=highlight, highlight_matches=((2, 9),)
+    )
+    with pytest.raises(ValueError):
+        SearchCandidate(
+            id="note:1", score=1.0, highlight=highlight, highlight_matches=((2, 10),)
+        )
+
+
 def test_oversized_body_is_truncated_at_word_boundary_with_warning(caplog):
     configure_search_body_limit(20)
     with caplog.at_level(logging.WARNING, logger=search_module.__name__):

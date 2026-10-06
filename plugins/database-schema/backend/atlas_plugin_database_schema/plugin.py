@@ -60,12 +60,14 @@ def register_runtime() -> None:
     that doesn't ship `atlas_plugin_ingestion` at all has nothing to
     register into, so the facet-writer is simply skipped.
     """
-    from atlas_plugin_api import register_search_source
+    from atlas_plugin_api import register_search_source, register_upload_target
 
     from .search_source import database_schema_search_source
+    from .upload import schema_upload_target
 
     # Harmless without the search plugin: nothing reads the registry then.
     register_search_source(database_schema_search_source, owner=PLUGIN.id)
+    register_upload_target(schema_upload_target(), owner=PLUGIN.id)
 
     try:
         from atlas_plugin_ingestion.extension_points import facet_writers

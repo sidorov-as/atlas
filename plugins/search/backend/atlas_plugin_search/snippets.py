@@ -8,6 +8,7 @@ is also safe for a client that renders it carelessly.
 """
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 DEFAULT_SNIPPET_CHARS = 180
@@ -98,9 +99,51 @@ def build_snippet(
     return _excerpt(fallback, 0, _word_end(fallback, min(len(fallback), width)), terms)
 
 
-def highlight_snippet(highlight: str, query: str) -> Snippet | None:
-    """Snippet from an engine-supplied plain-text highlight."""
+def _valid_matches(
+    text: str, matches: Sequence[tuple[int, int]]
+) -> tuple[tuple[int, int], ...]:
+    """Engine offsets that lie within `text`, in order and without overlap.
+
+    The contract already guarantees this; dropping the rest here means one
+    faulty candidate cannot break a response.
+    """
+    valid = []
+    previous_end = 0
+    for start, end in matches:
+        if previous_end <= start < end <= len(text):
+            valid.append((start, end))
+            previous_end = end
+    return tuple(valid)
+
+
+def highlight_snippet(
+    highlight: str,
+    query: str,
+    matches: Sequence[tuple[int, int]] = (),
+) -> Snippet | None:
+    """Snippet from an engine-supplied plain-text highlight.
+
+    With engine `matches` the highlight is used as it is, since cleaning it
+    would shift the offsets, and exactly those ranges are marked. Without them
+    the highlight is cleaned and the matches are located by the query terms.
+    """
+    if matches:
+        return Snippet(text=highlight, matches=_valid_matches(highlight, matches))
     text = clean_text(highlight)
     if not text:
         return None
     return Snippet(text=text, matches=tuple(find_matches(text, query_terms(query))))
+
+
+def utf16_matches(
+    text: str, matches: Sequence[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """Code-point `matches` of `text` as UTF-16 code-unit ranges.
+
+    A character outside the Basic Multilingual Plane is one code point and
+    two UTF-16 code units, so each one before an offset moves it by one.
+    """
+    shifts = [0]
+    for char in text:
+        shifts.append(shifts[-1] + (ord(char) > 0xFFFF))
+    return [(a + shifts[a], b + shifts[b]) for a, b in matches]

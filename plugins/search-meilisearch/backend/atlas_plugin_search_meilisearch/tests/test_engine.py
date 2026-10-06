@@ -12,6 +12,7 @@ from atlas_plugin_search_meilisearch.config import SearchMeilisearchPluginConfig
 from atlas_plugin_search_meilisearch.engine import (
     INDEX_SETTINGS,
     MeilisearchSearchEngine,
+    to_highlight,
     to_plain_highlight,
 )
 
@@ -180,6 +181,141 @@ def test_highlight_never_carries_markup():
     assert "<" not in text and ">" not in text
     assert "" not in text and "" not in text
     assert "payment" in text.replace(" ", "")
+
+
+S, E = "\ue000", "\ue001"
+
+
+def _marked(text, matches):
+    return [text[a:b] for a, b in matches]
+
+
+def test_highlight_offsets_address_the_plain_text():
+    text, matches = to_highlight(f"…the {S}payment{E} gateway")
+
+    assert text == "…the payment gateway"
+    assert _marked(text, matches) == ["payment"]
+
+
+def test_highlight_offsets_cover_every_marked_word():
+    text, matches = to_highlight(f"{S}pay{E} the {S}gateway{E}")
+
+    assert _marked(text, matches) == ["pay", "gateway"]
+
+
+def test_offsets_follow_text_changed_by_cleaning():
+    text, matches = to_highlight(
+        f"  <p>a</p>\n\n  <b>old</b>   {S}paymnt{E}\t<!-- x -->  {S}gate{E}way "
+    )
+
+    assert text == "a old paymnt gateway"
+    assert _marked(text, matches) == ["paymnt", "gateway"]
+
+
+def test_offsets_are_in_code_points_beyond_the_bmp():
+    text, matches = to_highlight(f"\U0001f600 {S}pay\U0001f600ment{E}")
+
+    assert _marked(text, matches) == ["pay\U0001f600ment"]
+    assert matches == ((2, 10),)
+
+
+def test_a_marker_lost_inside_a_tag_leaves_no_wrong_mark():
+    text, matches = to_highlight(f'x <a href="{S}u{E}">{S}y{E}</a> {S}z')
+
+    assert text == "x y z"
+    assert _marked(text, matches) == ["y"]
+
+
+def test_stray_and_nested_markers_are_dropped():
+    text, matches = to_highlight(f"a {E}b {S}c {S}d{E} e{E} f")
+
+    assert text == "a b c d e f"
+    assert _marked(text, matches) == ["c d"]
+
+
+def test_whitespace_around_a_match_is_not_marked():
+    text, matches = to_highlight(f"a{S} word {E}b")
+
+    assert _marked(text, matches) == ["word"]
+    assert to_highlight(f"a{S}  {E}b")[1] == ()
+
+
+def _words(formatted):
+    text, matches = to_highlight(formatted)
+    return _marked(text, matches)
+
+
+def test_a_partly_marked_word_is_marked_whole():
+    # The engine marks only the matched part of a word for a typo or a prefix.
+    assert _words(f"The {S}paymen{E}t gateway") == ["payment"]
+    assert _words(f"card {S}payment{E}s ok") == ["payments"]
+    assert _words(f"a {S}pa{E}yment {S}gat{E}eway") == ["payment", "gateway"]
+
+
+def test_a_partly_marked_cyrillic_word_is_marked_whole():
+    assert _words(f"обрабатывает {S}платеж{E}и клиентов") == ["платежи"]
+
+
+def test_words_end_where_the_engine_ends_them():
+    # `_`, `-` and camelCase are word boundaries for the engine.
+    assert _words(f"call {S}payment{E}_gateway and {S}billing{E}-api") == [
+        "payment",
+        "billing",
+    ]
+    assert _words(f"the {S}Paymen{E}tGateway class") == ["Payment"]
+    assert _words(f"the {S}Payment{E}Gateway class") == ["Payment"]
+
+
+def test_scripts_written_without_spaces_are_not_widened():
+    assert _words(f"这是{S}支付{E}网关服务") == ["支付"]
+    assert _words(f"決済ゲートウェイは{S}支払{E}いを処理します") == ["支払"]
+    assert _words(f"การ{S}ชำระ{E}เงิน") == ["ชำระ"]
+
+
+def test_widening_stops_at_whitespace_punctuation_and_text_ends():
+    assert _words(f"({S}paymen{E}t), {S}gatewa{E}y.") == ["payment", "gateway"]
+    assert _words(f"{S}paymen{E}t") == ["payment"]
+
+
+def test_ranges_of_one_word_are_joined():
+    text, matches = to_highlight(f"{S}pay{E}{S}ment{E} {S}pay{E}ment x")
+
+    assert _marked(text, matches) == ["payment", "payment"]
+    assert matches == ((0, 7), (8, 15))
+
+
+def test_widening_counts_code_points_beyond_the_bmp():
+    text, matches = to_highlight(f"\U0001f600 {S}pay{E}ment \U0001f600 {S}pa{E}y")
+
+    assert _marked(text, matches) == ["payment", "pay"]
+    assert matches == ((2, 9), (12, 15))
+
+
+def test_text_without_markers_has_no_offsets():
+    assert to_highlight("<b>plain</b>  text") == ("plain text", ())
+
+
+def test_candidate_carries_the_offsets_of_a_typo_match(engine):
+    engine._client.search_result = {
+        "hits": [
+            {
+                "document_id": "note:1",
+                "_rankingScore": 0.8,
+                "_formatted": {"body": f"a <i>{S}payment{E}</i>  gateway"},
+            },
+            {
+                "document_id": "note:2",
+                "_rankingScore": 0.5,
+                "_formatted": {"summary": f"{S}pay{E} me"},
+            },
+        ]
+    }
+
+    first, second = engine.query("paymnt")
+
+    assert first.highlight == "a payment gateway"
+    assert _marked(first.highlight, first.highlight_matches) == ["payment"]
+    assert _marked(second.highlight, second.highlight_matches) == ["pay"]
 
 
 def test_health_reports_the_document_count(engine):

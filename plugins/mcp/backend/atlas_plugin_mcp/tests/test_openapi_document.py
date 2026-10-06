@@ -68,6 +68,8 @@ def test_mcp_openapi_document_uses_short_explicit_operation_ids():
         ("/api/plugins/atlas.mcp/catalog/search/", "get"): "search_catalog",
         ("/api/plugins/atlas.mcp/kinds/", "get"): "describe_kinds",
         ("/api/plugins/atlas.mcp/catalog/", "post"): "create_entity",
+        ("/api/plugins/atlas.mcp/resources/schema/", "post"): "set_resource_schema",
+        ("/api/plugins/atlas.mcp/uploads/", "post"): "request_attach",
         ("/api/plugins/atlas.mcp/catalog/{id}/", "get"): "get_entity",
         ("/api/plugins/atlas.mcp/catalog/{id}/", "patch"): "update_entity",
         (

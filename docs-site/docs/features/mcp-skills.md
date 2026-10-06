@@ -44,6 +44,7 @@ set.
 | Create or update entities and relationships | `catalog:read`, `catalog:write` |
 | Read flows and validate a flow              | `flows:read`                    |
 | Create or update flows                      | `flows:write`                   |
+| Upload a large API spec (`request_attach`)  | `apis:write`                    |
 
 A write rejected for a missing scope is reported by the skill and not
 retried; issue a token with the scope and restart the transport process.

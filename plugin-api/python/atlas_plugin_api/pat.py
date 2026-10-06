@@ -39,6 +39,7 @@ class ResolvedPersonalAccessToken:
 
     user: Any
     scopes: frozenset[str]
+    token_id: int | None = None
 
 
 @runtime_checkable
