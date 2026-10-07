@@ -48,6 +48,11 @@ class CoreInfo(_Base):
 class PluginArtifact(_Base):
     package: str
     source: ArtifactSource
+    path: str | None = None
+    """Repo-root-relative directory of a `workspace` Python package that is not
+    in `core/backend/uv.lock` (an example-only plugin mounted into the
+    container). The resolver hashes this directory and reads its version from
+    the `pyproject.toml` there; ignored when the package is in `uv.lock`."""
 
 
 class ServiceOverride(_Base):

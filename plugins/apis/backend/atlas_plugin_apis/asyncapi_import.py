@@ -62,6 +62,7 @@ class ParsedOperation:
     tags: list[str] = field(default_factory=list)
     message: list[dict[str, Any]] = field(default_factory=list)
     external_docs: dict = field(default_factory=dict)
+    delivery: dict[str, str] = field(default_factory=dict)
 
 
 def detect_spec_version(spec_content: str) -> str | None:
@@ -133,7 +134,7 @@ def _parse_channels_2x(spec: dict, *, api_label: str) -> list[ParsedOperation]:
             try:
                 operations.append(
                     _parse_operation_2x(
-                        channel_address, keyword, operation, protocol, spec
+                        channel_address, channel, keyword, operation, protocol, spec
                     )
                 )
             except Exception:
@@ -148,20 +149,27 @@ def _parse_channels_2x(spec: dict, *, api_label: str) -> list[ParsedOperation]:
 
 
 def _parse_operation_2x(
-    channel_address: str, keyword: str, operation: dict, protocol: str, spec: dict
+    channel_key: str,
+    channel: dict,
+    keyword: str,
+    operation: dict,
+    protocol: str,
+    spec: dict,
 ) -> ParsedOperation:
     direction = _2X_DIRECTION_MAP[keyword]
+    event_key, delivery = _amqp_event(operation, channel, protocol)
     return ParsedOperation(
-        channel_address=channel_address,
+        channel_address=event_key or channel_key,
         channel_protocol=protocol,
         direction=direction,
-        operation_key=f"{channel_address}-{direction}",
+        operation_key=f"{channel_key}-{direction}",
         operation_id=operation.get("operationId") or "",
         summary=operation.get("summary") or "",
         description=operation.get("description") or "",
         tags=_extract_tags(operation.get("tags")),
         message=_extract_messages_2x(operation.get("message"), spec),
         external_docs=_extract_external_docs(operation.get("externalDocs")),
+        delivery=delivery,
     )
 
 
@@ -245,9 +253,11 @@ def _parse_operation_3x(
     if not isinstance(channel, dict):
         raise TypeError(f"unresolved channel reference {ref!r}")
 
+    protocol = _resolve_protocol_3x(channel, servers_map)
+    event_key, delivery = _amqp_event(operation, channel, protocol)
     return ParsedOperation(
-        channel_address=channel.get("address") or "",
-        channel_protocol=_resolve_protocol_3x(channel, servers_map),
+        channel_address=event_key or channel.get("address") or "",
+        channel_protocol=protocol,
         direction=direction,
         operation_key=operation_key,
         operation_id=operation.get("title") or "",
@@ -256,6 +266,7 @@ def _parse_operation_3x(
         tags=_extract_tags(operation.get("tags")),
         message=_extract_messages_3x(operation, channel, spec),
         external_docs=_extract_external_docs(operation.get("externalDocs")),
+        delivery=delivery,
     )
 
 
@@ -348,6 +359,67 @@ def _ref_name(ref: Any) -> str:
     return ref.rsplit("/", 1)[-1] if isinstance(ref, str) and ref else ""
 
 
+# --- AMQP adapter -------------------------------------------------------------
+
+_AMQP = "amqp"
+
+
+def _amqp_event(
+    operation: dict, channel: dict, protocol: str
+) -> tuple[str, dict[str, str]]:
+    """The AMQP event key and `delivery` object for one operation, or
+    `("", {})` when the adapter does not apply.
+
+    The event key is the operation's `bindings.amqp.cc` alone (the exchange is
+    not part of it): a list in 3.x, a string in 2.x, trimmed, empty values
+    ignored, the first usable one taken; wildcards stay literal. `delivery` is
+    `{exchange, queue, vhost}` from the channel's `bindings.amqp`, keys with no
+    value omitted. Only applies to AMQP: a resolved protocol other than `amqp`
+    skips it, and an unresolved one applies it only when the operation itself
+    carries `bindings.amqp`."""
+    operation_amqp = _amqp_bindings(operation)
+    if protocol:
+        if protocol != _AMQP:
+            return "", {}
+    elif operation_amqp is None:
+        return "", {}
+    event_key = _first_usable(operation_amqp.get("cc")) if operation_amqp else ""
+    return event_key, _amqp_delivery(_amqp_bindings(channel))
+
+
+def _amqp_bindings(node: dict) -> dict | None:
+    bindings = node.get("bindings")
+    amqp = bindings.get("amqp") if isinstance(bindings, dict) else None
+    return amqp if isinstance(amqp, dict) else None
+
+
+def _first_usable(cc: Any) -> str:
+    values = cc if isinstance(cc, list) else [cc]
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _amqp_delivery(amqp: dict | None) -> dict[str, str]:
+    if amqp is None:
+        return {}
+    exchange = amqp.get("exchange")
+    queue = amqp.get("queue")
+    exchange = exchange if isinstance(exchange, dict) else {}
+    queue = queue if isinstance(queue, dict) else {}
+    delivery = {
+        "exchange": exchange.get("name"),
+        "queue": queue.get("name"),
+        "vhost": exchange.get("vhost") or queue.get("vhost"),
+    }
+    return {
+        key: value.strip()
+        for key, value in delivery.items()
+        if isinstance(value, str) and value.strip()
+    }
+
+
 # --- shared: message / tag mapping -------------------------------------------
 
 
@@ -427,6 +499,7 @@ _OPERATION_DOC_FIELDS = (
     "tags",
     "message",
     "external_docs",
+    "delivery",
 )
 
 

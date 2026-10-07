@@ -257,6 +257,7 @@ class OperationOut(OperationSummaryOut):
     tags: list[str]
     messages: list[dict[str, Any]]
     external_docs: dict[str, Any] | None
+    delivery: dict[str, Any]
 
 
 class ConsumerServiceOut(CamelModel):

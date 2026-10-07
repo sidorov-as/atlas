@@ -5,7 +5,7 @@ plugins:
     backend:
       package: atlas-plugin-standard-catalog
       version: 0.1.0
-      hash: sha256:835d1ed01e057bce26196274c8cba1be1a96085f9894414189739552f3187e9c
+      hash: sha256:7f2ea1dd71a866e9054e16fe9f9685648349b03a014731625db8879255deab11
     frontend:
       package: '@atlas/plugin-standard-catalog'
       version: 0.1.0
@@ -14,11 +14,11 @@ plugins:
     backend:
       package: atlas-plugin-apis
       version: 0.1.0
-      hash: sha256:e7a1c6f4de1717446b22bd88dd7062b8516410d8b02cf81207713df6ef592a9a
+      hash: sha256:b61db6efd681b5e2262b65a213444a4c04e7e9924c3dc4d69da0cdd389a45755
     frontend:
       package: '@atlas/plugin-apis'
       version: 0.1.0
-      integrity: sha512-MVYB3ISqfXJNaI7ekRIkUqLxSFyaRooOLBojN/8ftLMm9N3PvQwnkgs/SA+/GTK6wXb4SylGC0gr+4zdlvnheQ==
+      integrity: sha512-8zbr0LsT2hCOKzxvqfZm9TYDWQqgRX892kdTUbdgYsFKrQAaNFWT0AHnskjYQsiRWN6o7zesHNt/LrshnGwNtg==
   atlas.c4@0.1.0:
     backend:
       package: atlas-plugin-c4
@@ -32,7 +32,7 @@ plugins:
     backend:
       package: atlas-plugin-database-schema
       version: 0.1.0
-      hash: sha256:43a5f26c0749b734648bfcfe8b1489ccfbbb41f733ead519ba3e23e47747f9c4
+      hash: sha256:806ca11492dfce97d75c97e6e711c277f24c716079654a986e0271106a91b5ad
     frontend:
       package: '@atlas/plugin-database-schema'
       version: 0.1.0
@@ -41,12 +41,12 @@ plugins:
     backend:
       package: atlas-plugin-ingestion
       version: 0.1.0
-      hash: sha256:0d03d93b721a98beca35332835f65bbbec2e2481285a25799ee0fbebca09fd2d
+      hash: sha256:de8c4d16fb7f4f55b19d7d2760905c5d2c1feb3035f7299b93e8b86b2d0b4c3c
   atlas.flows@0.1.0:
     backend:
       package: atlas-plugin-flows
       version: 0.1.0
-      hash: sha256:b1246b9c6820c4b732d4253dbd2f57fd60fcd59bbbd4cfb833fb134a01ec2450
+      hash: sha256:b8780e4906dac0e8a5f82017d1bca8a0d549e719037ddacf61a37d9f02d412ec
     frontend:
       package: '@atlas/plugin-flows'
       version: 0.1.0
@@ -55,7 +55,7 @@ plugins:
     backend:
       package: atlas-plugin-mcp
       version: 0.1.0
-      hash: sha256:07cccab985918f872c91058a0e2a24f18d29d1208da96d2b16157bf8e518994a
+      hash: sha256:7057c7942407b5585003f285b3c04deeb71a42920c2fa3cf44c70c83274c766c
 auth:
   providers:
   - id: atlas.auth.local

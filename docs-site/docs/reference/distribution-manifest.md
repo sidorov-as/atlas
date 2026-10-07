@@ -28,7 +28,10 @@ plugins:
 is checked against plugin `atlasCore` ranges. Each plugin has an `id`, `version`,
 at least one artifact, and optionally `disabled` and `config`. Artifact fields
 are `package` and `source`; registry source names may be accepted by the schema but
-are not currently resolved by this checkout. `fromEnv` references an environment
+are not currently resolved by this checkout. A `workspace` backend that is not in
+`core/backend/uv.lock`, such as an example-only plugin, can add `path`, a
+repo-relative directory whose `pyproject.toml` names the package; the lock then
+records that directory's hash. `fromEnv` references an environment
 variable and never puts the secret value in source control.
 
 The lock records `distribution` as `id@version`, `core`, and plugins keyed by

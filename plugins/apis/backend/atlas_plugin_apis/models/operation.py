@@ -54,11 +54,13 @@ class ApiOperation(models.Model):
     api = models.ForeignKey(
         CATALOG_ENTITY_LABEL, on_delete=models.CASCADE, related_name="operations"
     )
+    # The event name shared across APIs. For AMQP documents this is the
+    # operation's `cc` routing key (falling back to the channel's own address).
     channel_address = models.CharField(max_length=2048)
     channel_protocol = models.CharField(max_length=64, blank=True)
     direction = models.CharField(max_length=16, choices=DIRECTION_CHOICES)
     # Business identity for re-import upsert: the AsyncAPI 3.0
-    # operations-map key, or (for 2.x) `channel_address + direction`. Never
+    # operations-map key, or (for 2.x) `channel key + direction`. Never
     # used as a cross-document join key — only unique within `api`.
     operation_key = models.CharField(max_length=512)
     # Decorative only (spec's optional `operationId`/`title`) — never used
@@ -75,6 +77,10 @@ class ApiOperation(models.Model):
     # `{"description": str, "url": str}`, or `{}` when the Operation Object
     # declares no `externalDocs`.
     external_docs = models.JSONField(default=dict, blank=True)
+    # How the event is delivered: any of `{"exchange", "queue", "vhost"}` read
+    # from the channel's AMQP bindings, `{}` otherwise. Documentation only — it
+    # never takes part in identity or in grouping by `channel_address`.
+    delivery = models.JSONField(default=dict, blank=True)
     status = models.CharField(
         max_length=16, choices=STATUS_CHOICES, default=STATUS_ACTIVE
     )

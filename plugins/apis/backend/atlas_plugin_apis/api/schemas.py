@@ -449,6 +449,14 @@ class OperationProviderOut(CamelModel):
     role: OperationRole
 
 
+class OperationDeliveryOut(CamelModel):
+    """How an AMQP event is delivered; documentation only, never identity."""
+
+    exchange: str | None = None
+    queue: str | None = None
+    vhost: str | None = None
+
+
 class OperationOut(CamelModel):
     id: UUID
     api_id: UUID
@@ -462,6 +470,7 @@ class OperationOut(CamelModel):
     tags: list[str]
     messages: list[OperationMessageOut]
     external_docs: ExternalDocsOut | None = None
+    delivery: OperationDeliveryOut
     status: OperationStatus
     deprecated: bool
     provider: OperationProviderOut | None = None

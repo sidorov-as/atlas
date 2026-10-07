@@ -50,6 +50,7 @@ plugins:
     backend:
       package: atlas-example-auth-fixture
       source: workspace
+      path: examples/authentication/custom-credentials/plugin
     config:
       developmentEnabled: true
       sourceId: urn:atlas:directory:fixture-custom-credentials-example
