@@ -8,3 +8,9 @@ useDefault = true
 [allowlist]
 description = "OpenSpec markdown prose"
 paths = ['''^openspec/.*\.md$''']
+
+# `operation_key="exchange-1"` in AsyncAPI import tests is an operation id, not a secret.
+[[allowlists]]
+description = "AsyncAPI import test fixtures"
+targetRules = ["generic-api-key"]
+paths = ['''plugins/apis/backend/atlas_plugin_apis/tests/test_asyncapi_import\.py$''']
