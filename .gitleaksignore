@@ -1,0 +1,3 @@
+# `operation_key="exchange-1"` in AsyncAPI import tests is an operation id, not a secret.
+f2070e0c1710d0072463c017486b1cfe2231b661:plugins/apis/backend/atlas_plugin_apis/tests/test_asyncapi_import.py:generic-api-key:1306
+f2070e0c1710d0072463c017486b1cfe2231b661:plugins/apis/backend/atlas_plugin_apis/tests/test_asyncapi_import.py:generic-api-key:1316
