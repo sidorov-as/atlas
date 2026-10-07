@@ -125,6 +125,44 @@ def test_resolve_manifest_rejects_an_unknown_package():
         resolve_manifest(manifest, repo_root=REPO_ROOT)
 
 
+FIXTURE_PATH = "examples/authentication/custom-credentials/plugin"
+
+
+def test_resolve_manifest_hashes_a_package_outside_uv_lock_from_its_path():
+    manifest = _manifest(
+        backend={
+            "package": "atlas-example-auth-fixture",
+            "source": "workspace",
+            "path": FIXTURE_PATH,
+        },
+        frontend=None,
+    )
+
+    lock = resolve_manifest(
+        manifest,
+        repo_root=REPO_ROOT,
+        descriptors={"atlas.standard-catalog": _auth_descriptor("example.sso")},
+    )
+
+    backend = lock.plugins["atlas.standard-catalog@0.1.0"].backend
+    assert backend.package == "atlas-example-auth-fixture"
+    assert backend.version == "0.1.0"
+    assert backend.hash.startswith("sha256:")
+
+
+def test_resolve_manifest_rejects_a_path_whose_package_name_differs():
+    manifest = _manifest(
+        backend={
+            "package": "atlas-plugin-does-not-exist",
+            "source": "workspace",
+            "path": FIXTURE_PATH,
+        }
+    )
+
+    with pytest.raises(UnknownPackageError):
+        resolve_manifest(manifest, repo_root=REPO_ROOT)
+
+
 def test_resolve_manifest_rejects_an_unsupported_source():
     manifest = _manifest(
         backend={

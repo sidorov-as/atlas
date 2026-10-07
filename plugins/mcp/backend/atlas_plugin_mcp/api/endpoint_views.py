@@ -105,6 +105,7 @@ def _operation_out(instance) -> OperationOut:
         tags=instance.tags,
         messages=instance.message or [],
         external_docs=instance.external_docs or None,
+        delivery=instance.delivery or {},
     )
 
 

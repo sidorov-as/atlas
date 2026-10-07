@@ -14,8 +14,10 @@ from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 
+import tomllib
 from atlas_plugin_api import PluginDescriptor
 
+from ._hashing import hash_directory
 from .auth import authentication_provider_contributions
 from .generate import backend_module_path
 from .lock import (
@@ -87,15 +89,40 @@ class NativeLocks:
         )
 
 
+def _resolve_from_path(
+    artifact: PluginArtifact, repo_root: Path
+) -> ResolvedPythonPackage | None:
+    """Resolve a package that is not in `uv.lock` from `artifact.path`: the
+    directory hash is computed exactly as for a `uv.lock` path source, the
+    version comes from the `pyproject.toml` there, whose name must match."""
+    if artifact.path is None:
+        return None
+    package_dir = (repo_root / artifact.path).resolve()
+    try:
+        with open(package_dir / "pyproject.toml", "rb") as pyproject_file:
+            project = tomllib.load(pyproject_file).get("project", {})
+    except FileNotFoundError:
+        return None
+    if project.get("name") != artifact.package or "version" not in project:
+        return None
+    return ResolvedPythonPackage(
+        version=project["version"],
+        hash="sha256:" + hash_directory(package_dir, algorithm="sha256").hex(),
+    )
+
+
 def _resolve_backend(
     plugin_id: str,
     version: str,
     artifact: PluginArtifact,
     locks: NativeLocks,
+    repo_root: Path,
 ) -> LockedBackendArtifact:
     if artifact.source != "workspace":
         raise UnsupportedSourceError(artifact.package, artifact.source)
-    resolved = locks.python.get(artifact.package)
+    resolved = locks.python.get(artifact.package) or _resolve_from_path(
+        artifact, repo_root
+    )
     if resolved is None:
         raise UnknownPackageError(artifact.package, "uv.lock")
     if resolved.version != version:
@@ -207,6 +234,7 @@ def resolve_manifest(
                 entry.version,
                 entry.backend,
                 locks,
+                repo_root,
             )
         frontend = None
         if entry.frontend is not None:

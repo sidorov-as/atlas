@@ -122,6 +122,7 @@ from .schemas import (
     OperationConsumersOut,
     OperationConsumersQuery,
     OperationConsumerSummaryOut,
+    OperationDeliveryOut,
     OperationMessageOut,
     OperationOut,
     OperationProviderOut,
@@ -517,6 +518,7 @@ def _operation_out(
         external_docs=ExternalDocsOut.model_validate(instance.external_docs)
         if instance.external_docs
         else None,
+        delivery=OperationDeliveryOut.model_validate(instance.delivery or {}),
         status=instance.status,
         deprecated=instance.deprecated,
         provider=_operation_provider_out(provider, instance.direction),
@@ -1077,6 +1079,7 @@ class OperationConsumersController(AtlasController):
         aggregated = list(
             ApiOperation.objects.filter(
                 channel_address=operation.channel_address,
+                status=ApiOperation.STATUS_ACTIVE,
             ).select_related("api", "api__owner"),
         )
         participants = _ordered_participants(

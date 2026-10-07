@@ -73,7 +73,7 @@ The Link Service action and each row's Unlink action SHALL be visible only to a 
 - **THEN** no "Link service" button and no per-row "Unlink" action are rendered
 
 ### Requirement: Publishers & subscribers graph is scoped to the shared channel, not one Operation row
-An Operation's Overview tab SHALL show a read-only graph aggregating every `Operation` (including ones belonging to other API documents) that shares its `channel_address`, showing each aggregated Operation's linked Services (including each Operation's document-owner role implied by `direction`) as publisher or subscriber nodes, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available in the inline graph. This graph SHALL also be viewable in a full-screen mode, in which nodes can be repositioned as specified by the dependency-graph-exploration capability but connections still cannot be created or deleted.
+An Operation's Overview tab SHALL show a read-only graph aggregating every `active` `Operation` (including ones belonging to other API documents) that shares its `channel_address`, showing each aggregated Operation's linked Services (including each Operation's document-owner role implied by `direction`) as publisher or subscriber nodes, supporting pan, zoom, and fit-to-view, with no drag-repositioning, connection-creation, or deletion available in the inline graph. This graph SHALL also be viewable in a full-screen mode, in which nodes can be repositioned as specified by the dependency-graph-exploration capability but connections still cannot be created or deleted.
 
 #### Scenario: Two operations on the same channel from different APIs share one graph
 - **WHEN** Operation A (on API X, `direction=send`) and Operation B (on API Y, `direction=receive`) share the same `channel_address`
@@ -115,6 +115,18 @@ An Operation's Overview tab SHALL show a read-only graph aggregating every `Oper
 #### Scenario: Full screen shows every participant when there are 50 or fewer
 - **WHEN** a user opens the publishers/subscribers graph in full-screen mode for a channel with 18 participants
 - **THEN** every participant is shown as a node and no "more" node is drawn
+
+#### Scenario: A removed operation does not contribute to the graph
+- **WHEN** an Operation on the channel has `status=removed`
+- **THEN** its document owner's implied role and its linked Services are absent from the channel's graph and from the `/consumers` aggregation
+
+#### Scenario: A revived operation contributes again
+- **WHEN** a `removed` Operation becomes `active` again through re-import
+- **THEN** its document owner's implied role and its linked Services appear in the channel's graph again
+
+#### Scenario: Publisher and subscribers from separate documents form one graph
+- **WHEN** API X has an active `send` Operation and APIs Y and Z each have an active `receive` Operation on `rk-a`, each API provided by a different Service
+- **THEN** viewing any of the three Operations shows the provider of X as publisher and the providers of Y and Z as subscribers
 
 ### Requirement: Cross-API aggregation respects each aggregated API's visibility
 The channel-scoped publishers/subscribers graph and the `/consumers` aggregation SHALL exclude any aggregated `Operation` whose own `API` is not visible to the requesting principal, and SHALL do so without revealing that a hidden Operation exists (no count, placeholder node, or error naming it).

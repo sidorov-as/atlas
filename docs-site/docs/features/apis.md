@@ -48,6 +48,26 @@ An Operation's linked-services graph names the exact services tied to that
 endpoint, distinct from the containing API's own catalog relations. For the
 catalog workflow, see [Use feature-specific views](../using-atlas/use-feature-views.md).
 
+### AMQP events
+
+An Operation's channel address is the name of the event, shared by every API
+that mentions it, so the graph groups publishers and subscribers across
+documents. For AMQP documents the address is the routing key in the operation's
+`bindings.amqp.cc` (a list in AsyncAPI 3.x, a string in 2.x), trimmed; the
+channel's own address is used when `cc` is missing or empty. The exchange, queue
+and vhost from the channel's `bindings.amqp` are stored separately in the
+Operation's `delivery` and play no part in grouping. Operations from other
+protocols keep the channel address from the document. Only `active` Operations
+appear in the graph; a removed Operation drops out until a re-import revives it.
+
+Known limits:
+
+- Wildcard keys such as `orders.event.#` are kept as literal text and are not
+  matched against concrete keys.
+- Two events that use the same key on different exchanges are merged.
+- An event a document generator left out of its documents cannot be recovered
+  by Atlas.
+
 The graph never draws every linked service. The inline graph shows up to six
 services plus a **+N more** node that opens the full-screen view. Full screen
 draws up to 50 services as a left-to-right tree, one column per level, joined by

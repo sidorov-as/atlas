@@ -309,7 +309,7 @@ def get_operation_consumers(
     actor: AbstractBaseUser, operation_id
 ) -> list[tuple[CatalogEntity, str]] | None:
     """`(service, role)` pairs (`role` is `publisher`/`subscriber`) for an Operation's channel,
-    aggregated exactly as `OperationConsumersController` does: every Operation sharing its
+    aggregated exactly as `OperationConsumersController` does: every active Operation sharing its
     channel address contributes its document-owning Service's implied role, plus every explicit
     `ServiceOperationUsage` link. `None` if `operation_id` doesn't resolve. Raises `APIError`
     (403) without operation dependency read permission."""
@@ -320,6 +320,7 @@ def get_operation_consumers(
     aggregated = list(
         ApiOperation.objects.filter(
             channel_address=operation.channel_address,
+            status=ApiOperation.STATUS_ACTIVE,
         ).select_related("api", "api__owner"),
     )
     return channel_participants(aggregated)

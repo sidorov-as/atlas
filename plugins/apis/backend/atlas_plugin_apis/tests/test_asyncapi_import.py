@@ -1106,3 +1106,215 @@ def test_endpoints_status_self_save_does_not_retrigger_an_operations_sync_pass(a
     ) as mock_sync:
         details.save(update_fields=["endpoints_synced_at", "endpoints_sync_failed"])
         mock_sync.assert_not_called()
+
+
+# --- AMQP event key and delivery ---------------------------------------------
+
+AMQP_3X_SPEC = """
+asyncapi: 3.0.0
+info: {title: Orders, version: "1.0"}
+servers:
+  broker: {host: rabbit.local, protocol: amqp}
+channels:
+  exchange-1:
+    address: exchange-1
+    servers: [{$ref: '#/servers/broker'}]
+    bindings:
+      amqp:
+        exchange: {name: exchange-1, vhost: vhost-1}
+  queue-1:
+    address: queue-1
+    servers: [{$ref: '#/servers/broker'}]
+    bindings:
+      amqp:
+        queue: {name: queue-1, vhost: vhost-1}
+operations:
+  exchange-1:
+    action: send
+    channel: {$ref: '#/channels/exchange-1'}
+    bindings:
+      amqp:
+        cc: ["  rk-a  "]
+  queue-1:
+    action: receive
+    channel: {$ref: '#/channels/queue-1'}
+    bindings:
+      amqp:
+        cc: [rk-a]
+  empty-cc:
+    action: receive
+    channel: {$ref: '#/channels/queue-1'}
+    bindings:
+      amqp:
+        cc: ["  "]
+  no-cc:
+    action: receive
+    channel: {$ref: '#/channels/queue-1'}
+  wildcard:
+    action: receive
+    channel: {$ref: '#/channels/queue-1'}
+    bindings:
+      amqp:
+        cc: ["orders.event.#"]
+"""
+
+AMQP_2X_SPEC = """
+asyncapi: 2.6.0
+info: {title: Orders, version: "1.0"}
+servers:
+  broker: {url: rabbit.local, protocol: amqp}
+channels:
+  "rk-a:exchange-1:Publisher":
+    bindings:
+      amqp:
+        exchange: {name: exchange-1, vhost: vhost-1}
+    subscribe:
+      bindings:
+        amqp:
+          cc: rk-a
+  "rk-a:exchange-1:HandleEvent":
+    bindings:
+      amqp:
+        queue: {name: queue-1}
+    publish:
+      bindings:
+        amqp:
+          cc: rk-a
+  "plain:exchange-1:Publisher":
+    subscribe:
+      bindings:
+        amqp:
+          cc: ""
+"""
+
+AMQP_BINDINGS_NO_SERVERS_2X = """
+asyncapi: 2.6.0
+info: {title: Orders, version: "1.0"}
+channels:
+  "rk-a:exchange-1:Publisher":
+    subscribe:
+      bindings: {amqp: {cc: rk-a}}
+  other-channel:
+    subscribe:
+      bindings: {kafka: {key: ignored}}
+"""
+
+KAFKA_WITH_CC_SPEC = """
+asyncapi: 2.6.0
+info: {title: Orders, version: "1.0"}
+servers:
+  broker: {url: kafka.local, protocol: kafka}
+channels:
+  orders.created:
+    subscribe:
+      bindings: {amqp: {cc: should-be-ignored}}
+"""
+
+
+def _by_key(spec):
+    return {op.operation_key: op for op in parse_operations(spec)}
+
+
+def test_3x_publisher_and_subscriber_share_the_trimmed_cc_as_event_key():
+    operations = _by_key(AMQP_3X_SPEC)
+
+    assert operations["exchange-1"].channel_address == "rk-a"
+    assert operations["queue-1"].channel_address == "rk-a"
+
+
+def test_3x_delivery_comes_from_the_channel_bindings():
+    operations = _by_key(AMQP_3X_SPEC)
+
+    assert operations["exchange-1"].delivery == {
+        "exchange": "exchange-1",
+        "vhost": "vhost-1",
+    }
+    assert operations["queue-1"].delivery == {"queue": "queue-1", "vhost": "vhost-1"}
+
+
+def test_3x_missing_or_empty_cc_falls_back_to_the_channel_address():
+    operations = _by_key(AMQP_3X_SPEC)
+
+    assert operations["empty-cc"].channel_address == "queue-1"
+    assert operations["no-cc"].channel_address == "queue-1"
+
+
+def test_wildcard_cc_is_kept_literal():
+    assert _by_key(AMQP_3X_SPEC)["wildcard"].channel_address == "orders.event.#"
+
+
+def test_3x_operation_key_is_unchanged_by_the_event_key():
+    assert _by_key(AMQP_3X_SPEC)["exchange-1"].operation_key == "exchange-1"
+
+
+def test_2x_string_cc_replaces_the_composite_channel_key():
+    operations = _by_key(AMQP_2X_SPEC)
+
+    assert operations["rk-a:exchange-1:Publisher-send"].channel_address == "rk-a"
+    assert operations["rk-a:exchange-1:Publisher-send"].delivery == {
+        "exchange": "exchange-1",
+        "vhost": "vhost-1",
+    }
+    assert operations["rk-a:exchange-1:HandleEvent-receive"].delivery == {
+        "queue": "queue-1"
+    }
+
+
+def test_2x_publisher_and_listener_of_one_key_keep_distinct_operation_keys():
+    operations = parse_operations(AMQP_2X_SPEC)
+    keyed = [op for op in operations if op.channel_address == "rk-a"]
+
+    assert len(keyed) == 2
+    assert len({op.operation_key for op in keyed}) == 2
+
+
+def test_2x_empty_cc_falls_back_to_the_channel_key():
+    assert (
+        _by_key(AMQP_2X_SPEC)["plain:exchange-1:Publisher-send"].channel_address
+        == "plain:exchange-1:Publisher"
+    )
+
+
+def test_unresolved_protocol_applies_adapter_only_with_amqp_bindings():
+    operations = _by_key(AMQP_BINDINGS_NO_SERVERS_2X)
+
+    assert operations["rk-a:exchange-1:Publisher-send"].channel_address == "rk-a"
+    assert operations["other-channel-send"].channel_address == "other-channel"
+    assert operations["other-channel-send"].delivery == {}
+
+
+def test_non_amqp_document_keeps_channel_address_and_has_no_delivery():
+    (operation,) = parse_operations(KAFKA_WITH_CC_SPEC)
+
+    assert operation.channel_address == "orders.created"
+    assert operation.delivery == {}
+
+
+def test_exchange_is_not_part_of_the_event_key():
+    other_exchange = AMQP_3X_SPEC.replace("name: exchange-1", "name: exchange-2")
+
+    assert (
+        _by_key(other_exchange)["exchange-1"].channel_address
+        == _by_key(AMQP_3X_SPEC)["exchange-1"].channel_address
+    )
+
+
+def test_reimport_updates_event_key_in_place_keeping_id_and_links(api, group, system):
+    details = api.api_details
+    details.spec_content = AMQP_3X_SPEC.replace('cc: ["  rk-a  "]', "cc: [old-key]")
+    sync_operations_from_spec(details)
+    operation = ApiOperation.objects.get(api=api, operation_key="exchange-1")
+    assert operation.channel_address == "old-key"
+    service = create_component(name="svc", owner=group, system=system)
+    ServiceOperationUsage.objects.create(
+        operation=operation, service=service, role="subscriber"
+    )
+
+    details.spec_content = AMQP_3X_SPEC
+    sync_operations_from_spec(details)
+
+    refreshed = ApiOperation.objects.get(api=api, operation_key="exchange-1")
+    assert refreshed.id == operation.id
+    assert refreshed.channel_address == "rk-a"
+    assert refreshed.delivery == {"exchange": "exchange-1", "vhost": "vhost-1"}
+    assert refreshed.service_usages.count() == 1

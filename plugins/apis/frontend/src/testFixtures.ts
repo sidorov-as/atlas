@@ -115,6 +115,7 @@ export function makeOperation(overrides: Partial<Operation> = {}): Operation {
     tags: [],
     messages: [],
     externalDocs: null,
+    delivery: {},
     status: 'active',
     deprecated: false,
     provider: null,

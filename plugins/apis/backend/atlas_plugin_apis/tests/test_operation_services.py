@@ -404,6 +404,75 @@ def test_consumers_reflects_a_removed_operations_status(member_client, operation
     assert response.json()["operation"]["status"] == "removed"
 
 
+def _participants(client, operation):
+    body = client.get(f"/api/operations/{operation.id}/consumers/").json()
+    return {(p["service"]["id"], p["role"]) for p in body["participants"]}
+
+
+def test_three_apis_on_one_event_key_give_one_publisher_and_two_subscribers(
+    member_client, operation, other_api, group, system
+):
+    third_api = create_api(
+        name="audit-api", owner=group, system=system, type="asyncapi"
+    )
+    publisher = create_component(
+        name="booking-service",
+        owner=group,
+        system=system,
+        provides_apis=[operation.api],
+    )
+    subscribers = [
+        create_component(
+            name=f"{api.name}-service",
+            owner=group,
+            system=system,
+            provides_apis=[api],
+        )
+        for api in (other_api, third_api)
+    ]
+    for api, key in ((other_api, "q-billing"), (third_api, "q-audit")):
+        ApiOperation.objects.create(
+            api=api,
+            channel_address=operation.channel_address,
+            direction=ApiOperation.DIRECTION_RECEIVE,
+            operation_key=key,
+        )
+
+    for viewed in ApiOperation.objects.all():
+        assert _participants(member_client, viewed) == {
+            (str(publisher.id), "publisher"),
+            *((str(s.id), "subscriber") for s in subscribers),
+        }
+
+
+def test_removed_operation_is_excluded_from_the_graph_and_returns_when_revived(
+    member_client, operation, other_api, group, system, service
+):
+    provider = create_component(
+        name="billing-service",
+        owner=group,
+        system=system,
+        provides_apis=[other_api],
+    )
+    other_operation = ApiOperation.objects.create(
+        api=other_api,
+        channel_address=operation.channel_address,
+        direction=ApiOperation.DIRECTION_RECEIVE,
+        operation_key="onBookingCreatedReceive",
+    )
+    _seed_link(other_operation, service, role="subscriber")
+    expected = {(str(provider.id), "subscriber"), (str(service.id), "subscriber")}
+    assert expected <= _participants(member_client, operation)
+
+    other_operation.status = ApiOperation.STATUS_REMOVED
+    other_operation.save(update_fields=["status"])
+    assert not expected & _participants(member_client, operation)
+
+    other_operation.status = ApiOperation.STATUS_ACTIVE
+    other_operation.save(update_fields=["status"])
+    assert expected <= _participants(member_client, operation)
+
+
 def _seed_participants(operation, system, group, publishers, subscribers):
     for role, count in (("publisher", publishers), ("subscriber", subscribers)):
         for index in range(count):

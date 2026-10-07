@@ -201,11 +201,19 @@ export interface Operation {
   tags: string[]
   messages: OperationMessage[]
   externalDocs: ExternalDocs | null
+  delivery: OperationDelivery
   status: OperationStatus
   deprecated: boolean
   provider: OperationProvider | null
   createdAt: string
   updatedAt: string
+}
+
+/** How an AMQP event is delivered; documentation only, never identity. */
+export interface OperationDelivery {
+  exchange?: string | null
+  queue?: string | null
+  vhost?: string | null
 }
 
 export interface OperationListFilters {

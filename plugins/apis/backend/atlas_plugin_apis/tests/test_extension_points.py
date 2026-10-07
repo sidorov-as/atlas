@@ -269,6 +269,31 @@ def test_get_operation_consumers_returns_linked_services_with_roles(
     }
 
 
+def test_get_operation_consumers_excludes_removed_operations(
+    actor, api, group, system, provider, consumer
+):
+    operation = _operation(api)
+    other_api = create_api(
+        name="other-api", owner=group, system=system, type="asyncapi"
+    )
+    removed = ApiOperation.objects.create(
+        api=other_api,
+        channel_address=operation.channel_address,
+        direction=ApiOperation.DIRECTION_RECEIVE,
+        operation_key="removed-op",
+        status=ApiOperation.STATUS_REMOVED,
+    )
+    ServiceOperationUsage.objects.create(
+        operation=removed,
+        service=consumer,
+        role=ServiceOperationUsage.ROLE_SUBSCRIBER,
+    )
+
+    result = get_operation_consumers(actor, operation.id)
+
+    assert {(s.id, role) for s, role in result} == {(provider.id, "publisher")}
+
+
 def test_get_operation_consumers_returns_empty_list_without_links(actor, api):
     assert get_operation_consumers(actor, _operation(api).id) == []
 
