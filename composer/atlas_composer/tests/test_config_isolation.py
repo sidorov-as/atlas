@@ -74,12 +74,10 @@ def _lock_for(manifest: Manifest) -> Lock:
                 backend=LockedBackendArtifact(
                     package=entry.backend.package,
                     version=entry.version,
-                    hash="sha256:x",
                 ),
                 frontend=LockedFrontendArtifact(
                     package=entry.frontend.package,
                     version=entry.version,
-                    integrity="sha512-x",
                 ),
             ),
         },
@@ -121,7 +119,6 @@ def test_locked_plugin_keeps_only_unresolved_secret_reference_out_of_repr():
             "backend": {
                 "package": "atlas-plugin-auth-oidc",
                 "version": "0.1.0",
-                "hash": "sha256:x",
             },
             "config": {
                 "clientSecret": {"fromEnv": "ATLAS_OIDC_CLIENT_SECRET"},

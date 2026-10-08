@@ -35,8 +35,8 @@ flowchart TB
 This design has two important properties:
 
 - **Composition happens once before startup.** Containers do not download or resolve packages at
-  boot. The lock file pins exact versions and integrity hashes, so the same manifest and lock
-  produce the same running system.
+  boot. The lock file pins exact versions, and `uv.lock` and `package-lock.json` supply integrity, so
+  the same manifest and lock produce the same running system.
 - **The frontend is composed statically.** A plugin's frontend contributions are part of the
   built frontend image. The browser does not fetch plugin JavaScript at request time.
 

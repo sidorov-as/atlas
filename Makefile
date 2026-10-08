@@ -75,7 +75,7 @@ issue-pat: core/backend/.env ## Issue a fully-scoped Atlas Personal Access Token
 		--scope catalog:read --scope catalog:write --scope apis:write \
 		--scope flows:read --scope flows:write
 
-lock: ## Re-resolve every lock.yaml (hashes change with any edit under plugins/); use DIST=<dir> for one
+lock: ## Re-resolve every lock.yaml; use DIST=<dir> for one
 	@for d in $(or $(DIST),$(DISTRIBUTIONS)); do \
 		echo "resolve $$d"; \
 		$(COMPOSE) resolve $$d/manifest.yaml -o $$d/lock.yaml || exit 1; \

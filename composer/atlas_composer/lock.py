@@ -1,9 +1,10 @@
 """Distribution lock file schema.
 
-Records exact resolved versions and integrity hashes for every selected
-plugin (`docs/plugin-architecture.md:527-545`) — `resolver.resolve_manifest`'s
-output, and everything a build needs without contacting a registry
-(reusing each ecosystem's native lock mechanism rather
+Records exact resolved versions for every selected plugin
+(`docs/plugin-architecture.md:527-545`) — `resolver.resolve_manifest`'s
+output. Integrity of installed artifacts is not recorded here: it comes from
+the native `uv.lock` and `package-lock.json`, which `uv sync --frozen` and
+`npm ci` verify (reusing each ecosystem's native lock mechanism rather
 than inventing a third custom lock format).
 """
 
@@ -35,13 +36,11 @@ class _Base(BaseModel):
 class LockedBackendArtifact(_Base):
     package: str
     version: str
-    hash: str
 
 
 class LockedFrontendArtifact(_Base):
     package: str
     version: str
-    integrity: str
 
 
 class LockedPlugin(_Base):
@@ -161,7 +160,26 @@ def load_lock(path: Path) -> Lock:
     """Parse a lock file YAML document into a validated `Lock`."""
     with open(path) as lock_file:
         data = yaml.safe_load(lock_file)
+    if _has_legacy_integrity_fields(data):
+        raise ValueError(
+            f"{path} still records `hash` or `integrity` values, which the lock "
+            "no longer carries; re-resolve it from the manifest (`make lock`)",
+        )
     return Lock.model_validate(data)
+
+
+def _has_legacy_integrity_fields(data: Any) -> bool:
+    plugins = data.get("plugins") if isinstance(data, dict) else None
+    if not isinstance(plugins, dict):
+        return False
+    for plugin in plugins.values():
+        if not isinstance(plugin, dict):
+            continue
+        for side, field in (("backend", "hash"), ("frontend", "integrity")):
+            artifact = plugin.get(side)
+            if isinstance(artifact, dict) and field in artifact:
+                return True
+    return False
 
 
 def dump_lock(lock: Lock, path: Path) -> None:

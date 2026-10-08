@@ -1,0 +1,27 @@
+name: Lock freshness
+
+# Re-resolving every distribution must leave every `lock.yaml` unchanged.
+# A manifest or native lock edited without re-running `make lock` fails here.
+# It runs on every PR so a required check is never skipped by a path filter.
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  lock-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up composer environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.13.13"
+          working-directory: composer
+
+      - name: Re-resolve every distribution
+        run: make lock
+
+      - name: Fail if any lock.yaml changed
+        run: git diff --exit-code -- '*lock.yaml'

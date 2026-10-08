@@ -1,9 +1,9 @@
 """Manifest -> lock resolution.
 
-Resolves each manifest-declared plugin's exact artifact version and
-integrity by cross-referencing this monorepo's own native lock files
-(`uv.lock` for backend, the root `package-lock.json` for frontend)
-rather than re-deriving hashes independently. Only
+Resolves each manifest-declared plugin's exact artifact version by
+cross-referencing this monorepo's own native lock files (`uv.lock` for
+backend, the root `package-lock.json` for frontend); integrity stays with
+those files and the installers that verify them. Only
 the `workspace` artifact source is resolvable this way; the other sources
 `manifest.ArtifactSource` accepts name real package registries this
 composer doesn't fetch from yet.
@@ -17,7 +17,6 @@ from pathlib import Path
 import tomllib
 from atlas_plugin_api import PluginDescriptor
 
-from ._hashing import hash_directory
 from .auth import authentication_provider_contributions
 from .generate import backend_module_path
 from .lock import (
@@ -31,9 +30,9 @@ from .lock import (
     LockedProviderPresentation,
 )
 from .manifest import Manifest, PluginArtifact
-from .npm_lock import ResolvedFrontendPackage, parse_npm_lock
+from .npm_lock import parse_npm_lock
 from .services import resolve_required_services
-from .uv_lock import ResolvedPythonPackage, parse_uv_lock
+from .uv_lock import parse_uv_lock
 
 
 class ResolutionError(Exception):
@@ -73,11 +72,11 @@ class UnsupportedSourceError(ResolutionError):
 
 @dataclass(frozen=True, slots=True)
 class NativeLocks:
-    """The native lock files the resolver cross-references, each keyed by
-    package name."""
+    """The native lock files the resolver cross-references, each mapping
+    package name to resolved version."""
 
-    python: dict[str, ResolvedPythonPackage]
-    npm: dict[str, ResolvedFrontendPackage]
+    python: dict[str, str]
+    npm: dict[str, str]
 
     @classmethod
     def from_repo_root(cls, repo_root: Path) -> "NativeLocks":
@@ -91,9 +90,8 @@ class NativeLocks:
 
 def _resolve_from_path(
     artifact: PluginArtifact, repo_root: Path
-) -> ResolvedPythonPackage | None:
+) -> str | None:
     """Resolve a package that is not in `uv.lock` from `artifact.path`: the
-    directory hash is computed exactly as for a `uv.lock` path source, the
     version comes from the `pyproject.toml` there, whose name must match."""
     if artifact.path is None:
         return None
@@ -105,10 +103,7 @@ def _resolve_from_path(
         return None
     if project.get("name") != artifact.package or "version" not in project:
         return None
-    return ResolvedPythonPackage(
-        version=project["version"],
-        hash="sha256:" + hash_directory(package_dir, algorithm="sha256").hex(),
-    )
+    return project["version"]
 
 
 def _resolve_backend(
@@ -125,13 +120,9 @@ def _resolve_backend(
     )
     if resolved is None:
         raise UnknownPackageError(artifact.package, "uv.lock")
-    if resolved.version != version:
-        raise VersionMismatchError(plugin_id, version, resolved.version)
-    return LockedBackendArtifact(
-        package=artifact.package,
-        version=resolved.version,
-        hash=resolved.hash,
-    )
+    if resolved != version:
+        raise VersionMismatchError(plugin_id, version, resolved)
+    return LockedBackendArtifact(package=artifact.package, version=resolved)
 
 
 def _resolve_frontend(
@@ -145,13 +136,9 @@ def _resolve_frontend(
     resolved = locks.npm.get(artifact.package)
     if resolved is None:
         raise UnknownPackageError(artifact.package, "package-lock.json")
-    if resolved.version != version:
-        raise VersionMismatchError(plugin_id, version, resolved.version)
-    return LockedFrontendArtifact(
-        package=artifact.package,
-        version=resolved.version,
-        integrity=resolved.integrity,
-    )
+    if resolved != version:
+        raise VersionMismatchError(plugin_id, version, resolved)
+    return LockedFrontendArtifact(package=artifact.package, version=resolved)
 
 
 def _load_resolved_descriptors(
