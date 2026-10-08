@@ -16,7 +16,6 @@ def test_load_backend_descriptors_imports_the_real_plugin_module():
                 backend=LockedBackendArtifact(
                     package="atlas-plugin-c4",
                     version="0.1.0",
-                    hash="sha256:x",
                 ),
             ),
         },

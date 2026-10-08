@@ -81,7 +81,7 @@ def _manifest(*plugins: dict) -> Manifest:
 
 
 def _resolve(manifest: Manifest, *descriptors: PluginDescriptor) -> Lock:
-    # The real package behind every entry only supplies native lock hashes;
+    # The real package behind every entry only supplies native lock versions;
     # the declared services come from the synthetic descriptors.
     resolved = {d.id: d for d in descriptors}
     return resolve_manifest(manifest, repo_root=REPO_ROOT, descriptors=resolved)
@@ -288,7 +288,7 @@ def test_a_stale_lock_fails_validation():
         plugins={
             f"{ENGINE}@0.1.0": LockedPlugin(
                 backend=LockedBackendArtifact(
-                    package="atlas-plugin-standard-catalog", version="0.1.0", hash="h"
+                    package="atlas-plugin-standard-catalog", version="0.1.0"
                 )
             )
         },

@@ -64,7 +64,7 @@ secret references remain in the owning plugin's namespaced `config`.
 
 ## The distribution lock
 
-A composer tool resolves a manifest's declared artifacts to exact versions and integrity hashes:
+A composer tool resolves a manifest's declared artifacts to exact versions:
 
 ```yaml
 distribution: company.atlas@2026.08
@@ -75,15 +75,13 @@ plugins:
     backend:
       package: atlas-plugin-apis
       version: 1.4.2
-      hash: sha256:example
     frontend:
       package: "@atlas/plugin-apis"
       version: 1.4.2
-      integrity: sha512-example
 ```
 
 Containers do not download anything when they start. The manifest and lock are
-inputs to a reproducible backend and frontend image build. The same composer
+inputs to a reproducible backend and frontend image build. The lock records versions only; integrity of installed artifacts comes from `uv.lock` and `package-lock.json`, which `uv sync --frozen` and `npm ci` verify. The same composer
 builds Atlas's official distribution for CI.
 
 ## Assemble and verify

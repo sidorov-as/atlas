@@ -125,8 +125,8 @@ The terms below have specific meanings in Atlas documentation.
   sources that compose a Distribution.
 
 **Distribution Lock**
-: The composer-generated record of exact resolved artifact versions and integrity hashes for a
-  Distribution's manifest. It is used only to build reproducible images; containers do not
+: The composer-generated record of exact resolved artifact versions for a
+  Distribution's manifest; integrity comes from `uv.lock` and `package-lock.json`. It is used only to build reproducible images; containers do not
   download anything when they start.
 
 **Composer**

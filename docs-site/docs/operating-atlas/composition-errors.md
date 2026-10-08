@@ -20,7 +20,7 @@ For a custom installation, use a copied distribution path; the checked-in defaul
 | Failure category | Corrective action |
 | --- | --- |
 | Duplicate plugin identity | Keep one manifest entry for each plugin id. |
-| Backend/frontend version mismatch | Resolve both artifacts at the declared plugin version. Do not hand-edit lock integrity values. |
+| Backend/frontend version mismatch | Resolve both artifacts at the declared plugin version. Do not hand-edit the lock; integrity comes from `uv.lock` and `package-lock.json`. |
 | Core compatibility | Choose a plugin release whose `atlasCore` range contains the manifest core version, or select a compatible core. |
 | Missing dependency or cycle | Add the required plugin at a compatible version, or remove or rework the dependency cycle in the plugin descriptors. |
 | Duplicate kind, capability, permission, extension point, contribution, or route | Change the conflicting plugin-owned identifier or remove one contribution. Identifiers are global within a distribution. |

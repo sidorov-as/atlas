@@ -31,13 +31,13 @@ are `package` and `source`; registry source names may be accepted by the schema 
 are not currently resolved by this checkout. A `workspace` backend that is not in
 `core/backend/uv.lock`, such as an example-only plugin, can add `path`, a
 repo-relative directory whose `pyproject.toml` names the package; the lock then
-records that directory's hash. `fromEnv` references an environment
+records the version from that `pyproject.toml`. `fromEnv` references an environment
 variable and never puts the secret value in source control.
 
 The lock records `distribution` as `id@version`, `core`, and plugins keyed by
-`id@version`. Each selected backend has `package`, exact `version`, and
-`hash`; each frontend has `package`, exact `version`, and `integrity`. Generate
-the lock instead of editing it by hand:
+`id@version`. Each selected backend and frontend has `package` and exact `version`.
+Integrity of installed artifacts comes from `uv.lock` and `package-lock.json`,
+not from the lock. Generate the lock instead of editing it by hand:
 
 ```shell
 uv run --project composer atlas-compose resolve distributions/default/manifest.yaml -o distributions/default/lock.yaml

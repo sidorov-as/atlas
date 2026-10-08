@@ -1,5 +1,6 @@
 """Manifest -> lock resolution tests (`deployment-manifest-and-lock` spec)."""
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,7 @@ from atlas_plugin_api import (
     PluginDescriptor,
 )
 
+from atlas_composer.lock import dump_lock
 from atlas_composer.manifest import Manifest
 from atlas_composer.resolver import (
     UnknownPackageError,
@@ -79,10 +81,8 @@ def test_resolve_manifest_records_exact_backend_and_frontend_artifacts():
     locked = lock.plugins["atlas.standard-catalog@0.1.0"]
     assert locked.backend.package == "atlas-plugin-standard-catalog"
     assert locked.backend.version == "0.1.0"
-    assert locked.backend.hash.startswith("sha256:")
     assert locked.frontend.package == "@atlas/plugin-standard-catalog"
     assert locked.frontend.version == "0.1.0"
-    assert locked.frontend.integrity.startswith("sha512-")
 
 
 def test_resolve_manifest_preserves_unresolved_namespaced_plugin_config():
@@ -128,7 +128,7 @@ def test_resolve_manifest_rejects_an_unknown_package():
 FIXTURE_PATH = "examples/authentication/custom-credentials/plugin"
 
 
-def test_resolve_manifest_hashes_a_package_outside_uv_lock_from_its_path():
+def test_resolve_manifest_resolves_a_package_outside_uv_lock_from_its_path():
     manifest = _manifest(
         backend={
             "package": "atlas-example-auth-fixture",
@@ -147,7 +147,6 @@ def test_resolve_manifest_hashes_a_package_outside_uv_lock_from_its_path():
     backend = lock.plugins["atlas.standard-catalog@0.1.0"].backend
     assert backend.package == "atlas-example-auth-fixture"
     assert backend.version == "0.1.0"
-    assert backend.hash.startswith("sha256:")
 
 
 def test_resolve_manifest_rejects_a_path_whose_package_name_differs():
@@ -279,3 +278,40 @@ def test_resolve_manifest_preserves_multi_provider_order():
         "example.auth.custom",
         "atlas.auth.local",
     ]
+
+
+def test_resolve_manifest_is_stable_when_a_workspace_plugin_source_changes(tmp_path):
+    shutil.copy(REPO_ROOT / "package-lock.json", tmp_path / "package-lock.json")
+    (tmp_path / "core" / "backend").mkdir(parents=True)
+    shutil.copy(
+        REPO_ROOT / "core" / "backend" / "uv.lock",
+        tmp_path / "core" / "backend" / "uv.lock",
+    )
+    plugin_dir = tmp_path / "plugin"
+    plugin_dir.mkdir()
+    (plugin_dir / "pyproject.toml").write_text(
+        '[project]\nname = "atlas-example-auth-fixture"\nversion = "0.1.0"\n'
+    )
+    source = plugin_dir / "module.py"
+    source.write_text("VALUE = 1\n")
+    manifest = _manifest(
+        backend={
+            "package": "atlas-example-auth-fixture",
+            "source": "workspace",
+            "path": "plugin",
+        },
+        frontend=None,
+    )
+    descriptors = {"atlas.standard-catalog": _auth_descriptor("example.sso")}
+
+    def resolved_text(name: str) -> str:
+        lock = resolve_manifest(manifest, repo_root=tmp_path, descriptors=descriptors)
+        path = tmp_path / name
+        dump_lock(lock, path)
+        return path.read_text()
+
+    before = resolved_text("before.yaml")
+    source.write_text("VALUE = 2\n")
+    after = resolved_text("after.yaml")
+
+    assert before == after

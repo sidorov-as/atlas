@@ -1,6 +1,7 @@
 """Distribution lock file schema tests (`deployment-manifest-and-lock` spec)."""
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from atlas_composer.lock import (
@@ -22,12 +23,10 @@ def _example_lock() -> Lock:
                 backend=LockedBackendArtifact(
                     package="atlas-plugin-apis",
                     version="1.4.2",
-                    hash="sha256:example",
                 ),
                 frontend=LockedFrontendArtifact(
                     package="@atlas/plugin-apis",
                     version="1.4.2",
-                    integrity="sha512-example",
                 ),
             ),
         },
@@ -52,7 +51,6 @@ def test_dump_lock_omits_absent_backend_or_frontend(tmp_path):
                 backend=LockedBackendArtifact(
                     package="atlas-plugin-ingestion",
                     version="1.0.0",
-                    hash="sha256:example",
                 ),
             ),
         },
@@ -79,7 +77,6 @@ def test_dump_lock_omits_disabled_when_false(tmp_path):
                 backend=LockedBackendArtifact(
                     package="atlas-plugin-ingestion",
                     version="1.0.0",
-                    hash="sha256:example",
                 ),
             ),
         },
@@ -100,7 +97,6 @@ def test_dump_and_load_round_trips_a_disabled_plugin(tmp_path):
                 backend=LockedBackendArtifact(
                     package="atlas-plugin-ingestion",
                     version="1.0.0",
-                    hash="sha256:example",
                 ),
                 disabled=True,
             ),
@@ -167,3 +163,31 @@ def test_lock_schema_rejects_secret_bearing_auth_fields(secret_field):
                 "auth": {"providers": [provider], "default": "atlas.auth.local"},
             }
         )
+
+
+@pytest.mark.parametrize(
+    ("side", "legacy_field"),
+    [("backend", "hash"), ("frontend", "integrity")],
+)
+def test_load_lock_rejects_legacy_integrity_fields(tmp_path, side, legacy_field):
+    lock_path = tmp_path / "lock.yaml"
+    lock_path.write_text(
+        yaml.safe_dump(
+            {
+                "distribution": "company.atlas@2026.08",
+                "core": "3.2.0",
+                "plugins": {
+                    "atlas.apis@1.4.2": {
+                        side: {
+                            "package": "atlas-apis",
+                            "version": "1.4.2",
+                            legacy_field: "sha256:x",
+                        },
+                    },
+                },
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="re-resolve it from the manifest"):
+        load_lock(lock_path)

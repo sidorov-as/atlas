@@ -111,7 +111,8 @@ routes reject the old local session; test upstream logout separately.
 
 Run the resolver and validator against the manifest and lock before building.
 Correct the named manifest entry or plugin contract, then resolve a new lock;
-do not hand-edit generated modules or integrity values. See [Fix distribution
+do not hand-edit generated modules or the lock; integrity comes from `uv.lock` and
+`package-lock.json`. See [Fix distribution
 composition errors](../operating-atlas/composition-errors.md).
 
 ## Diagram or feature rendering fails

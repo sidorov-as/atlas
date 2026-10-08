@@ -127,12 +127,10 @@ def _locked_plugin(backend_version: str, frontend_version: str) -> LockedPlugin:
         backend=LockedBackendArtifact(
             package="atlas-plugin-apis",
             version=backend_version,
-            hash="sha256:x",
         ),
         frontend=LockedFrontendArtifact(
             package="@atlas/plugin-apis",
             version=frontend_version,
-            integrity="sha512-x",
         ),
     )
 

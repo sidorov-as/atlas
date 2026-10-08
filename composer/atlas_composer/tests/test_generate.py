@@ -51,13 +51,11 @@ def _lock(entries=REAL_DISTRIBUTION_ORDER, *, disabled_ids=frozenset()) -> Lock:
             frontend = LockedFrontendArtifact(
                 package=frontend_package,
                 version="0.1.0",
-                integrity="sha512-x",
             )
         plugins[f"{plugin_id}@0.1.0"] = LockedPlugin(
             backend=LockedBackendArtifact(
                 package=backend_package,
                 version="0.1.0",
-                hash="sha256:x",
             ),
             frontend=frontend,
             disabled=plugin_id in disabled_ids,
