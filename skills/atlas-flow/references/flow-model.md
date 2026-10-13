@@ -8,6 +8,9 @@ A flow is a named step graph attached to one System. Fields: `system` (a `system
 (`autolayoutEnabled`, `layoutDirection`, `layoutEngine`) that you leave at their defaults. Flow-level fields are
 camelCase; fields **inside a step are snake_case**.
 
+`name` must not be empty and must not contain `/` or `:`; the save is rejected otherwise. When a natural name
+contains them, replace them with `,` or a space.
+
 ## Step fields
 
 | Field         | Notes                                                                             |
@@ -60,5 +63,5 @@ A step may carry only one of `entity_ref`, `external_label`, `query_ref`, `event
 
 `validate_flow` (when available) takes the same body as `create_flow` plus an optional `flowId` and returns every
 violation without saving. Fix all of them before saving. Check the same things yourself when it is missing: unique
-ids, transitions to existing steps, no cycle, one reference per step, no title or summary on a ref-backed step, and
+ids, a `name` without `/` or `:`, transitions to existing steps, no cycle, one reference per step, no title or summary on a ref-backed step, and
 the limits.

@@ -21,7 +21,7 @@ Run the preflight from the shared rules, then check the flow tools. See
 
 ## Rules of conduct
 
-- One question at a time. Propose the flow's name and description yourself; do not ask about them.
+- One question at a time. Propose the flow's name and description yourself; do not ask about them. A name must not contain `/` or `:`.
 - Establish the home system before drafting any steps.
 - Never bind a step to something you have not confirmed exists in the catalog.
 - Never invent icons: use names returned by `search_flow_icons`, or leave the icon out.
