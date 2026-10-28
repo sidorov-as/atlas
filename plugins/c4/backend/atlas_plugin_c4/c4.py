@@ -6,7 +6,7 @@ PlantUML-specific syntax and aliases out of controllers and catalog models.
 """
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -338,6 +338,7 @@ def diagram_payload(
     elements: Iterable[Mapping[str, Any]],
     relationships: Iterable[Mapping[str, Any]],
     settings: DiagramRenderingSettings = DEFAULT_DIAGRAM_RENDERING_SETTINGS,
+    boundaries: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build the complete validated PlantUML diagram payload.
 
@@ -350,6 +351,7 @@ def diagram_payload(
         "title": title if settings.show_title else None,
         "elements": [dict(item) for item in elements],
         "relationships": [dict(item) for item in relationships],
+        **({"boundaries": [dict(item) for item in boundaries]} if boundaries else {}),
         "render_options": render_options_payload(settings)
         | {
             "tags": [
@@ -817,7 +819,11 @@ def _component_element(
     system,
     show_selected_label: bool = True,
 ) -> dict[str, str]:
-    """Map catalog entities to their deterministic Component Diagram macro."""
+    """Map catalog entities to their deterministic Component Diagram macro.
+
+    ``system`` is the reference System for external styling; without one
+    (custom views) only the ``external`` tag marks an element external.
+    """
     if _is_actor_kind(entity.kind):
         return element(
             type="Person" if selected else "PersonExt",
@@ -829,7 +835,9 @@ def _component_element(
         )
     details = entity.details
     external = is_external(entity.tags) or (
-        hasattr(details, "system_id") and details.system_id != system.id
+        system is not None
+        and hasattr(details, "system_id")
+        and details.system_id != system.id
     )
     if entity.kind == KIND_RESOURCE:
         element_type = {
@@ -943,7 +951,7 @@ class _IdentifiedRemotePlantUMLBackend(RemotePlantUMLBackend):
             ) from exc
 
 
-def _plantuml_config() -> C4PluginConfig:
+def plugin_config() -> C4PluginConfig:
     """The resolved ``atlas.c4`` config, or the local-renderer defaults when
     the deployment declares none."""
     try:
@@ -968,7 +976,7 @@ def render(payload: Mapping[str, Any], *, format: ImageFormat = "svg") -> bytes:
     """Render a validated diagram through the configured PlantUML backend."""
     try:
         diagram, _ = diagram_from_dict(payload)
-        renderer = PlantUMLRenderer(backend=_plantuml_backend(_plantuml_config()))
+        renderer = PlantUMLRenderer(backend=_plantuml_backend(plugin_config()))
         return renderer.render_bytes(diagram, format=DiagramFormat(format))
     except (
         ConversionError,

@@ -11,6 +11,7 @@ from atlas_plugin_api import PluginConfigSchema
 from pydantic import Field, model_validator
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
+DEFAULT_MAX_NODES = 50
 
 
 class C4PluginConfig(PluginConfigSchema):
@@ -20,6 +21,10 @@ class C4PluginConfig(PluginConfigSchema):
     avoids the JVM in memory-constrained deployments. ``serverUrl`` defaults to
     c4-diagrams' public server; point it at a self-hosted one for private
     catalogs, since the diagram text leaves the deployment.
+
+    ``maxNodes`` bounds the visible nodes of a custom view (boundary frames
+    and other decorative elements do not count). A view over the limit is
+    rejected before rendering rather than truncated.
     """
 
     renderer: Literal["local", "remote"] = "local"
@@ -27,6 +32,7 @@ class C4PluginConfig(PluginConfigSchema):
     timeout_seconds: float = Field(
         default=DEFAULT_TIMEOUT_SECONDS, alias="timeoutSeconds", gt=0, le=300
     )
+    max_nodes: int = Field(default=DEFAULT_MAX_NODES, alias="maxNodes", ge=1)
 
     @model_validator(mode="after")
     def validate_renderer_options(self) -> "C4PluginConfig":

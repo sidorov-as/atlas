@@ -1,8 +1,11 @@
-import { Loader, Text } from '@gravity-ui/uikit'
+import { Loader, Tab, TabList, TabPanel, TabProvider, Text } from '@gravity-ui/uikit'
+import { useSearchParams } from 'react-router-dom'
 import { systemsApi } from 'frontend/lib/entities'
 import { useAsync } from 'frontend/lib/useAsync'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
 import { DiagramViewer } from '../components/DiagramTab'
+import { ViewsList } from '../components/ViewsList'
+import { VIEWS_TAB } from '../lib/customView'
 import { useDiagramPreferences, type DiagramRenderingPreferences } from '../lib/diagramPreferences'
 import { systemLandscapeUrl } from '../lib/diagramUrls'
 
@@ -42,9 +45,25 @@ function SystemMapDiagram({ preferences, onPreferencesChange }: {
  * relationships — checked via the existing `systemsApi.list()` pagination
  * count rather than a new backend endpoint.
  */
-export function SystemMapPage() {
+function LandscapeTab() {
   const [diagramPreferences, setDiagramPreferences] = useDiagramPreferences('landscape')
   const { data: systems, isLoading } = useAsync(() => systemsApi.list({ pageSize: 1 }), [])
+
+  return isLoading ? (
+    <Loader size="m" />
+  ) : systems?.count === 0 ? (
+    <Text color="secondary">System Map appears once your catalog has systems.</Text>
+  ) : (
+    <SystemMapDiagram preferences={diagramPreferences} onPreferencesChange={setDiagramPreferences} />
+  )
+}
+
+const LANDSCAPE_TAB = 'landscape'
+
+/** System Map: the catalog-wide Landscape and the saved Views list, selected by the `tab` URL parameter. */
+export function SystemMapPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') === VIEWS_TAB ? VIEWS_TAB : LANDSCAPE_TAB
 
   return (
     <section aria-labelledby="system-map-heading">
@@ -52,13 +71,21 @@ export function SystemMapPage() {
       <p>
         <Text color="secondary">Relationships among catalog systems and explicitly interacting people.</Text>
       </p>
-      {isLoading ? (
-        <Loader size="m" />
-      ) : systems?.count === 0 ? (
-        <Text color="secondary">System Map appears once your catalog has systems.</Text>
-      ) : (
-        <SystemMapDiagram preferences={diagramPreferences} onPreferencesChange={setDiagramPreferences} />
-      )}
+      <TabProvider
+        value={activeTab}
+        onUpdate={(tab) => setSearchParams(tab === VIEWS_TAB ? { tab } : {})}
+      >
+        <TabList>
+          <Tab value={LANDSCAPE_TAB}>Landscape</Tab>
+          <Tab value={VIEWS_TAB}>Views</Tab>
+        </TabList>
+        <TabPanel value={LANDSCAPE_TAB}>
+          {activeTab === LANDSCAPE_TAB && <div style={{ paddingTop: 16 }}><LandscapeTab /></div>}
+        </TabPanel>
+        <TabPanel value={VIEWS_TAB}>
+          {activeTab === VIEWS_TAB && <ViewsList />}
+        </TabPanel>
+      </TabProvider>
     </section>
   )
 }

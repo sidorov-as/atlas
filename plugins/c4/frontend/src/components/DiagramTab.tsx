@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Gear, MagnifierMinus, MagnifierPlus, SquareDashed } from '@gravity-ui/icons'
 import { Button, Checkbox, Icon, Loader, Popup, SegmentedRadioGroup, Text, Tooltip } from '@gravity-ui/uikit'
+import { apiFetch } from 'frontend/lib/api'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
+import { CustomViewFetchError } from '../lib/customViewApi'
 import { diagramUrl, type DiagramView } from '../lib/diagramUrls'
 import {
   type DiagramLayout,
@@ -20,6 +22,19 @@ export interface DiagramViewerProps {
   preferences?: DiagramRenderingPreferences
   onPreferencesChange?: (preferences: DiagramRenderingPreferences) => void
   height?: number | string
+  /** Fetch `src` (with an `AbortController`) and show the result through an object URL instead of
+   * handing `src` to the `<img>`; a newer `src` aborts the request in flight, and a failed request
+   * keeps the previous image on screen and is reported through `onFetchError`. */
+  fetchSource?: boolean
+  onFetchError?: (error: CustomViewFetchError) => void
+  onFetchingChange?: (fetching: boolean) => void
+  /** Called with the `src` whose image is now on screen. */
+  onFetched?: (src: string) => void
+  /** Changing this value re-fetches the current `src` (a retry). */
+  reloadToken?: number
+  /** With `fetchSource`: a JSON body to POST to `src` (an unsaved draft preview) instead of a GET.
+   * A changed body re-fetches, like a changed `src`. */
+  requestBody?: string
 }
 
 function DiagramSettings({ preferences, onChange }: { preferences: DiagramRenderingPreferences; onChange: (preferences: DiagramRenderingPreferences) => void }) {
@@ -64,7 +79,7 @@ function DiagramSettings({ preferences, onChange }: { preferences: DiagramRender
 }
 
 /** A canvas-like image viewport with pan, zoom, fit, settings, and graceful image-load failures. */
-export function DiagramViewer({ src, alt, downloadUrls, preferences, onPreferencesChange, height = 'min(70vh, 720px)' }: DiagramViewerProps) {
+export function DiagramViewer({ src, alt, downloadUrls, preferences, onPreferencesChange, height = 'min(70vh, 720px)', fetchSource = false, onFetchError, onFetchingChange, onFetched, reloadToken = 0, requestBody }: DiagramViewerProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -72,7 +87,44 @@ export function DiagramViewer({ src, alt, downloadUrls, preferences, onPreferenc
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null)
+  const view = useRef({ scale, offset })
+  view.current = { scale, offset }
   const lastViewportSize = useRef({ width: 0, height: 0 })
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const [fetching, setFetching] = useState(fetchSource)
+  const callbacks = useRef({ onFetchError, onFetchingChange, onFetched })
+  callbacks.current = { onFetchError, onFetchingChange, onFetched }
+
+  useEffect(() => {
+    if (!fetchSource) return
+    const controller = new AbortController()
+    setFetching(true)
+    callbacks.current.onFetchingChange?.(true)
+    apiFetch(src, requestBody === undefined ? { signal: controller.signal } : { method: 'POST', body: requestBody, signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw await CustomViewFetchError.fromResponse(response)
+        return URL.createObjectURL(await response.blob())
+      })
+      .then((url) => {
+        if (controller.signal.aborted) return URL.revokeObjectURL(url)
+        setObjectUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous)
+          return url
+        })
+        setFetching(false)
+        callbacks.current.onFetchingChange?.(false)
+        callbacks.current.onFetched?.(src)
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+        setFetching(false)
+        callbacks.current.onFetchingChange?.(false)
+        callbacks.current.onFetchError?.(error instanceof CustomViewFetchError ? error : new CustomViewFetchError(0, 'network', 'The view could not be loaded'))
+      })
+    return () => controller.abort()
+  }, [fetchSource, src, reloadToken, requestBody])
+
+  useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }, [objectUrl])
 
   const fitToViewport = useCallback(() => {
     const viewport = viewportRef.current
@@ -97,13 +149,34 @@ export function DiagramViewer({ src, alt, downloadUrls, preferences, onPreferenc
     return () => { cancelAnimationFrame(frame); observer.disconnect() }
   }, [fitToViewport])
 
+  // Trackpad pinch (a `wheel` event with ctrlKey) and two-finger scroll zoom around the cursor.
+  // Registered natively because React's wheel listener is passive and cannot preventDefault.
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const { scale: current, offset: currentOffset } = view.current
+      const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, current * Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.002))))
+      if (next === current) return
+      const rect = viewport.getBoundingClientRect()
+      const px = event.clientX - rect.left - rect.width / 2
+      const py = event.clientY - rect.top - rect.height / 2
+      const ratio = next / current
+      setScale(next)
+      setOffset({ x: px - (px - currentOffset.x) * ratio, y: py - (py - currentOffset.y) * ratio })
+    }
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+    return () => viewport.removeEventListener('wheel', onWheel)
+  }, [])
+
   return (
-    <div ref={viewportRef} style={{ position: 'relative', height, minHeight: 360, overflow: 'hidden', border: '1px solid var(--g-color-line-generic)', borderRadius: 8, background: 'var(--g-color-base-generic)' }}>
-      {status === 'loading' && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><Loader size="m" /></div>}
-      {status === 'error' ? <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}><Text color="danger">The diagram could not be rendered. Please try again later.</Text></div> : (
+    <div ref={viewportRef} style={{ position: 'relative', height, minHeight: 360, overflow: 'hidden', border: '1px solid var(--g-color-line-generic)', borderRadius: 8, background: '#fff' }}>
+      {(fetchSource ? fetching : status === 'loading') && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><Loader size="m" /></div>}
+      {fetchSource && !objectUrl ? null : status === 'error' ? <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}><Text color="danger">The diagram could not be rendered. Please try again later.</Text></div> : (
         <img
           ref={imageRef}
-          src={src}
+          src={fetchSource ? objectUrl ?? undefined : src}
           alt={alt}
           draggable={false}
           onLoad={() => { setStatus('ready'); fitToViewport() }}
@@ -161,7 +234,12 @@ function FillViewportDiagram({ kind, id, view, preferences, onPreferencesChange 
 }
 
 /** C4 diagram endpoint rendered through the shared interactive viewer. */
-export function DiagramTab({ kind, id, view }: { kind: string; id: string; view: DiagramView }) {
+export function DiagramTab({ kind, id, view, actions }: { kind: string; id: string; view: DiagramView; actions?: ReactNode }) {
   const [preferences, setPreferences] = useDiagramPreferences(view)
-  return <FillViewportDiagram kind={kind} id={id} view={view} preferences={preferences} onPreferencesChange={setPreferences} />
+  return (
+    <>
+      {actions && <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>{actions}</div>}
+      <FillViewportDiagram kind={kind} id={id} view={view} preferences={preferences} onPreferencesChange={setPreferences} />
+    </>
+  )
 }
