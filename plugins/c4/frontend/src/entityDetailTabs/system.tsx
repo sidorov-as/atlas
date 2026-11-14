@@ -1,6 +1,7 @@
 import { entityDetailTab, entitySupports } from '@atlas/plugin-api'
 import type { CatalogEntityUnion, SystemEntity } from 'frontend/lib/types'
 import { DiagramTab } from '../components/DiagramTab'
+import { OpenInViewBuilder } from '../components/OpenInViewBuilder'
 
 const supportsSubjectDiagrams = entitySupports('architecture.subject.v1')
 
@@ -25,7 +26,7 @@ function SystemContextTab({ entity }: { entity: CatalogEntityUnion }) {
 
 function SystemArchitectureTab({ entity }: { entity: CatalogEntityUnion }) {
   if (!isSystem(entity)) return null
-  return <DiagramTab kind="system" id={entity.id} view="architecture" />
+  return <DiagramTab kind="system" id={entity.id} view="architecture" actions={<OpenInViewBuilder entityId={entity.id} />} />
 }
 
 export const systemEntityDetailTabs = [

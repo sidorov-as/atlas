@@ -1,6 +1,7 @@
 import { entityDetailTab, entitySupports } from '@atlas/plugin-api'
 import type { CatalogEntityUnion, ComponentEntity } from 'frontend/lib/types'
 import { DiagramTab } from '../components/DiagramTab'
+import { OpenInViewBuilder } from '../components/OpenInViewBuilder'
 
 const supportsSubjectDiagrams = entitySupports('architecture.subject.v1')
 
@@ -17,7 +18,7 @@ function isComponentDiagramCapable(entity: CatalogEntityUnion): boolean {
 
 function ComponentDiagramTab({ entity }: { entity: CatalogEntityUnion }) {
   if (!isComponent(entity)) return null
-  return <DiagramTab kind="component" id={entity.id} view="component" />
+  return <DiagramTab kind="component" id={entity.id} view="component" actions={<OpenInViewBuilder entityId={entity.id} />} />
 }
 
 export const componentEntityDetailTabs = [

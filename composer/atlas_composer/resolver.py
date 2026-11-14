@@ -88,9 +88,7 @@ class NativeLocks:
         )
 
 
-def _resolve_from_path(
-    artifact: PluginArtifact, repo_root: Path
-) -> str | None:
+def _resolve_from_path(artifact: PluginArtifact, repo_root: Path) -> str | None:
     """Resolve a package that is not in `uv.lock` from `artifact.path`: the
     version comes from the `pyproject.toml` there, whose name must match."""
     if artifact.path is None:

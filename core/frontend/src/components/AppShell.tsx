@@ -4,9 +4,11 @@ import { AsideHeader, FooterItem, type AsideHeaderItem } from '@gravity-ui/navig
 import { User } from '@gravity-ui/uikit'
 import { ArrowRightFromLine } from '@gravity-ui/icons'
 import { useSession } from '../lib/SessionContext'
-import { atlasConfig } from '../atlas.config'
+import { atlasConfig, logoForTheme } from '../atlas.config'
+import { useTheme } from '../lib/ThemeContext'
 import { SKIP_AUTO_START_KEY } from '../pages/LoginPage'
 import { ContributionBoundary } from './ContributionBoundary'
+import { ThemeSwitcher } from './ThemeSwitcher'
 import type { GlobalSearchContribution, ResolvedNavItem } from '@atlas/plugin-api'
 
 export function AppShell({
@@ -21,6 +23,7 @@ export function AppShell({
   const { session, logout } = useSession()
   const navigate = useNavigate()
   const location = useLocation()
+  const { resolved: theme } = useTheme()
   const [compact, setCompact] = useState(false)
 
   const menuItems: AsideHeaderItem[] = navItems.map((item) => ({
@@ -46,7 +49,7 @@ export function AppShell({
             <div className="app-shell-logo-subtitle">software catalog</div>
           </div>
         ),
-        iconSrc: atlasConfig.logo,
+        iconSrc: logoForTheme(atlasConfig, theme),
         iconSize: 50,
         className: 'app-shell-logo',
         onClick: () => navigate('/'),
@@ -68,7 +71,8 @@ export function AppShell({
         const username = session?.user?.username ?? ''
         return (
           <>
-            <div style={{ padding: '6px 12px' }}>
+            <ThemeSwitcher compact={isCompact} />
+            <div style={isCompact ? { display: 'flex', justifyContent: 'center', padding: '6px 0' } : { padding: '6px 12px' }}>
               <User avatar={{ text: username }} name={isCompact ? undefined : username} size="s" />
             </div>
             <FooterItem

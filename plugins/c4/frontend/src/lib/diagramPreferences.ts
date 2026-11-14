@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export type DiagramPreferenceView = 'context' | 'architecture' | 'container' | 'component' | 'landscape'
+export type DiagramPreferenceView = 'context' | 'architecture' | 'container' | 'component' | 'landscape' | 'custom'
 export type DiagramLayout = 'LAYOUT_TOP_DOWN' | 'LAYOUT_LEFT_RIGHT' | 'LAYOUT_LANDSCAPE'
 
 export interface DiagramRenderingPreferences {

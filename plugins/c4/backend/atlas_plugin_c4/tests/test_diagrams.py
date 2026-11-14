@@ -90,6 +90,7 @@ def test_diagram_request_applies_valid_rendering_settings(
     [
         {"layout": "LAYOUT_DIAGONAL"},
         {"show_legend": "not-a-boolean"},
+        {"theme": "sepia"},
     ],
 )
 def test_invalid_rendering_setting_returns_400(owner_client, system, query):
@@ -190,3 +191,58 @@ def test_unauthenticated_request_is_rejected(dmr_client, system):
         f"{DIAGRAMS_URL}/system/{system.id}/", {"view": "context"}
     )
     assert response.status_code == 401
+
+
+def test_diagram_request_without_theme_renders_light(owner_client, system, monkeypatch):
+    captured = []
+    monkeypatch.setattr(
+        "atlas_plugin_c4.c4.render",
+        lambda payload, *, format: captured.append(payload) or b"<svg />",
+    )
+
+    response = owner_client.get(
+        f"{DIAGRAMS_URL}/system/{system.id}/", {"view": "context"}
+    )
+
+    assert response.status_code == 200
+    assert "atlas_theme" not in captured[0]
+
+
+@pytest.mark.parametrize(
+    ("format", "download", "content_type"),
+    [("svg", "0", "image/svg+xml"), ("png", "1", "image/png")],
+)
+def test_dark_theme_applies_to_entity_and_landscape_diagrams(
+    owner_client, system, monkeypatch, format, download, content_type
+):
+    captured = []
+    monkeypatch.setattr(
+        "atlas_plugin_c4.c4.render",
+        lambda payload, *, format: captured.append((payload, format)) or b"image",
+    )
+    query = {"theme": "dark", "format": format, "download": download}
+
+    entity = owner_client.get(
+        f"{DIAGRAMS_URL}/system/{system.id}/", query | {"view": "context"}
+    )
+    landscape = owner_client.get(f"{DIAGRAMS_URL}/landscape/", query)
+
+    for response in (entity, landscape):
+        assert response.status_code == 200
+        assert response["Content-Type"] == content_type
+    assert [(p["atlas_theme"], f) for p, f in captured] == [("dark", format)] * 2
+    assert bool(landscape.get("Content-Disposition")) == (download == "1")
+
+
+def test_invalid_theme_is_rejected_before_rendering_landscape(
+    owner_client, monkeypatch
+):
+    calls = []
+    monkeypatch.setattr(
+        "atlas_plugin_c4.c4.render", lambda *a, **k: calls.append(a) or b"x"
+    )
+
+    response = owner_client.get(f"{DIAGRAMS_URL}/landscape/", {"theme": "sepia"})
+
+    assert response.status_code == 400
+    assert calls == []

@@ -1,0 +1,81 @@
+/* Dark overrides for @asyncapi/react-component, whose stylesheet ships light colors only.
+   Every rule is scoped under Gravity's dark theme class and the component's own `.aui-root`,
+   so nothing outside the viewer is affected. Colors follow Gravity's dark palette. */
+.g-root_theme_dark .aui-root {
+  color: #dedddd;
+}
+
+.g-root_theme_dark .aui-root .bg-white {
+  background-color: transparent;
+}
+.g-root_theme_dark .aui-root .bg-gray-100 {
+  background-color: #2b252b;
+}
+.g-root_theme_dark .aui-root .bg-gray-200 {
+  background-color: #332c33;
+}
+.g-root_theme_dark .aui-root .bg-gray-400 {
+  background-color: #4a444a;
+}
+.g-root_theme_dark .aui-root .bg-blue-100 {
+  background-color: #12355f;
+}
+.g-root_theme_dark .aui-root .bg-red-200 {
+  background-color: #4a1f1f;
+}
+
+.g-root_theme_dark .aui-root .text-gray-900,
+.g-root_theme_dark .aui-root .text-gray-800,
+.g-root_theme_dark .aui-root .text-gray-700,
+.g-root_theme_dark .aui-root .hover\:text-gray-700:hover,
+.g-root_theme_dark .aui-root .hover\:text-gray-900:hover {
+  color: #dedddd;
+}
+.g-root_theme_dark .aui-root .text-gray-600,
+.g-root_theme_dark .aui-root .text-gray-500 {
+  color: #b9b6b9;
+}
+.g-root_theme_dark .aui-root .text-purple-700 {
+  color: #c9a8f5;
+}
+.g-root_theme_dark .aui-root .text-orange-700 {
+  color: #f0a35e;
+}
+.g-root_theme_dark .aui-root .text-red-700 {
+  color: #ee8a8a;
+}
+
+.g-root_theme_dark .aui-root .border-gray-400 {
+  border-color: #4a444a;
+}
+
+/* Markdown descriptions (`.prose`) carry their own hard-coded light-theme colors. */
+.g-root_theme_dark .aui-root .prose,
+.g-root_theme_dark .aui-root .prose [class~='lead'] {
+  color: #dedddd;
+}
+.g-root_theme_dark .aui-root .prose a,
+.g-root_theme_dark .aui-root .prose strong,
+.g-root_theme_dark .aui-root .prose blockquote,
+.g-root_theme_dark .aui-root .prose h1,
+.g-root_theme_dark .aui-root .prose h2,
+.g-root_theme_dark .aui-root .prose h3,
+.g-root_theme_dark .aui-root .prose h4,
+.g-root_theme_dark .aui-root .prose code,
+.g-root_theme_dark .aui-root .prose a code,
+.g-root_theme_dark .aui-root .prose thead {
+  color: #f1f0f1;
+}
+.g-root_theme_dark .aui-root .prose figure figcaption,
+.g-root_theme_dark .aui-root .prose ol > li:before {
+  color: #b9b6b9;
+}
+.g-root_theme_dark .aui-root .prose ul > li:before {
+  background-color: #4a444a;
+}
+.g-root_theme_dark .aui-root .prose hr,
+.g-root_theme_dark .aui-root .prose blockquote,
+.g-root_theme_dark .aui-root .prose thead,
+.g-root_theme_dark .aui-root .prose tbody tr {
+  border-color: #4a444a;
+}

@@ -7,7 +7,15 @@ the other plugins share.
 
 from dmr.routing import Router, path
 
-from .views import DiagramController, SystemLandscapeDiagramController
+from .views import (
+    ActorKindsController,
+    CustomViewDiagramController,
+    DiagramController,
+    SystemLandscapeDiagramController,
+    ViewDetailController,
+    ViewDiagramController,
+    ViewListController,
+)
 
 router = Router(
     "api/plugins/atlas.c4/",
@@ -16,6 +24,23 @@ router = Router(
             "diagrams/landscape/",
             SystemLandscapeDiagramController.as_view(),
             name="system-landscape-diagram",
+        ),
+        path(
+            "diagrams/custom/",
+            CustomViewDiagramController.as_view(),
+            name="custom-view-diagram",
+        ),
+        path(
+            "custom-view/actor-kinds/",
+            ActorKindsController.as_view(),
+            name="custom-view-actor-kinds",
+        ),
+        path("views/", ViewListController.as_view(), name="views"),
+        path("views/<uuid:id>/", ViewDetailController.as_view(), name="view"),
+        path(
+            "views/<uuid:id>/diagram/",
+            ViewDiagramController.as_view(),
+            name="view-diagram",
         ),
         path(
             "diagrams/<str:kind>/<uuid:id>/",

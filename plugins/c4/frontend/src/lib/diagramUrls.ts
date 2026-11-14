@@ -12,9 +12,18 @@ export type DiagramRenderingOptions = {
   showStereotypes: boolean
 }
 
-export type DiagramUrlOptions = { format?: DiagramFormat; download?: boolean; rendering?: DiagramRenderingOptions }
+/** The UI theme as resolved by the application; `system` is never sent to the backend. */
+export type DiagramTheme = 'light' | 'dark'
 
-function addRenderingOptions(query: URLSearchParams, rendering?: DiagramRenderingOptions) {
+export type DiagramUrlOptions = {
+  format?: DiagramFormat
+  download?: boolean
+  rendering?: DiagramRenderingOptions
+  theme?: DiagramTheme
+}
+
+export function addRenderingOptions(query: URLSearchParams, rendering?: DiagramRenderingOptions, theme?: DiagramTheme) {
+  if (theme) query.set('theme', theme)
   if (!rendering) return
   query.set('layout', rendering.layout)
   query.set('show_title', String(rendering.showTitle))
@@ -29,7 +38,7 @@ export function diagramUrl(kind: string, id: string, view: DiagramView, options:
   const query = new URLSearchParams({ view })
   if (options.format && options.format !== 'svg') query.set('format', options.format)
   if (options.download) query.set('download', '1')
-  addRenderingOptions(query, options.rendering)
+  addRenderingOptions(query, options.rendering, options.theme)
   return `/api/plugins/atlas.c4/diagrams/${kind}/${id}/?${query}`
 }
 
@@ -38,7 +47,7 @@ export function systemLandscapeUrl(options: DiagramUrlOptions = {}): string {
   const query = new URLSearchParams()
   if (options.format && options.format !== 'svg') query.set('format', options.format)
   if (options.download) query.set('download', '1')
-  addRenderingOptions(query, options.rendering)
+  addRenderingOptions(query, options.rendering, options.theme)
   const suffix = query.toString()
   return `/api/plugins/atlas.c4/diagrams/landscape/${suffix ? `?${suffix}` : ''}`
 }

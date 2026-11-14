@@ -118,7 +118,7 @@ def test_localhost_subdomain_supports_a_docker_development_alias():
 
 
 def test_supported_adapter_baseline_is_pinned_and_documented():
-    assert SUPPORTED_ALLAUTH_VERSION == "65.19.1"
+    assert SUPPORTED_ALLAUTH_VERSION == "65.22.1"
     assert SUPPORTED_GITEA_VERSION == "1.27.3"
 
 

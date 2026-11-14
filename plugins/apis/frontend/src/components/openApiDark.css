@@ -1,0 +1,22 @@
+/* Redoc hard-codes the color of its underlined section headers (AUTHORIZATIONS, QUERY PARAMETERS, ...),
+   so the dark theme object cannot reach them. Scoped to the viewer wrapper. */
+.atlas-openapi-dark h5 {
+  color: rgba(222, 221, 221, 0.7);
+  border-bottom-color: rgba(222, 221, 221, 0.3);
+}
+
+/* The content-type label in a section header is hard-coded black. */
+.atlas-openapi-dark h5 span {
+  color: inherit;
+}
+
+/* Redoc paints the selected right-panel tab (response status, request sample) with the panel's
+   text color, which is light here and swallows its label. Non-status tabs get a light label;
+   status tabs (`tab-success` etc.) keep their own colors. */
+.atlas-openapi-dark [role='tab'][aria-selected='true'] {
+  background-color: #3a343a;
+}
+.atlas-openapi-dark
+  [role='tab'][aria-selected='true']:not(.tab-success):not(.tab-error):not(.tab-redirect):not(.tab-info) {
+  color: #f1f0f1;
+}

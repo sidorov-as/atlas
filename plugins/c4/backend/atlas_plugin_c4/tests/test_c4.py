@@ -8,8 +8,14 @@ from server.apps.catalog.tests.factories import (
     create_system,
 )
 
+from atlas_plugin_c4 import c4
 from atlas_plugin_c4.c4 import (
+    _ATLAS_PLANTUML_RELATIONSHIP_TAGS,
+    _ATLAS_PLANTUML_TAGS,
+    _ELEMENT_PALETTES,
+    _RELATIONSHIP_PALETTES,
     DEFAULT_DIAGRAM_RENDERING_SETTINGS,
+    THEME_PAYLOAD_KEY,
     DiagramRenderingSettings,
     alias,
     build_component_diagram,
@@ -20,6 +26,7 @@ from atlas_plugin_c4.c4 import (
     element,
     is_external,
     relationship,
+    render,
     render_options_payload,
 )
 
@@ -398,3 +405,146 @@ def test_system_architecture_scopes_internal_elements_and_external_edges(group, 
     )
     assert payment_edge["label"] == "Charge payment"
     assert payment_edge["tags"] == ["AtlasAsynchronous"]
+
+
+# The light palette as it was before themes existed: tag -> (background, font, border).
+_LIGHT_ELEMENT_COLORS = {
+    "AtlasSelectedSystem": ("#e3f2fd", "#0d47a1", "#42a5f5"),
+    "AtlasSelectedComponent": ("#e3f2fd", "#0d47a1", "#42a5f5"),
+    "AtlasComponent": ("#e8f5e9", "#1b5e20", "#66bb6a"),
+    "AtlasDatabase": ("#fff8e1", "#5d4037", "#ffb300"),
+    "AtlasQueue": ("#f3e5f5", "#6a1b9a", "#ab47bc"),
+    "AtlasEndpoint": ("#e3f2fd", "#0d47a1", "#42a5f5"),
+    "AtlasExternalEndpoint": ("#f5f5f5", "#424242", "#9e9e9e"),
+    "AtlasPerson": ("#fff3e0", "#e65100", "#fb8c00"),
+}
+_LIGHT_RELATIONSHIP_COLORS = {
+    "AtlasSynchronous": ("#1565c0", "#1e88e5"),
+    "AtlasAsynchronous": ("#6a1b9a", "#8e24aa"),
+    "AtlasDataAccess": ("#6d4c41", "#8d6e63"),
+    "AtlasManual": ("#455a64", "#78909c"),
+    "AtlasDerived": ("#455a64", "#78909c"),
+}
+
+
+def _payload(**settings):
+    return diagram_payload(
+        diagram_type="SystemContextDiagram",
+        title="t",
+        elements=[],
+        relationships=[],
+        settings=DiagramRenderingSettings(**settings),
+    )
+
+
+def _element_colors(payload):
+    return {
+        tag["tag_stereo"]: (tag["bg_color"], tag["font_color"], tag["border_color"])
+        for tag in payload["render_options"]["tags"]
+        if tag["type"] == "ElementTag"
+    }
+
+
+def _relationship_colors(payload):
+    return {
+        tag["tag_stereo"]: (tag["text_color"], tag["line_color"])
+        for tag in payload["render_options"]["tags"]
+        if tag["type"] == "RelTag"
+    }
+
+
+def test_payload_without_theme_is_the_light_payload():
+    payload = _payload()
+
+    assert payload == _payload(theme="light")
+    assert THEME_PAYLOAD_KEY not in payload
+    assert "styles" not in payload["render_options"]
+    assert _element_colors(payload) == _LIGHT_ELEMENT_COLORS
+    assert _relationship_colors(payload) == _LIGHT_RELATIONSHIP_COLORS
+
+
+def test_dark_theme_selects_the_dark_palette_for_every_tag():
+    payload = _payload(theme="dark")
+
+    assert payload[THEME_PAYLOAD_KEY] == "dark"
+    assert _element_colors(payload) == _ELEMENT_PALETTES["dark"]
+    assert _relationship_colors(payload) == _RELATIONSHIP_PALETTES["dark"]
+    assert _element_colors(payload) != _element_colors(_payload())
+    assert {style["type"] for style in payload["render_options"]["styles"]} == {
+        "BoundaryStyle",
+        "SystemBoundaryStyle",
+    }
+
+
+def test_dark_theme_keeps_shapes_lines_and_legend_text():
+    def structure(payload):
+        colors = {"bg_color", "font_color", "border_color", "text_color", "line_color"}
+        return [
+            {key: value for key, value in tag.items() if key not in colors}
+            for tag in payload["render_options"]["tags"]
+        ]
+
+    assert structure(_payload(theme="dark")) == structure(_payload())
+
+
+def test_every_tag_has_a_light_and_a_dark_palette_entry():
+    element_tags = {tag[0] for tag in _ATLAS_PLANTUML_TAGS}
+    relationship_tags = {tag[0] for tag in _ATLAS_PLANTUML_RELATIONSHIP_TAGS}
+
+    for theme in ("light", "dark"):
+        assert set(_ELEMENT_PALETTES[theme]) == element_tags
+        assert set(_RELATIONSHIP_PALETTES[theme]) == relationship_tags
+
+
+class _RecordingBackend:
+    def __init__(self):
+        self.calls = []
+
+    def to_bytes(self, diagram, *, format):
+        self.calls.append((diagram, format.value))
+        return b"image"
+
+
+@pytest.fixture
+def backend(monkeypatch):
+    recorder = _RecordingBackend()
+    monkeypatch.setattr(c4, "_plantuml_backend", lambda _config: recorder)
+    return recorder
+
+
+def _renderable(**settings):
+    return _payload(**settings) | {
+        "elements": [
+            {
+                "type": "System",
+                "alias": "a",
+                "label": "A",
+                "tags": ["AtlasSelectedSystem"],
+            }
+        ]
+    }
+
+
+@pytest.mark.parametrize("format", ["svg", "png"])
+def test_dark_render_injects_diagram_colors_before_the_layout(backend, format):
+    render(_renderable(theme="dark"), format=format)
+
+    source, rendered_format = backend.calls[0]
+    assert rendered_format == format
+    assert "skinparam backgroundColor #221d22" in source
+    assert source.index("skinparam backgroundColor") < source.index("\nLAYOUT_")
+    assert source.index("AddElementTag") < source.index("skinparam backgroundColor")
+    assert THEME_PAYLOAD_KEY not in source
+
+
+def test_light_render_has_no_dark_colors(backend):
+    render(_renderable())
+
+    assert "skinparam backgroundColor" not in backend.calls[0][0]
+
+
+def test_dark_render_is_deterministic(backend):
+    render(_renderable(theme="dark"))
+    render(_renderable(theme="dark"))
+
+    assert backend.calls[0] == backend.calls[1]

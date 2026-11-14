@@ -65,6 +65,7 @@ export function reactFlowMock(actual: { useNodesState: unknown }) {
     ),
     Background: () => null,
     Controls: () => null,
+    useReactFlow: () => ({ zoomIn: async () => true, zoomOut: async () => true, fitView: async () => true }),
     Panel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     Handle: () => null,
     Position: { Top: 'top' },

@@ -24,6 +24,7 @@
     "./lib/api": "./src/lib/api.ts",
     "./lib/auth": "./src/lib/auth.ts",
     "./lib/SessionContext": "./src/lib/SessionContext.tsx",
+    "./lib/ThemeContext": "./src/lib/ThemeContext.tsx",
     "./lib/entities": "./src/lib/entities.ts",
     "./lib/entityRowActions": "./src/lib/entityRowActions.tsx",
     "./lib/types": "./src/lib/types.ts",

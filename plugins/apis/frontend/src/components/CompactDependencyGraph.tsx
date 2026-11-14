@@ -10,7 +10,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   Background,
-  Controls,
   Panel,
   ReactFlow,
   useNodesState,
@@ -23,8 +22,10 @@ import '@xyflow/react/dist/style.css'
 import { ArrowsExpand, Gear, MagicWand } from '@gravity-ui/icons'
 import { Alert, Button, Dialog, DropdownMenu, Icon, Loader, Skeleton, Text, TextInput, Tooltip } from '@gravity-ui/uikit'
 import { errorMessage } from 'frontend/lib/api'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { exportGraphImage, GraphExportControl, type GraphExportOptions } from './GraphExportControl'
 import { GROUP_NODE_TYPE } from './GroupNode'
+import { GraphZoomToolbar } from './GraphZoomToolbar'
 import { resolveGraphGrouping, writeGraphGrouping, type GraphGroupingId } from '../lib/graphGrouping'
 import type { ConsumerGroupBy, OperationRole } from '../lib/types'
 import './CompactDependencyGraph.css'
@@ -141,6 +142,7 @@ export function CompactDependencyGraph<C, M>({
   /** Stretch to the parent's height (via a `flex: 1` wrapper, e.g. EndpointOverviewTab's right column) instead of the fixed `GRAPH_HEIGHT` — keeps the graph's bottom edge level with a sibling card that can grow taller than `GRAPH_HEIGHT` (e.g. a long Documentation card pushing Details down). `GRAPH_HEIGHT` remains the floor via `minHeight`. */
   fillHeight?: boolean
 }) {
+  const { resolved: theme } = useTheme()
   const titleId = useId()
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
   // `ReactFlow`'s `fitView` only runs once, against whatever size its
@@ -420,6 +422,7 @@ export function CompactDependencyGraph<C, M>({
   return (
     <div style={{ ...(fillHeight ? { height: '100%', minHeight: GRAPH_HEIGHT } : { height: GRAPH_HEIGHT }), border: '1px solid var(--g-color-line-generic)', borderRadius: 8 }}>
       <ReactFlow
+        colorMode={theme}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -431,7 +434,7 @@ export function CompactDependencyGraph<C, M>({
         minZoom={0.2}
       >
         <Background />
-        <Controls showInteractive={false} />
+        <GraphZoomToolbar />
         <Panel position="top-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Button size="s" onClick={openFullscreen}>
             <Icon data={ArrowsExpand} size={14} />
@@ -498,6 +501,7 @@ export function CompactDependencyGraph<C, M>({
             {fullscreenReady && !groupedReady && !groupsFailed && <Loader size="l" />}
             {fullscreenReady && flowNodes.length > 0 && (
               <ReactFlow
+                colorMode={theme}
                 key={layoutRevision}
                 nodes={flowNodes}
                 edges={fullscreenGraph?.edges ?? []}
@@ -511,7 +515,7 @@ export function CompactDependencyGraph<C, M>({
                 minZoom={0.2}
               >
                 <Background />
-                <Controls showInteractive={false} />
+                <GraphZoomToolbar />
               </ReactFlow>
             )}
           </div>

@@ -103,13 +103,13 @@ describe('SystemDetailPage', () => {
   it('requests the context diagram endpoint for the System Context tab', async () => {
     renderSystemDetailPage()
     const image = await screen.findByAltText('context diagram')
-    expect(image.getAttribute('src')).toBe('/api/plugins/atlas.c4/diagrams/system/5/?view=context&layout=LAYOUT_TOP_DOWN&show_title=true&show_legend=true&show_selected_label=true&show_person_sprite=true&show_stereotypes=true')
+    expect(image.getAttribute('src')).toBe('/api/plugins/atlas.c4/diagrams/system/5/?view=context&theme=light&layout=LAYOUT_TOP_DOWN&show_title=true&show_legend=true&show_selected_label=true&show_person_sprite=true&show_stereotypes=true')
   })
 
   it('requests the architecture diagram endpoint for the System Architecture tab', async () => {
     renderSystemDetailPage()
     const image = await screen.findByAltText('architecture diagram')
-    expect(image.getAttribute('src')).toBe('/api/plugins/atlas.c4/diagrams/system/5/?view=architecture&layout=LAYOUT_TOP_DOWN&show_title=true&show_legend=true&show_selected_label=true&show_person_sprite=true&show_stereotypes=true')
+    expect(image.getAttribute('src')).toBe('/api/plugins/atlas.c4/diagrams/system/5/?view=architecture&theme=light&layout=LAYOUT_TOP_DOWN&show_title=true&show_legend=true&show_selected_label=true&show_person_sprite=true&show_stereotypes=true')
   })
 
   it('opens the Docs tab from a direct tab query parameter', async () => {

@@ -33,6 +33,18 @@ PLUGIN = PluginDescriptor(
 
 DIAGRAM_READ_PERMISSION = "atlas.c4.diagram.read"
 
+# Saved views are shared across the catalog and have no owner, so there is no
+# resource to check against. `RBACPolicyEvaluator` resolves a permission by its
+# *suffix*, and with `resource=None`: `.create` and `.delete` allow any
+# authenticated principal, `.edit` allows only a superuser (it checks group
+# membership of a missing owner), and an unrecognised suffix such as `.update`
+# is denied. The core guard additionally denies write permissions to read-only
+# principals. Hence only `.create` and `.delete` are registered, and editing a
+# view checks `VIEW_CREATE_PERMISSION` too. Do not "fix" these into
+# `atlas.c4.view.edit`/`.update`: that would lock normal users out of editing.
+VIEW_CREATE_PERMISSION = "atlas.c4.view.create"
+VIEW_DELETE_PERMISSION = "atlas.c4.view.delete"
+
 
 def register_runtime() -> None:
     """Populate this plugin's runtime registrations.
@@ -44,3 +56,5 @@ def register_runtime() -> None:
     from atlas_plugin_api import register_permission
 
     register_permission(DIAGRAM_READ_PERMISSION, owner=PLUGIN.id)
+    register_permission(VIEW_CREATE_PERMISSION, owner=PLUGIN.id)
+    register_permission(VIEW_DELETE_PERMISSION, owner=PLUGIN.id)

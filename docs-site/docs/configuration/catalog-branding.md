@@ -1,6 +1,6 @@
 ---
 title: Catalog branding
-description: Set your deployment's title, tagline, logo, and icon via atlas.config.ts.
+description: Set your deployment's title, tagline, logos (light and dark), and icon via atlas.config.ts.
 audience:
   - operator
 page-type: reference
@@ -16,6 +16,7 @@ export const atlasConfig: AtlasConfig = {
   title: 'Atlas',
   tagline: 'A software catalog for teams, systems, components, resources, and APIs.',
   logo: '/atlas-logo.svg',
+  logoDark: '/atlas-logo-dark.svg',
   icon: '/favicon.ico',
 }
 ```
@@ -25,6 +26,11 @@ export const atlasConfig: AtlasConfig = {
   and the "About this catalog" section.
 - `logo` and `icon` are paths served from `core/frontend/public/`; replace the
   referenced file (or point to a new one you add there) to change the image.
+- `logoDark` is optional. When the application is in its dark theme the sidebar
+  shows `logoDark`; if you omit it, the light `logo` is used in both themes. The
+  theme follows the user's choice in the sidebar footer (light, dark, or system),
+  and the logo switches without a reload. `icon` (the browser tab favicon) is
+  the same in both themes.
 
 ## Changing branding
 

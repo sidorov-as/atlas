@@ -6,7 +6,7 @@ PlantUML-specific syntax and aliases out of controllers and catalog models.
 """
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -47,6 +47,7 @@ from .config import C4PluginConfig
 logger = logging.getLogger(__name__)
 
 ImageFormat = Literal["svg", "png"]
+DiagramTheme = Literal["light", "dark"]
 DiagramLayout = Literal[
     "LAYOUT_TOP_DOWN",
     "LAYOUT_LEFT_RIGHT",
@@ -70,6 +71,7 @@ class DiagramRenderingSettings:
     show_selected_label: bool = True
     show_person_sprite: bool = True
     show_stereotypes: bool = True
+    theme: DiagramTheme = "light"
 
 
 DEFAULT_DIAGRAM_RENDERING_SETTINGS = DiagramRenderingSettings()
@@ -118,138 +120,88 @@ _INTERACTION_TAGS = {
 }
 _DERIVED_RELATIONSHIP_TAG = "AtlasDerived"
 
+# Role styling shared by every theme: (tag, border style, border thickness,
+# shadowing, legend text). Only colors differ per theme, see the palettes below.
 _ATLAS_PLANTUML_TAGS = (
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["selected_system"],
-        "#e3f2fd",
-        "#0d47a1",
-        "#42a5f5",
-        "BoldLine",
-        "2",
-        True,
-        "Selected System",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["selected_component"],
-        "#e3f2fd",
-        "#0d47a1",
-        "#42a5f5",
-        "BoldLine",
-        "2",
-        True,
-        "Selected Component",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["component"],
-        "#e8f5e9",
-        "#1b5e20",
-        "#66bb6a",
-        "SolidLine",
-        "2",
-        True,
-        "Internal Component",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["database"],
-        "#fff8e1",
-        "#5d4037",
-        "#ffb300",
-        "SolidLine",
-        "1",
-        False,
-        "Database",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["queue"],
-        "#f3e5f5",
-        "#6a1b9a",
-        "#ab47bc",
-        "SolidLine",
-        "1",
-        False,
-        "Queue",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["endpoint"],
-        "#e3f2fd",
-        "#0d47a1",
-        "#42a5f5",
-        "SolidLine",
-        "2",
-        True,
-        "API or Resource",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["external_endpoint"],
-        "#f5f5f5",
-        "#424242",
-        "#9e9e9e",
-        "DashedLine",
-        "1",
-        False,
-        "External Endpoint",
-    ),
-    (
-        "ElementTag",
-        _ELEMENT_TAGS["person"],
-        "#fff3e0",
-        "#e65100",
-        "#fb8c00",
-        "SolidLine",
-        "2",
-        True,
-        "Person or Group",
-    ),
+    (_ELEMENT_TAGS["selected_system"], "BoldLine", "2", True, "Selected System"),
+    (_ELEMENT_TAGS["selected_component"], "BoldLine", "2", True, "Selected Component"),
+    (_ELEMENT_TAGS["component"], "SolidLine", "2", True, "Internal Component"),
+    (_ELEMENT_TAGS["database"], "SolidLine", "1", False, "Database"),
+    (_ELEMENT_TAGS["queue"], "SolidLine", "1", False, "Queue"),
+    (_ELEMENT_TAGS["endpoint"], "SolidLine", "2", True, "API or Resource"),
+    (_ELEMENT_TAGS["external_endpoint"], "DashedLine", "1", False, "External Endpoint"),
+    (_ELEMENT_TAGS["person"], "SolidLine", "2", True, "Person or Group"),
 )
+# Interaction styling shared by every theme: (tag, line style, line thickness,
+# legend text).
 _ATLAS_PLANTUML_RELATIONSHIP_TAGS = (
-    (
-        _INTERACTION_TAGS["synchronous"],
-        "#1565c0",
-        "#1e88e5",
-        "SolidLine",
-        "1",
-        "Synchronous Interaction",
-    ),
-    (
-        _INTERACTION_TAGS["asynchronous"],
-        "#6a1b9a",
-        "#8e24aa",
-        "DottedLine",
-        "2",
-        "Asynchronous Interaction",
-    ),
-    (
-        _INTERACTION_TAGS["data-access"],
-        "#6d4c41",
-        "#8d6e63",
-        "DashedLine",
-        "1",
-        "Data Access",
-    ),
-    (
-        _INTERACTION_TAGS["manual"],
-        "#455a64",
-        "#78909c",
-        "DashedLine",
-        "1",
-        "Manual Interaction",
-    ),
-    (
-        _DERIVED_RELATIONSHIP_TAG,
-        "#455a64",
-        "#78909c",
-        "DashedLine",
-        "1",
-        "Derived Catalog Relation",
-    ),
+    (_INTERACTION_TAGS["synchronous"], "SolidLine", "1", "Synchronous Interaction"),
+    (_INTERACTION_TAGS["asynchronous"], "DottedLine", "2", "Asynchronous Interaction"),
+    (_INTERACTION_TAGS["data-access"], "DashedLine", "1", "Data Access"),
+    (_INTERACTION_TAGS["manual"], "DashedLine", "1", "Manual Interaction"),
+    (_DERIVED_RELATIONSHIP_TAG, "DashedLine", "1", "Derived Catalog Relation"),
 )
+
+# Per-theme element colors: tag -> (background, font, border).
+_ELEMENT_PALETTES: dict[DiagramTheme, dict[str, tuple[str, str, str]]] = {
+    "light": {
+        _ELEMENT_TAGS["selected_system"]: ("#e3f2fd", "#0d47a1", "#42a5f5"),
+        _ELEMENT_TAGS["selected_component"]: ("#e3f2fd", "#0d47a1", "#42a5f5"),
+        _ELEMENT_TAGS["component"]: ("#e8f5e9", "#1b5e20", "#66bb6a"),
+        _ELEMENT_TAGS["database"]: ("#fff8e1", "#5d4037", "#ffb300"),
+        _ELEMENT_TAGS["queue"]: ("#f3e5f5", "#6a1b9a", "#ab47bc"),
+        _ELEMENT_TAGS["endpoint"]: ("#e3f2fd", "#0d47a1", "#42a5f5"),
+        _ELEMENT_TAGS["external_endpoint"]: ("#f5f5f5", "#424242", "#9e9e9e"),
+        _ELEMENT_TAGS["person"]: ("#fff3e0", "#e65100", "#fb8c00"),
+    },
+    "dark": {
+        _ELEMENT_TAGS["selected_system"]: ("#12355f", "#e3f2fd", "#64b5f6"),
+        _ELEMENT_TAGS["selected_component"]: ("#12355f", "#e3f2fd", "#64b5f6"),
+        _ELEMENT_TAGS["component"]: ("#16341c", "#c8e6c9", "#81c784"),
+        _ELEMENT_TAGS["database"]: ("#3b2f10", "#ffe082", "#ffb300"),
+        _ELEMENT_TAGS["queue"]: ("#34173d", "#e1bee7", "#ba68c8"),
+        _ELEMENT_TAGS["endpoint"]: ("#102a47", "#bbdefb", "#64b5f6"),
+        _ELEMENT_TAGS["external_endpoint"]: ("#2b2d31", "#d0d0d0", "#9e9e9e"),
+        _ELEMENT_TAGS["person"]: ("#47260a", "#ffcc80", "#fb8c00"),
+    },
+}
+# Per-theme relationship colors: tag -> (text, line).
+_RELATIONSHIP_PALETTES: dict[DiagramTheme, dict[str, tuple[str, str]]] = {
+    "light": {
+        _INTERACTION_TAGS["synchronous"]: ("#1565c0", "#1e88e5"),
+        _INTERACTION_TAGS["asynchronous"]: ("#6a1b9a", "#8e24aa"),
+        _INTERACTION_TAGS["data-access"]: ("#6d4c41", "#8d6e63"),
+        _INTERACTION_TAGS["manual"]: ("#455a64", "#78909c"),
+        _DERIVED_RELATIONSHIP_TAG: ("#455a64", "#78909c"),
+    },
+    "dark": {
+        _INTERACTION_TAGS["synchronous"]: ("#90caf9", "#64b5f6"),
+        _INTERACTION_TAGS["asynchronous"]: ("#ce93d8", "#ba68c8"),
+        _INTERACTION_TAGS["data-access"]: ("#bcaaa4", "#a1887f"),
+        _INTERACTION_TAGS["manual"]: ("#b0bec5", "#90a4ae"),
+        _DERIVED_RELATIONSHIP_TAG: ("#b0bec5", "#90a4ae"),
+    },
+}
+
+# Diagram-wide colors for the dark theme. The vendored C4-PlantUML applies
+# `SET_SKETCH_STYLE` only together with `LAYOUT_AS_SKETCH`, which would give a
+# hand-drawn look, so the background and text colors are injected as plain
+# PlantUML lines by `render` instead.
+_DARK_BACKGROUND = "#221d22"
+_DARK_TEXT = "#e6e6e6"
+_DARK_BOUNDARY_BORDER = "#9aa0a6"
+_DARK_SOURCE_LINES = (
+    f'!$LEGEND_TITLE_COLOR = "{_DARK_TEXT}"',
+    f'!$LEGEND_FONT_COLOR = "{_DARK_TEXT}"',
+    f"skinparam backgroundColor {_DARK_BACKGROUND}",
+    f"skinparam titleFontColor {_DARK_TEXT}",
+    f"skinparam defaultFontColor {_DARK_TEXT}",
+    f"skinparam legendBackgroundColor {_DARK_BACKGROUND}",
+    f"skinparam legendBorderColor {_DARK_BACKGROUND}",
+    f"skinparam legendFontColor {_DARK_TEXT}",
+)
+# Reserved payload key: consumed by `render`, never sent to the validator.
+THEME_PAYLOAD_KEY = "atlas_theme"
 
 
 class DiagramRenderError(RuntimeError):
@@ -338,65 +290,80 @@ def diagram_payload(
     elements: Iterable[Mapping[str, Any]],
     relationships: Iterable[Mapping[str, Any]],
     settings: DiagramRenderingSettings = DEFAULT_DIAGRAM_RENDERING_SETTINGS,
+    boundaries: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build the complete validated PlantUML diagram payload.
 
     The values are intentionally conservative and stable so diagrams do not
     inherit arbitrary visual configuration from catalog tags.
     """
+    element_palette = _ELEMENT_PALETTES[settings.theme]
+    relationship_palette = _RELATIONSHIP_PALETTES[settings.theme]
+    render_options = render_options_payload(settings) | {
+        "tags": [
+            {
+                "type": "ElementTag",
+                "tag_stereo": tag_stereo,
+                "bg_color": element_palette[tag_stereo][0],
+                "font_color": element_palette[tag_stereo][1],
+                "border_color": element_palette[tag_stereo][2],
+                "border_style": border_style,
+                "border_thickness": border_thickness,
+                "shadowing": shadowing,
+                "shape": "RoundedBoxShape",
+                "legend_text": legend,
+            }
+            for (
+                tag_stereo,
+                border_style,
+                border_thickness,
+                shadowing,
+                legend,
+            ) in _ATLAS_PLANTUML_TAGS
+        ]
+        + [
+            {
+                "type": "RelTag",
+                "tag_stereo": tag_stereo,
+                "text_color": relationship_palette[tag_stereo][0],
+                "line_color": relationship_palette[tag_stereo][1],
+                "line_style": line_style,
+                "line_thickness": line_thickness,
+                "legend_text": legend,
+            }
+            for (
+                tag_stereo,
+                line_style,
+                line_thickness,
+                legend,
+            ) in _ATLAS_PLANTUML_RELATIONSHIP_TAGS
+        ],
+    }
+    if settings.theme == "dark":
+        render_options["styles"] = [
+            {
+                "type": "BoundaryStyle",
+                "element_name": "boundary",
+                "bg_color": _DARK_BACKGROUND,
+                "font_color": _DARK_TEXT,
+                "border_color": _DARK_BOUNDARY_BORDER,
+            },
+            {
+                "type": "SystemBoundaryStyle",
+                "bg_color": _DARK_BACKGROUND,
+                "font_color": _DARK_TEXT,
+                "border_color": _DARK_BOUNDARY_BORDER,
+            },
+        ]
     return {
         "backend": "plantuml",
         "type": diagram_type,
         "title": title if settings.show_title else None,
         "elements": [dict(item) for item in elements],
         "relationships": [dict(item) for item in relationships],
-        "render_options": render_options_payload(settings)
-        | {
-            "tags": [
-                {
-                    "type": tag_type,
-                    "tag_stereo": tag_stereo,
-                    "bg_color": background,
-                    "font_color": font,
-                    "border_color": border,
-                    "border_style": border_style,
-                    "border_thickness": border_thickness,
-                    "shadowing": shadowing,
-                    "shape": "RoundedBoxShape",
-                    "legend_text": legend,
-                }
-                for (
-                    tag_type,
-                    tag_stereo,
-                    background,
-                    font,
-                    border,
-                    border_style,
-                    border_thickness,
-                    shadowing,
-                    legend,
-                ) in _ATLAS_PLANTUML_TAGS
-            ]
-            + [
-                {
-                    "type": "RelTag",
-                    "tag_stereo": tag_stereo,
-                    "text_color": text_color,
-                    "line_color": line_color,
-                    "line_style": line_style,
-                    "line_thickness": line_thickness,
-                    "legend_text": legend,
-                }
-                for (
-                    tag_stereo,
-                    text_color,
-                    line_color,
-                    line_style,
-                    line_thickness,
-                    legend,
-                ) in _ATLAS_PLANTUML_RELATIONSHIP_TAGS
-            ],
-        },
+        **({"boundaries": [dict(item) for item in boundaries]} if boundaries else {}),
+        "render_options": render_options,
+        **({THEME_PAYLOAD_KEY: settings.theme} if settings.theme == "dark" else {}),
     }
 
 
@@ -817,7 +784,11 @@ def _component_element(
     system,
     show_selected_label: bool = True,
 ) -> dict[str, str]:
-    """Map catalog entities to their deterministic Component Diagram macro."""
+    """Map catalog entities to their deterministic Component Diagram macro.
+
+    ``system`` is the reference System for external styling; without one
+    (custom views) only the ``external`` tag marks an element external.
+    """
     if _is_actor_kind(entity.kind):
         return element(
             type="Person" if selected else "PersonExt",
@@ -829,7 +800,9 @@ def _component_element(
         )
     details = entity.details
     external = is_external(entity.tags) or (
-        hasattr(details, "system_id") and details.system_id != system.id
+        system is not None
+        and hasattr(details, "system_id")
+        and details.system_id != system.id
     )
     if entity.kind == KIND_RESOURCE:
         element_type = {
@@ -943,7 +916,7 @@ class _IdentifiedRemotePlantUMLBackend(RemotePlantUMLBackend):
             ) from exc
 
 
-def _plantuml_config() -> C4PluginConfig:
+def plugin_config() -> C4PluginConfig:
     """The resolved ``atlas.c4`` config, or the local-renderer defaults when
     the deployment declares none."""
     try:
@@ -964,11 +937,31 @@ def _plantuml_backend(config: C4PluginConfig):
     )
 
 
+def _with_dark_source(source: str) -> str:
+    """Insert the dark diagram-wide colors ahead of the layout macro.
+
+    They go after the includes and tag definitions, so the legend variables
+    override the C4-PlantUML defaults before `SHOW_LEGEND` reads them.
+    """
+    index = source.find("\nLAYOUT_") + 1
+    if index == 0:
+        raise DiagramRenderError("Unable to render diagram")
+    return source[:index] + "\n".join(_DARK_SOURCE_LINES) + "\n" + source[index:]
+
+
 def render(payload: Mapping[str, Any], *, format: ImageFormat = "svg") -> bytes:
     """Render a validated diagram through the configured PlantUML backend."""
+    theme = payload.get(THEME_PAYLOAD_KEY, "light")
+    payload = {key: value for key, value in payload.items() if key != THEME_PAYLOAD_KEY}
     try:
         diagram, _ = diagram_from_dict(payload)
-        renderer = PlantUMLRenderer(backend=_plantuml_backend(_plantuml_config()))
+        backend = _plantuml_backend(plugin_config())
+        renderer = PlantUMLRenderer(backend=backend)
+        if theme == "dark":
+            return backend.to_bytes(
+                _with_dark_source(renderer.render(diagram)),
+                format=DiagramFormat(format),
+            )
         return renderer.render_bytes(diagram, format=DiagramFormat(format))
     except (
         ConversionError,

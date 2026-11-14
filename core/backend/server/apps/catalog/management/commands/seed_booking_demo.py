@@ -21,6 +21,8 @@ from atlas_plugin_apis.models import (
     ServiceEndpointUsage,
     ServiceOperationUsage,
 )
+from atlas_plugin_c4.api.schemas import CustomViewSettings
+from atlas_plugin_c4.models import View
 from atlas_plugin_database_schema.models import DatabaseSchema
 from atlas_plugin_database_schema.parser import parse_schema
 from atlas_plugin_flows.models import Flow
@@ -3183,6 +3185,223 @@ FLOWS = [
 ]
 
 
+def _view(
+    name: str,
+    description: str,
+    level: str,
+    selection: str,
+    entities: list[tuple[str, str]],
+    **options: object,
+) -> dict:
+    return {
+        "name": name,
+        "description": description,
+        "level": level,
+        "selection": selection,
+        "entities": entities,
+        **options,
+    }
+
+
+# Saved C4 custom views. Each varies one option (level, selection mode, depth,
+# direction, entity types, relationship source) against a neighbouring view, so
+# the rendered diagrams visibly differ. There are more than 15 so the default
+# page of the views list overflows onto a second page.
+VIEWS = [
+    _view(
+        "Internal systems overview",
+        "All six internal systems, declared relationships only.",
+        "systems",
+        "selected",
+        [
+            ("system", name)
+            for name in (
+                "search-discovery",
+                "booking-reservations",
+                "payments-payouts",
+                "listings-supply",
+                "identity-trust",
+                "notifications-messaging",
+            )
+        ],
+    ),
+    _view(
+        "Booking and payments (derived)",
+        (
+            "Two systems; relationships derived from their "
+            "components are included."
+        ),
+        "systems",
+        "selected",
+        [("system", "booking-reservations"), ("system", "payments-payouts")],
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Booking neighborhood, depth 1",
+        "Systems directly connected to booking, both directions.",
+        "systems",
+        "neighborhood",
+        [("system", "booking-reservations")],
+        depth=1,
+        direction="both",
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Who depends on payments",
+        "Everything upstream of payments, to any depth.",
+        "systems",
+        "neighborhood",
+        [("system", "payments-payouts")],
+        depth="all",
+        direction="incoming",
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Search downstream, depth 2",
+        "Outgoing dependencies of search up to two hops.",
+        "systems",
+        "neighborhood",
+        [("system", "search-discovery")],
+        depth=2,
+        direction="outgoing",
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Booking neighborhood without actors",
+        "Same roots as the depth-1 view, depth 2, with actors switched off.",
+        "systems",
+        "neighborhood",
+        [("system", "booking-reservations")],
+        depth=2,
+        direction="both",
+        entity_types=["none"],
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "External partner consumers",
+        "Systems that rely on the external partners system.",
+        "systems",
+        "neighborhood",
+        [("system", "external-partners")],
+        depth="all",
+        direction="incoming",
+        entity_types=["actor"],
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Booking payment path",
+        "The booking-to-Stripe path with its queue and database.",
+        "components",
+        "selected",
+        [
+            ("component", "booking-service"),
+            ("component", "payment-service"),
+            ("resource", "booking-events-queue"),
+            ("resource", "payments-db"),
+            ("api", "stripe-api"),
+        ],
+    ),
+    _view(
+        "booking-service, depth 1",
+        "Direct neighbours of booking-service, every entity type.",
+        "components",
+        "neighborhood",
+        [("component", "booking-service")],
+        depth=1,
+        direction="both",
+    ),
+    _view(
+        "booking-service outgoing, depth 2",
+        "What booking-service calls, two hops out.",
+        "components",
+        "neighborhood",
+        [("component", "booking-service")],
+        depth=2,
+        direction="outgoing",
+    ),
+    _view(
+        "payment-service callers",
+        "Everything that reaches payment-service, any depth.",
+        "components",
+        "neighborhood",
+        [("component", "payment-service")],
+        depth="all",
+        direction="incoming",
+    ),
+    _view(
+        "booking-service, components only",
+        "Resources, APIs and actors are filtered out.",
+        "components",
+        "neighborhood",
+        [("component", "booking-service")],
+        depth=2,
+        direction="both",
+        entity_types=["component"],
+    ),
+    _view(
+        "Payments data stores",
+        "Payment components plus only the resources around them.",
+        "components",
+        "neighborhood",
+        [
+            ("component", "payment-service"),
+            ("component", "payout-service"),
+            ("component", "ledger-worker"),
+        ],
+        depth=1,
+        direction="outgoing",
+        entity_types=["resource"],
+    ),
+    _view(
+        "Guest journey",
+        "From the guest through the web app, components and actors only.",
+        "components",
+        "neighborhood",
+        [("user", "guest-persona")],
+        depth=3,
+        direction="outgoing",
+        entity_types=["component", "actor"],
+    ),
+    _view(
+        "Notifications fan-out (derived)",
+        "notification-service within two hops, with derived relationships.",
+        "components",
+        "neighborhood",
+        [("component", "notification-service")],
+        depth=2,
+        direction="both",
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Listings supply stack",
+        "Listing components with their API, database and media bucket.",
+        "components",
+        "selected",
+        [
+            ("component", "listing-service"),
+            ("component", "pricing-engine"),
+            ("component", "host-portal"),
+            ("api", "listings-api"),
+            ("resource", "listings-db"),
+            ("resource", "media-bucket"),
+        ],
+        relationships="declared_and_derived",
+    ),
+    _view(
+        "Identity and trust components",
+        "Selected components only, no neighbours.",
+        "components",
+        "selected",
+        [
+            ("component", "auth-service"),
+            ("component", "review-service"),
+            ("component", "trust-safety-service"),
+        ],
+        entity_types=[],
+    ),
+]
+
+
 class Command(BaseCommand):
     help = (
         "Wipe the database and repopulate it with a booking-platform demo "
@@ -3250,6 +3469,7 @@ class Command(BaseCommand):
                 components, apis, resources, guest
             )
             self._create_flows(systems, apis, endpoints, operations)
+            self._create_views()
             self._color_tags()
 
         relationship_count = len(ARCHITECTURE_RELATIONSHIPS) + len(
@@ -3266,6 +3486,7 @@ class Command(BaseCommand):
                 f"{len(operations)} operations, "
                 f"{len(OPERATION_USAGES)} operation-service links, "
                 f"{len(FLOWS)} flows, "
+                f"{len(VIEWS)} C4 views, "
                 f"{relationship_count} architecture relationships.",
             )
         )
@@ -3587,6 +3808,35 @@ class Command(BaseCommand):
                 ],
             )
         self.stdout.write(f"Created {len(FLOWS)} flows")
+
+    def _create_views(self) -> None:
+        for spec in VIEWS:
+            entities = [
+                CatalogEntity.objects.get(kind=kind, name=name).id
+                for kind, name in spec["entities"]
+            ]
+            options = {
+                key: spec[key]
+                for key in (
+                    "depth",
+                    "direction",
+                    "entity_types",
+                    "relationships",
+                )
+                if key in spec
+            }
+            settings = CustomViewSettings(
+                level=spec["level"],
+                selection=spec["selection"],
+                entities=entities,
+                **options,
+            )
+            View.objects.create(
+                name=spec["name"],
+                description=spec["description"],
+                settings=settings.model_dump(mode="json", by_alias=True),
+            )
+        self.stdout.write(f"Created {len(VIEWS)} C4 views")
 
     def _color_tags(self) -> None:
         """Assign every non-External demo tag a stable, visibly distinct

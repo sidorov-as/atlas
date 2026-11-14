@@ -4,7 +4,8 @@ import '@xyflow/react/dist/style.css'
 import { toPng, toSvg } from 'html-to-image'
 import { Button, Checkbox, Icon, Popup, SegmentedRadioGroup, Text, Tooltip } from '@gravity-ui/uikit'
 import { ArrowUpRightFromSquare, MagnifierMinus, MagnifierPlus, SquareDashed } from '@gravity-ui/icons'
-import { downloadDataUrl } from 'frontend/lib/diagramExport'
+import { downloadDataUrl, exportBackgroundColor } from 'frontend/lib/diagramExport'
+import { useTheme } from 'frontend/lib/ThemeContext'
 
 import { FLOW_EDGE_TYPES } from './FlowEdges'
 import { FLOW_NODE_TYPES } from './FlowNodes'
@@ -151,6 +152,7 @@ function FlowGraphCanvas({ steps, refStatus, autolayoutEnabled, layoutDirection,
   const [edges, setEdges] = useState<Edge[]>([])
   const [exporting, setExporting] = useState(false)
   const { fitBounds } = useReactFlow()
+  const { resolved: theme } = useTheme()
   const viewportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -231,7 +233,7 @@ function FlowGraphCanvas({ steps, refStatus, autolayoutEnabled, layoutDirection,
     const gridElement = element.querySelector<HTMLElement>('.react-flow__background')
     if (gridElement && !showGrid) gridElement.style.display = 'none'
     try {
-      const options = { backgroundColor: transparent ? undefined : '#ffffff' }
+      const options = { backgroundColor: exportBackgroundColor(element, transparent) }
       const dataUrl = format === 'svg' ? await toSvg(element, options) : await toPng(element, options)
       downloadDataUrl(dataUrl, `flow.${format}`)
     } finally {
@@ -253,6 +255,7 @@ function FlowGraphCanvas({ steps, refStatus, autolayoutEnabled, layoutDirection,
           nodesDraggable={false}
           onNodeClick={(_event, node) => onBlockClick?.(node.id)}
           minZoom={0.05}
+          colorMode={theme}
         >
           <Background />
         </ReactFlow>
