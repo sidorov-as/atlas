@@ -25,7 +25,7 @@ const ID = '44444444-4444-4444-8444-444444444444'
 const GONE = '33333333-3333-4333-8333-333333333333'
 const fetchMock = vi.fn()
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-const svg = () => new Response(new Blob(['<svg />']), { status: 200 })
+const svg = () => new Response('<svg />', { status: 200 })
 const settings = { level: 'systems', selection: 'selected', entities: ['s1'], entityTypes: ['actor'], relationships: 'declared' }
 const view = (extra: object = {}) => ({ id: ID, name: 'Billing', description: 'Payments flow', settings, missingEntities: [], createdAt: 't', updatedAt: 't', ...extra })
 

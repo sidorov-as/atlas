@@ -1,9 +1,9 @@
 """A saved view over the booking demo catalog (tasks 9.3 of the view builder change)."""
 
 import pytest
+from atlas_plugin_api import get_catalog_entity_model
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from server.apps.catalog.models import CatalogEntity
 
 pytestmark = pytest.mark.django_db
 
@@ -40,7 +40,7 @@ def client(dmr_client):
 
 def _ids(selection):
     return [
-        str(CatalogEntity.objects.get(kind=kind, name=name).id)
+        str(get_catalog_entity_model().objects.get(kind=kind, name=name).id)
         for kind, name in selection
     ]
 

@@ -18,7 +18,7 @@ packages = [{ include = "atlas_plugin_auth_gitea" }]
 python = "==3.13.13"
 atlas-plugin-api-python = { path = "../../../plugin-api/python", develop = true }
 django = ">=6.1,<6.2"
-django-allauth = { version = "==65.19.1", extras = ["socialaccount"] }
+django-allauth = { version = ">=65.22.1,<66", extras = ["socialaccount"] }
 requests = "^2.34"
 
 [tool.poetry.group.dev.dependencies]

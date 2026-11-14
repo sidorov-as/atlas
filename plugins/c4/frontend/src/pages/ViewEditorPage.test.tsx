@@ -43,7 +43,7 @@ const fetchMock = vi.fn()
 let created = 0
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-const svg = () => new Response(new Blob(['<svg />']), { status: 200 })
+const svg = () => new Response('<svg />', { status: 200 })
 
 const savedView = (settings: object, extra: object = {}) => ({
   id: VIEW_ID, name: 'Billing', description: 'About', missingEntities: [], createdAt: 't', updatedAt: 't', settings, ...extra,

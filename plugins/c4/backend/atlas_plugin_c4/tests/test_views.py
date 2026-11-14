@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from atlas_plugin_api import get_architecture_relationship_model
 from django.contrib.auth import get_user_model
-from server.apps.catalog.models import AccountAccess
+from django.core.management import call_command
 from server.apps.catalog.tests.factories import (
     create_actor,
     create_api,
@@ -261,7 +261,13 @@ def test_non_owner_can_create_edit_and_delete(dmr_client, pair, group, owner_cli
 def test_read_only_user_cannot_write_but_can_read(owner_client, owner_account, pair):
     api, _ = pair
     view_id = _create(owner_client, api).json()["id"]
-    AccountAccess.objects.create(account=owner_account, read_only=True)
+    call_command(
+        "clear_read_only",
+        owner_account.username,
+        reason="c4 view permission regression",
+        read_only="true",
+        confirm=True,
+    )
     assert _create(owner_client, api, name="New").status_code == 403
     put = owner_client.put(_url(view_id), data=_body(api), format="json")
     assert put.status_code == 403

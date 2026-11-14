@@ -27,7 +27,7 @@ afterEach(() => {
 })
 
 function svg() {
-  return new Response(new Blob(['<svg />'], { type: 'image/svg+xml' }), { status: 200 })
+  return new Response('<svg />', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })
 }
 
 function error(status: number, detail: object) {
