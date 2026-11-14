@@ -5,6 +5,22 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlas</title>
+    <script>
+      // Applies the stored theme before first paint so a reload does not flash the
+      // wrong one. Keep the key and validation in step with src/lib/ThemeContext.tsx.
+      ;(function () {
+        var mode = 'system'
+        try {
+          var stored = window.localStorage.getItem('atlas.theme.v1')
+          if (stored === 'light' || stored === 'dark' || stored === 'system') mode = stored
+        } catch (e) {}
+        var dark =
+          mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        var root = document.documentElement
+        root.style.backgroundColor = dark ? '#221d22' : '#ffffff'
+        root.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

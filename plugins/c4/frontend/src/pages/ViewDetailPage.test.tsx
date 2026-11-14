@@ -79,6 +79,7 @@ describe('ViewDetailPage', () => {
     await screen.findByAltText('View diagram')
     const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/diagram/'))
     expect(String(call?.[0])).toContain(`/views/${ID}/diagram/`)
+    expect(String(call?.[0])).toContain('theme=light')
   })
 
   it('offers SVG and PNG export once the diagram is shown', async () => {

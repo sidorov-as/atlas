@@ -222,3 +222,45 @@ div:has(> .app-shell-logo) {
   max-height: 40vh;
   overflow-y: auto;
 }
+
+/* xyflow's dark color mode paints its own near-black canvas; keep the canvas transparent like
+   the light mode so the page's Gravity background shows through and exports match it. */
+.react-flow.dark {
+  --xy-background-color: transparent;
+}
+
+/* Diplodoc's YFM stylesheet defaults to dark text on white; its public variables take over in dark. */
+.g-root_theme_dark .yfm {
+  --yfm-color-text: var(--g-color-text-primary);
+  --yfm-color-base: var(--g-color-base-background);
+  --yfm-color-border: var(--g-color-line-generic);
+  --yfm-color-link: #5b9eea;
+  --yfm-color-link-hover: #7fb4f0;
+  --yfm-color-accent: #5b9eea;
+  --yfm-color-code-background: rgba(255, 255, 255, 0.1);
+  --yfm-color-code-hovered-background: rgba(255, 255, 255, 0.16);
+  --yfm-color-hljs-background: rgba(255, 255, 255, 0.08);
+  --yfm-color-table: var(--g-color-text-primary);
+  --yfm-color-table-background: transparent;
+  --yfm-color-table-border: var(--g-color-line-generic);
+  --yfm-color-table-head-background: rgba(255, 255, 255, 0.06);
+  --yfm-color-table-stripe-row-background: rgba(255, 255, 255, 0.04);
+  --yfm-color-table-row-background: rgba(255, 255, 255, 0.04);
+  --yfm-color-hljs-comment: #9a979a;
+  --yfm-color-hljs-subst: #dedddd;
+}
+
+/* Gravity's width="max" rule forces `display: block` on the option text (hence the compound
+   selector), and sizes an icon-only option's text box at 100% of an auto-height label, which leaves the
+   icon at the top of the segment; center the icon in the segment instead. */
+.theme-switcher .g-segmented-radio-group__option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-switcher.g-segmented-radio-group_width_max .g-segmented-radio-group__option-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

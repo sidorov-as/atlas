@@ -1,11 +1,13 @@
-import { ThemeProvider, ToasterComponent, ToasterProvider } from '@gravity-ui/uikit'
+import { ThemeProvider as GravityThemeProvider, ToasterComponent, ToasterProvider } from '@gravity-ui/uikit'
 import { toaster } from '@gravity-ui/uikit/toaster-singleton'
+import type { ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AdminProtected } from './components/AdminProtected'
 import { ContributionBoundary } from './components/ContributionBoundary'
 import { Protected } from './components/Protected'
 import { WriteProtected } from './components/WriteProtected'
 import { SessionProvider } from './lib/SessionContext'
+import { ThemeModeProvider, useTheme } from './lib/ThemeContext'
 import { composedContributions } from './plugins/composition'
 import type { RouteContribution } from '@atlas/plugin-api'
 
@@ -25,6 +27,12 @@ function RouteBoundary({ route }: { route: RouteContribution }) {
   )
 }
 
+/** Hands the user's chosen mode to Gravity UI, which resolves `system` itself. */
+function GravityTheme({ children }: { children: ReactNode }) {
+  const { mode } = useTheme()
+  return <GravityThemeProvider theme={mode}>{children}</GravityThemeProvider>
+}
+
 function App() {
   const publicRoutes = composedContributions.routes.filter((routeContribution) => routeContribution.public)
   const protectedRoutes = composedContributions.routes.filter((routeContribution) => !routeContribution.public)
@@ -37,7 +45,8 @@ function App() {
   )
 
   return (
-    <ThemeProvider theme="system">
+    <ThemeModeProvider>
+      <GravityTheme>
       <ToasterProvider toaster={toaster}>
         <ToasterComponent />
         <BrowserRouter>
@@ -65,7 +74,8 @@ function App() {
           </SessionProvider>
         </BrowserRouter>
       </ToasterProvider>
-    </ThemeProvider>
+      </GravityTheme>
+    </ThemeModeProvider>
   )
 }
 

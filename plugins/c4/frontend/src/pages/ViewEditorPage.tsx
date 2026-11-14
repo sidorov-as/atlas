@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ConfirmDialog } from 'frontend/components/ConfirmDialog'
 import { HeaderActionRow } from 'frontend/components/HeaderActionRow'
 import { ApiError, errorMessage } from 'frontend/lib/api'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { useAsync } from 'frontend/lib/useAsync'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
 import { DiagramViewer } from '../components/DiagramTab'
@@ -120,6 +121,7 @@ export function ViewEditorPage() {
   const navigate = useNavigate()
   const narrow = useNarrowScreen()
   const [preferences, setPreferences] = useDiagramPreferences('custom')
+  const { resolved: theme } = useTheme()
   const names = useRef<Names>(new Map())
 
   const { data: actorKinds } = useAsync(() => fetchActorKinds().catch(() => [] as ActorKind[]), [])
@@ -263,7 +265,7 @@ export function ViewEditorPage() {
       )}
       {applied && requestBody !== undefined ? (
         <PreviewViewer
-          src={customViewPreviewUrl({ rendering: preferences })}
+          src={customViewPreviewUrl({ rendering: preferences, theme })}
           requestBody={requestBody}
           alt="View preview"
           fetchSource

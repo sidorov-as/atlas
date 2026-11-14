@@ -81,6 +81,29 @@ def test_rendering_options_come_from_the_query(owner_client, pair, captured):
     assert captured
 
 
+def test_preview_renders_dark_from_the_query(owner_client, pair, captured):
+    api, resource = pair
+    response = _post(owner_client, _body(api.id, resource.id), "?theme=dark&format=png")
+    assert response.status_code == 200
+    payload, fmt = captured[0]
+    assert (payload["atlas_theme"], fmt) == ("dark", "png")
+
+
+def test_preview_without_theme_renders_light(owner_client, pair, captured):
+    api, resource = pair
+    _post(owner_client, _body(api.id, resource.id))
+    assert "atlas_theme" not in captured[0][0]
+
+
+def test_preview_rejects_an_invalid_theme_before_rendering(
+    owner_client, pair, captured
+):
+    api, resource = pair
+    response = _post(owner_client, _body(api.id, resource.id), "?theme=sepia")
+    assert response.status_code == 400
+    assert captured == []
+
+
 def test_settings_in_the_query_string_are_ignored(owner_client, pair, captured):
     api, resource = pair
     response = _post(

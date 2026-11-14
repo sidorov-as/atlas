@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@gravity-ui/uikit'
+import { act } from '@testing-library/react'
+import { useTheme, ThemeModeProvider, type ThemeMode } from 'frontend/lib/ThemeContext'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DiagramTab, DiagramViewer } from './DiagramTab'
 
@@ -11,6 +13,11 @@ class ResizeObserverStub {
 }
 
 globalThis.ResizeObserver = ResizeObserverStub
+window.matchMedia = vi.fn().mockReturnValue({
+  matches: false,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+}) as unknown as typeof window.matchMedia
 
 const storage = new Map<string, string>()
 
@@ -68,5 +75,47 @@ describe('DiagramViewer', () => {
     fireEvent.error(screen.getByAltText('broken diagram'))
     expect(screen.getByText(/could not be rendered/i)).toBeDefined()
     expect(screen.queryByAltText('broken diagram')).toBeNull()
+  })
+})
+
+describe('DiagramTab theme', () => {
+  let setMode: (mode: ThemeMode) => void = () => {}
+
+  function ModeProbe() {
+    setMode = useTheme().setMode
+    return null
+  }
+
+  function renderThemed() {
+    return render(
+      <ThemeModeProvider>
+        <ModeProbe />
+        <ThemeProvider theme="light"><DiagramTab kind="system" id={42} view="context" /></ThemeProvider>
+      </ThemeModeProvider>,
+    )
+  }
+
+  it('requests the resolved theme, never the mode', () => {
+    renderThemed()
+    expect((screen.getByAltText('context diagram') as HTMLImageElement).src).toContain('theme=light')
+  })
+
+  it('reloads the diagram in the new theme when the theme changes', () => {
+    renderThemed()
+    const image = screen.getByAltText('context diagram') as HTMLImageElement
+    fireEvent.load(image)
+    expect(image.src).toContain('theme=light')
+
+    act(() => setMode('dark'))
+
+    const reloaded = screen.getByAltText('context diagram') as HTMLImageElement
+    expect(reloaded.src).toContain('theme=dark')
+    expect(reloaded.src).not.toContain('theme=light')
+  })
+
+  it('does not draw a fixed white backdrop behind the diagram', () => {
+    renderThemed()
+    const viewport = screen.getByAltText('context diagram').parentElement as HTMLElement
+    expect(viewport.style.background).toBe('var(--g-color-base-background)')
   })
 })

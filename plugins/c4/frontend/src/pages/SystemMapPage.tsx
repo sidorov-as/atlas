@@ -1,6 +1,7 @@
 import { Loader, Tab, TabList, TabPanel, TabProvider, Text } from '@gravity-ui/uikit'
 import { useSearchParams } from 'react-router-dom'
 import { systemsApi } from 'frontend/lib/entities'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { useAsync } from 'frontend/lib/useAsync'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
 import { DiagramViewer } from '../components/DiagramTab'
@@ -18,16 +19,17 @@ function SystemMapDiagram({ preferences, onPreferencesChange }: {
   onPreferencesChange: (preferences: DiagramRenderingPreferences) => void
 }) {
   const { containerRef, height } = useFillViewportHeight()
+  const { resolved: theme } = useTheme()
   return (
     <div ref={containerRef}>
       <DiagramViewer
-        src={systemLandscapeUrl({ rendering: preferences })}
+        src={systemLandscapeUrl({ rendering: preferences, theme })}
         alt="System Landscape diagram"
         preferences={preferences}
         onPreferencesChange={onPreferencesChange}
         downloadUrls={{
-          svg: systemLandscapeUrl({ download: true, rendering: preferences }),
-          png: systemLandscapeUrl({ format: 'png', download: true, rendering: preferences }),
+          svg: systemLandscapeUrl({ download: true, rendering: preferences, theme }),
+          png: systemLandscapeUrl({ format: 'png', download: true, rendering: preferences, theme }),
         }}
         height={height}
       />

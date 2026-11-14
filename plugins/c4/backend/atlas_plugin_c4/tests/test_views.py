@@ -197,6 +197,35 @@ def test_diagram_svg_png_and_download(owner_client, pair, captured):
     assert png["Content-Disposition"].startswith("attachment")
 
 
+def test_saved_view_diagram_renders_dark_and_stores_no_theme(
+    owner_client, pair, captured
+):
+    api, resource = pair
+    created = _create(owner_client, api, resource).json()
+
+    light = owner_client.get(_url(created["id"], "diagram/"))
+    dark = owner_client.get(
+        _url(created["id"], "diagram/"),
+        {"theme": "dark", "format": "png", "download": 1},
+    )
+
+    assert light.status_code == dark.status_code == 200
+    assert "atlas_theme" not in captured[0][0]
+    assert (captured[1][0]["atlas_theme"], captured[1][1]) == ("dark", "png")
+    assert "theme" not in created["settings"]
+    assert "theme" not in owner_client.get(_url(created["id"])).json()["settings"]
+
+
+def test_saved_view_diagram_rejects_an_invalid_theme(owner_client, pair, captured):
+    api, resource = pair
+    view_id = _create(owner_client, api, resource).json()["id"]
+
+    response = owner_client.get(_url(view_id, "diagram/"), {"theme": "sepia"})
+
+    assert response.status_code == 400
+    assert captured == []
+
+
 def test_diagram_unknown_view_is_404(owner_client, captured):
     assert owner_client.get(_url(uuid4(), "diagram/")).status_code == 404
     assert captured == []

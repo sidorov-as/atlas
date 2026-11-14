@@ -113,3 +113,16 @@ def test_settings_component_types_are_rejected_at_systems_level():
     with pytest.raises(ValidationError):
         _settings(level="systems", entityTypes=["resource"])
     assert _settings(level="systems", entityTypes=["actor"]).entity_types == ["actor"]
+
+
+def test_settings_do_not_carry_a_theme():
+    settings = CustomViewSettings.model_validate(
+        {
+            "level": "components",
+            "selection": "selected",
+            "entities": [str(uuid4())],
+            "theme": "dark",
+        }
+    )
+
+    assert "theme" not in settings.model_dump()

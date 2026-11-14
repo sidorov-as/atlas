@@ -19,7 +19,8 @@ import '@xyflow/react/dist/style.css'
 import { toPng, toSvg } from 'html-to-image'
 import { ArrowUpRightFromSquare, MagicWand, MagnifierMinus, MagnifierPlus, SquareDashed } from '@gravity-ui/icons'
 import { Button, Checkbox, Icon, Loader, Popup, SegmentedRadioGroup, Text, Tooltip } from '@gravity-ui/uikit'
-import { downloadDataUrl } from 'frontend/lib/diagramExport'
+import { downloadDataUrl, exportBackgroundColor } from 'frontend/lib/diagramExport'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
 import { isUpgradedSchema, type ParsedSchema, type ParsedSchemaRelation, type ParsedSchemaTable } from '../lib/databaseSchemaApi'
 import { layoutErDiagramTables, type ErDiagramPositions } from '../lib/erDiagramLayout'
@@ -168,6 +169,7 @@ function ErDiagramGraph({ tables, relations }: { tables: ParsedSchemaTable[], re
   const [isLayouting, setIsLayouting] = useState(true)
   const [exporting, setExporting] = useState(false)
   const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const { resolved: theme } = useTheme()
   const viewportRef = useRef<HTMLDivElement>(null)
   const { containerRef, height } = useFillViewportHeight()
   const edges = buildEdges(relations)
@@ -224,7 +226,7 @@ function ErDiagramGraph({ tables, relations }: { tables: ParsedSchemaTable[], re
     const gridElement = element.querySelector<HTMLElement>('.react-flow__background')
     if (gridElement && !showGrid) gridElement.style.display = 'none'
     try {
-      const options = { backgroundColor: transparent ? undefined : '#ffffff' }
+      const options = { backgroundColor: exportBackgroundColor(element, transparent) }
       const dataUrl = format === 'svg' ? await toSvg(element, options) : await toPng(element, options)
       downloadDataUrl(dataUrl, `schema.${format}`)
     } finally {
@@ -247,6 +249,7 @@ function ErDiagramGraph({ tables, relations }: { tables: ParsedSchemaTable[], re
           nodesDraggable
           onlyRenderVisibleElements={tables.length > LARGE_SCHEMA_TABLE_THRESHOLD}
           minZoom={0.05}
+          colorMode={theme}
           fitView
         >
           <Background />

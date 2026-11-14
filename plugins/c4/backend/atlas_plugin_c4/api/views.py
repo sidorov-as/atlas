@@ -99,6 +99,7 @@ class DiagramController(AtlasController):
                 show_selected_label=parsed_query.show_selected_label,
                 show_person_sprite=parsed_query.show_person_sprite,
                 show_stereotypes=parsed_query.show_stereotypes,
+                theme=parsed_query.theme,
             ),
         )
         try:
@@ -156,6 +157,7 @@ class SystemLandscapeDiagramController(AtlasController):
                         show_selected_label=parsed_query.show_selected_label,
                         show_person_sprite=parsed_query.show_person_sprite,
                         show_stereotypes=parsed_query.show_stereotypes,
+                        theme=parsed_query.theme,
                     )
                 ),
                 format=parsed_query.format,
@@ -208,6 +210,7 @@ def render_custom_view(
                 show_selected_label=query.show_selected_label,
                 show_person_sprite=query.show_person_sprite,
                 show_stereotypes=query.show_stereotypes,
+                theme=query.theme,
             ),
         )
     except CustomViewError as error:

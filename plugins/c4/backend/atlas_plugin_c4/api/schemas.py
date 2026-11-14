@@ -27,6 +27,7 @@ class DiagramQuery(BaseModel):
     show_selected_label: bool = True
     show_person_sprite: bool = True
     show_stereotypes: bool = True
+    theme: Literal["light", "dark"] = "light"
 
 
 CustomViewLevel = Literal["systems", "components"]

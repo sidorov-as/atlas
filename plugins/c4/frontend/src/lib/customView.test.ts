@@ -60,6 +60,10 @@ describe('URLs', () => {
     expect(viewDiagramUrl(ID)).toBe(`/api/plugins/atlas.c4/views/${ID}/diagram/`)
     expect(viewDiagramUrl(ID, { format: 'png', download: true })).toBe(`/api/plugins/atlas.c4/views/${ID}/diagram/?format=png&download=1`)
     expect(viewDiagramUrl(ID, { rendering })).toContain('show_person_sprite=false')
+    expect(viewDiagramUrl(ID, { format: 'png', download: true, theme: 'dark' })).toBe(
+      `/api/plugins/atlas.c4/views/${ID}/diagram/?format=png&download=1&theme=dark`,
+    )
+    expect(customViewPreviewUrl({ theme: 'dark' })).toBe('/api/plugins/atlas.c4/diagrams/custom/?theme=dark')
   })
 
   it('links "Open in view builder" by root id only', () => {

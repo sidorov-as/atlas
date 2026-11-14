@@ -8,8 +8,6 @@
 .g-root_theme_dark {
   --g-color-base-brand: #1c73e3;
   --g-color-base-brand-hover: #185fbd;
-  --g-color-base-selection: #edf4fb;
-  --g-color-base-selection-hover: #dbe9f7;
 
   --g-color-line-brand: #1c73e3;
   --g-color-text-brand: #1c73e3;
@@ -18,4 +16,14 @@
 
   --g-color-text-link: #1c73e3;
   --g-color-text-link-hover: #185fbd;
+}
+
+.g-root_theme_light {
+  --g-color-base-selection: #edf4fb;
+  --g-color-base-selection-hover: #dbe9f7;
+}
+
+.g-root_theme_dark {
+  --g-color-base-selection: rgba(28, 115, 227, 0.2);
+  --g-color-base-selection-hover: rgba(28, 115, 227, 0.3);
 }

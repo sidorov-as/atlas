@@ -18,7 +18,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { Gear, MagicWand } from '@gravity-ui/icons'
 import { Button, Icon, Popup, SegmentedRadioGroup, Switch, Text, Tooltip } from '@gravity-ui/uikit'
-
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { FLOW_EDGE_TYPES } from './FlowEdges'
 import { FlowGraphToolbar } from './FlowGraph'
 import { FLOW_NODE_TYPES } from './FlowNodes'
@@ -190,6 +190,7 @@ function FlowCanvasEditorGraph({ steps, onChange, autolayoutEnabled, layoutDirec
   const [addNextSourceId, setAddNextSourceId] = useState<string | null>(null)
   const structuralErrors = validateFlowSteps(steps)
   const { setCenter, fitView, fitBounds } = useReactFlow()
+  const { resolved: theme } = useTheme()
   const centeredOnRef = useRef<string | null>(null)
   // The `fitView` prop `<ReactFlow>` used to carry below only fits once,
   // against whatever `nodes` holds at that first render — which is `[]`, since the
@@ -505,6 +506,7 @@ function FlowCanvasEditorGraph({ steps, onChange, autolayoutEnabled, layoutDirec
         nodesConnectable
         deleteKeyCode={['Backspace', 'Delete']}
         minZoom={0.05}
+        colorMode={theme}
       >
         <Background />
       </ReactFlow>

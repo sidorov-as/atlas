@@ -44,7 +44,7 @@ describe('SystemMapPage', () => {
 
     const image = await screen.findByAltText('System Landscape diagram')
     expect(image.getAttribute('src')).toContain(
-      '/api/plugins/atlas.c4/diagrams/landscape/?layout=LAYOUT_TOP_DOWN',
+      '/api/plugins/atlas.c4/diagrams/landscape/?theme=light&layout=LAYOUT_TOP_DOWN',
     )
     fireEvent.load(image)
     expect(screen.getByRole('button', { name: 'Download SVG' })).toBeDefined()

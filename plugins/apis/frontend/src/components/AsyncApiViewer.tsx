@@ -5,6 +5,7 @@
 // Buffer/process/util globals; vite.config.ts's nodePolyfills plugin supplies them.
 import AsyncApiComponent from '@asyncapi/react-component'
 import '@asyncapi/react-component/styles/default.min.css'
+import './asyncApiDark.css'
 
 export default function AsyncApiViewer({ schema }: { schema: object }) {
   return <AsyncApiComponent schema={schema} />

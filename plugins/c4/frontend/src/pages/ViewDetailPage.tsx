@@ -4,6 +4,7 @@ import { Alert, Breadcrumbs, Button, Loader, Text } from '@gravity-ui/uikit'
 import { ConfirmDialog } from 'frontend/components/ConfirmDialog'
 import { ApiError, errorMessage } from 'frontend/lib/api'
 import { useSession } from 'frontend/lib/SessionContext'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { useAsync } from 'frontend/lib/useAsync'
 import { useConfirm } from 'frontend/lib/useConfirm'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
@@ -16,18 +17,19 @@ import { useDiagramPreferences } from '../lib/diagramPreferences'
 function ViewDiagram({ id, reloadToken, onError }: { id: string; reloadToken: number; onError: (error: CustomViewFetchError | null) => void }) {
   const [preferences, setPreferences] = useDiagramPreferences('custom')
   const { containerRef, height } = useFillViewportHeight()
+  const { resolved: theme } = useTheme()
   return (
     <div ref={containerRef}>
       <DiagramViewer
-        src={viewDiagramUrl(id, { rendering: preferences })}
+        src={viewDiagramUrl(id, { rendering: preferences, theme })}
         alt="View diagram"
         fetchSource
         reloadToken={reloadToken}
         preferences={preferences}
         onPreferencesChange={setPreferences}
         downloadUrls={{
-          svg: viewDiagramUrl(id, { download: true, rendering: preferences }),
-          png: viewDiagramUrl(id, { format: 'png', download: true, rendering: preferences }),
+          svg: viewDiagramUrl(id, { download: true, rendering: preferences, theme }),
+          png: viewDiagramUrl(id, { format: 'png', download: true, rendering: preferences, theme }),
         }}
         onFetchingChange={(fetching) => { if (fetching) onError(null) }}
         onFetchError={onError}

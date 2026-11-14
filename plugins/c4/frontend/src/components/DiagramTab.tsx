@@ -3,6 +3,7 @@ import { Gear, MagnifierMinus, MagnifierPlus, SquareDashed } from '@gravity-ui/i
 import { Button, Checkbox, Icon, Loader, Popup, SegmentedRadioGroup, Text, Tooltip } from '@gravity-ui/uikit'
 import { apiFetch } from 'frontend/lib/api'
 import { useFillViewportHeight } from 'frontend/lib/useFillViewportHeight'
+import { useTheme } from 'frontend/lib/ThemeContext'
 import { CustomViewFetchError } from '../lib/customViewApi'
 import { diagramUrl, type DiagramView } from '../lib/diagramUrls'
 import {
@@ -171,7 +172,7 @@ export function DiagramViewer({ src, alt, downloadUrls, preferences, onPreferenc
   }, [])
 
   return (
-    <div ref={viewportRef} style={{ position: 'relative', height, minHeight: 360, overflow: 'hidden', border: '1px solid var(--g-color-line-generic)', borderRadius: 8, background: '#fff' }}>
+    <div ref={viewportRef} style={{ position: 'relative', height, minHeight: 360, overflow: 'hidden', border: '1px solid var(--g-color-line-generic)', borderRadius: 8, background: 'var(--g-color-base-background)' }}>
       {(fetchSource ? fetching : status === 'loading') && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><Loader size="m" /></div>}
       {fetchSource && !objectUrl ? null : status === 'error' ? <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}><Text color="danger">The diagram could not be rendered. Please try again later.</Text></div> : (
         <img
@@ -216,16 +217,17 @@ function FillViewportDiagram({ kind, id, view, preferences, onPreferencesChange 
   onPreferencesChange: (preferences: DiagramRenderingPreferences) => void
 }) {
   const { containerRef, height } = useFillViewportHeight()
+  const { resolved: theme } = useTheme()
   return (
     <div ref={containerRef}>
       <DiagramViewer
-        src={diagramUrl(kind, id, view, { rendering: preferences })}
+        src={diagramUrl(kind, id, view, { rendering: preferences, theme })}
         alt={`${view} diagram`}
         preferences={preferences}
         onPreferencesChange={onPreferencesChange}
         downloadUrls={{
-          svg: diagramUrl(kind, id, view, { download: true, rendering: preferences }),
-          png: diagramUrl(kind, id, view, { format: 'png', download: true, rendering: preferences }),
+          svg: diagramUrl(kind, id, view, { download: true, rendering: preferences, theme }),
+          png: diagramUrl(kind, id, view, { format: 'png', download: true, rendering: preferences, theme }),
         }}
         height={height}
       />

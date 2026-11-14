@@ -1,7 +1,7 @@
 // Custom view settings model: what a view stores, its JSON wire format, and the
 // routes and diagram endpoint URLs around it. Settings are never serialized
 // into page URLs; layout and display options come from viewer preferences.
-import type { DiagramFormat, DiagramRenderingOptions } from './diagramUrls'
+import { addRenderingOptions, type DiagramFormat, type DiagramRenderingOptions, type DiagramTheme } from './diagramUrls'
 
 export type CustomViewLevel = 'systems' | 'components'
 export type CustomViewSelection = 'selected' | 'neighborhood'
@@ -107,21 +107,18 @@ export function sameCustomViewSettings(a: CustomViewSettings, b: CustomViewSetti
   return JSON.stringify(settingsToBody(a)) === JSON.stringify(settingsToBody(b))
 }
 
-export type CustomViewUrlOptions = { format?: DiagramFormat; download?: boolean; rendering?: DiagramRenderingOptions }
+export type CustomViewUrlOptions = {
+  format?: DiagramFormat
+  download?: boolean
+  rendering?: DiagramRenderingOptions
+  theme?: DiagramTheme
+}
 
 function diagramQuery(options: CustomViewUrlOptions): string {
   const query = new URLSearchParams()
   if (options.format && options.format !== 'svg') query.set('format', options.format)
   if (options.download) query.set('download', '1')
-  const { rendering } = options
-  if (rendering) {
-    query.set('layout', rendering.layout)
-    query.set('show_title', String(rendering.showTitle))
-    query.set('show_legend', String(rendering.showLegend))
-    query.set('show_selected_label', String(rendering.showSelectedLabel))
-    query.set('show_person_sprite', String(rendering.showPersonSprite))
-    query.set('show_stereotypes', String(rendering.showStereotypes))
-  }
+  addRenderingOptions(query, options.rendering, options.theme)
   const suffix = query.toString()
   return suffix ? `?${suffix}` : ''
 }
