@@ -258,7 +258,7 @@ dependencies = [
 requires-dist = [
     { name = "atlas-plugin-api-python", editable = "../../plugin-api/python" },
     { name = "django", specifier = ">=6.1,<6.2" },
-    { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.22.1,<66" },
+    { name = "django-allauth", extras = ["socialaccount"], specifier = "==65.22.1" },
     { name = "requests", specifier = ">=2.34,<3.0" },
 ]
 

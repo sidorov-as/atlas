@@ -1,7 +1,7 @@
 # Atlas Gitea authentication provider
 
 `atlas.auth.gitea` is the first-party, provider-specific Gitea OAuth2 adapter.
-Its supported baseline is django-allauth 65.19.1 and Gitea 1.27.3.
+Its supported baseline is django-allauth 65.22.1 and Gitea 1.27.3.
 
 The adapter uses Authorization Code with mandatory PKCE S256, requests exactly
 the `read:user` scope, reads the authenticated profile from `/api/v1/user`, and

@@ -13,7 +13,7 @@ from .config import GiteaConfig
 
 PROVIDER_ID = "atlas.auth.gitea"
 SUPPORTED_GITEA_VERSION = "1.27.3"
-SUPPORTED_ALLAUTH_VERSION = "65.19.1"
+SUPPORTED_ALLAUTH_VERSION = "65.22.1"
 
 PROVIDER_DESCRIPTOR = AuthenticationProviderDescriptor(
     id=PROVIDER_ID,
